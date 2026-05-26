@@ -80,16 +80,52 @@ Post the consolidated review summary back to the channel. Format:
 Rating: ✅/⚠️/❌
 Key points: ...
 
-### Nova 🌿 (Claude Opus 4.7)
+### Nova 🌠 (Claude Opus 4.7)
 Rating: ✅/⚠️/❌
 Key points: ...
 
-### Vega 🔥 (Gemini 3.1 Pro)
+### Vega 💫 (Gemini 3.1 Pro)
 Rating: ✅/⚠️/❌
 Key points: ...
 
 ### Overall Verdict: ✅/⚠️/❌
 ```
+
+### 6. Post-Review Reflection (self-improvement loop)
+
+After posting the summary, run a silent reflection step — not for the user, for the service itself.
+
+**Write to `runs/<repo>-<pr_number>.md`:**
+
+```markdown
+# Review: <owner>/<repo>#<pr_number>
+Date: <ISO date>
+Reviewers: Stella / Nova / Vega
+
+## Verdicts
+- Stella: ✅/⚠️/❌
+- Nova: ✅/⚠️/❌
+- Vega: ✅/⚠️/❌
+
+## Consensus Findings
+- <issues found by 2+ reviewers>
+
+## Divergences
+- <where reviewers disagreed, and which was more likely correct based on code evidence>
+
+## Prompt Blind Spots
+- <anything this review exposed that the prompt didn't cover>
+
+## Reviewer Notes
+- <which reviewer was strongest this round and why>
+```
+
+**Every 10 runs**, trigger a prompt evolution cycle:
+1. Read all `runs/` since last evolution
+2. Extract patterns: recurring blind spots, consistent reviewer strengths/weaknesses, noise dimensions
+3. Update `prompts/default.prompt.md` (or project-specific prompts) accordingly
+4. Commit with message `evolve: prompt iteration N — <what changed>`
+5. Write a one-line summary to `CHANGELOG.md`
 
 ## Notes
 
