@@ -44,12 +44,30 @@ nodes:
   - id: reflection
     task: |
       Post-review self-improvement. DO NOT SKIP THIS STEP.
-      1. Write structured run record to `runs/<repo>-<pr_number>.md`:
-         - Verdicts, consensus findings, divergences, prompt blind spots, reviewer notes
-      2. Read recent runs/ — look for new patterns
-      3. If blind spots or recurring issues found → update prompt immediately, commit
-      4. If nothing new → note "no evolution needed" in run record
-      This is how the service gets better. Every review is an evolution opportunity.
+
+      ## Layer 1: Record
+      Write structured run record to `runs/<repo>-<pr_number>.md`:
+      - Verdicts, consensus findings, divergences, prompt blind spots, reviewer notes
+
+      ## Layer 2: Prompt Evolution
+      Read recent runs/ — look for new patterns.
+      If blind spots or recurring issues found → update prompts/ immediately.
+
+      ## Layer 3: Reviewer Assessment
+      Update `stats.md` — per-reviewer accuracy, strengths, weaknesses.
+      If a reviewer is consistently weak in a dimension → consider adjusting its task template or swapping model.
+
+      ## Layer 4: Process Evolution (meta)
+      Ask: did the review PROCESS work well this round?
+      - Was the summary format useful? Should it change?
+      - Did the workflow steps flow well? Missing a step? Redundant step?
+      - Is this reflection step itself asking the right questions?
+      If yes → update workflow.yaml, SKILL.md, or this reflection node itself.
+      Log any process changes to stats.md Meta-Evolution Log.
+
+      ## Commit
+      Any file changed → commit with `evolve: <what changed and why>`
+      If nothing changed → note "no evolution needed" in run record.
     next: register_tracking
 
   - id: register_tracking
