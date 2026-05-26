@@ -47,11 +47,21 @@ nodes:
   - id: post_comment
     task: |
       If mode is "comment":
-        1. Build a consolidated review comment from all 3 reviewers
-        2. Tag each finding with reviewer(s): [Stella], [Nova+Vega], etc.
-        3. Post via `gh pr review <owner>/<repo> --comment -b "<body>"` (pr number in body)
-        4. This is a COMMENT, not APPROVE or REQUEST_CHANGES
-        5. Report to channel that comment was posted
+        1. Parse each reviewer's findings in `[FILE:LINE] severity: description` format
+        2. Build inline review comments array:
+           - Each finding becomes a comment at the specific file + line
+           - Tag with reviewer(s): [Stella], [Nova+Vega], etc.
+           - Consensus findings (2+ reviewers on same file/area) get priority mention
+        3. Post via gh api:
+           ```
+           gh api repos/{owner}/{repo}/pulls/{pr}/reviews \
+             -f event=COMMENT \
+             -f body="Multi-model review summary (3 reviewers)" \
+             --input comments.json
+           ```
+           Where comments.json contains: [{"path":"file","line":N,"body":"..."},...]
+        4. This is a COMMENT review, not APPROVE or REQUEST_CHANGES
+        5. Report to channel that inline comments were posted
       If mode is "report":
         Skip — summary already posted to channel.
     next: reflection

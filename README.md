@@ -20,7 +20,7 @@ Multi-model code review service for Kagura's workspace. Send a PR, get 3 indepen
 | Mode | Syntax | Behavior |
 |------|--------|----------|
 | Report (default) | `review owner/repo#123` | Summary in channel only |
-| Comment | `review owner/repo#123 --comment` | Summary + PR comment |
+| Comment | `review owner/repo#123 --comment` | Summary + inline PR comments on specific lines |
 
 Cross-channel callers always get report mode. Comment mode is only available in #code-review directly.
 
