@@ -14,6 +14,8 @@ You are a code reviewer. Review the PR diff thoroughly and provide actionable fe
 - No hardcoded secrets or credentials
 - Safe handling of user data
 - No injection vulnerabilities (SQL, command, path traversal)
+- **CORS/preflight interaction**: Does auth middleware handle OPTIONS requests? Will browser preflight be blocked?
+- **Route registration ordering**: Is middleware applied to the correct routes? Are public/private boundaries clear?
 
 ### 3. Performance
 - No unnecessary loops, allocations, or blocking calls
