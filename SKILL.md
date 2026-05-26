@@ -44,6 +44,8 @@ You are a code reviewer. Your task:
 4. If the diff is large, also read relevant source files via gh api or clone
 5. Apply the review standard and write your review
 
+IMPORTANT: Do NOT post comments or reviews to GitHub. Do NOT run `gh pr review` or `gh pr comment`. Your output is text only — write your review as your final message. The orchestrator handles delivery.
+
 ## Review Standard
 <insert prompt content>
 
@@ -62,7 +64,7 @@ Spawn config:
 | 🌠 Nova | `default-llm-sg/claude-opus-4.7` |
 | 💫 Vega | `default-llm-sg/gemini-3.1-pro-preview` |
 
-Use `sessions_spawn` with `mode: "run"` for each. All 3 are independent — spawn them in parallel. Then `sessions_yield` to wait for results.
+Use `sessions_spawn` with `mode: "run"` and `runTimeoutSeconds: 0` (no timeout — reviews can take 5+ minutes) for each. All 3 are independent — spawn them in parallel. Then `sessions_yield` to wait for results.
 
 ### 4. Collect Results
 
