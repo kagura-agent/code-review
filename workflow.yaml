@@ -8,9 +8,12 @@ version: "1.0"
 nodes:
   - id: parse_request
     task: |
-      Parse the review request. Extract owner, repo, and pr_number.
-      Validate format: `review <owner>/<repo>#<pr_number>`
-      If invalid, reply with usage hint and stop.
+      Parse the review request. Extract owner, repo, pr_number, and mode.
+      Formats:
+        `review <owner>/<repo>#<pr_number>`           → report mode (default)
+        `review <owner>/<repo>#<pr_number> --comment`  → comment mode
+      If called from another channel (cross-channel), force report mode regardless of flags.
+      If invalid format, reply with usage hint and stop.
     next: load_prompt
 
   - id: load_prompt
@@ -39,6 +42,18 @@ nodes:
       - Per-reviewer rating and key points
       - Overall verdict
       Post to channel. Use the format from SKILL.md step 5.
+    next: post_comment
+
+  - id: post_comment
+    task: |
+      If mode is "comment":
+        1. Build a consolidated review comment from all 3 reviewers
+        2. Tag each finding with reviewer(s): [Stella], [Nova+Vega], etc.
+        3. Post via `gh pr review <owner>/<repo> --comment -b "<body>"` (pr number in body)
+        4. This is a COMMENT, not APPROVE or REQUEST_CHANGES
+        5. Report to channel that comment was posted
+      If mode is "report":
+        Skip — summary already posted to channel.
     next: reflection
 
   - id: reflection

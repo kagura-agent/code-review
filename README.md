@@ -4,13 +4,25 @@ Multi-model code review service for Kagura's workspace. Send a PR, get 3 indepen
 
 ## How It Works
 
-1. Send a review request to `#code-review` channel: `review <owner>/<repo>#<pr_number>`
+1. Send a review request to `#code-review` channel:
+   - `review <owner>/<repo>#<pr_number>` — get review summary in channel
+   - `review <owner>/<repo>#<pr_number> --comment` — also post comments to the PR on GitHub
 2. This channel spawns 3 independent reviewers:
    - 🌟 **Stella** (GPT-5.5) — fast, concise, catches logic issues
    - 🌠 **Nova** (Claude Opus 4.7) — thorough, strong on architecture and patterns
    - 💫 **Vega** (Gemini 3.1 Pro) — massive context, good for large PRs
 3. Each reviewer independently reads the review standard, pulls PR diff, reads source code as needed
 4. Results are collected and summarized in this channel
+5. With `--comment`: a consolidated review is also posted directly to the PR via `gh pr review`
+
+## Modes
+
+| Mode | Syntax | Behavior |
+|------|--------|----------|
+| Report (default) | `review owner/repo#123` | Summary in channel only |
+| Comment | `review owner/repo#123 --comment` | Summary + PR comment |
+
+Cross-channel callers always get report mode. Comment mode is only available in #code-review directly.
 
 ## Callers
 

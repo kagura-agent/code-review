@@ -6,8 +6,13 @@ Channel-as-service skill for multi-model code review.
 
 When a message arrives in this channel matching:
 ```
-review <owner>/<repo>#<pr_number>
+review <owner>/<repo>#<pr_number>              ← report mode (default)
+review <owner>/<repo>#<pr_number> --comment     ← comment mode (write to PR)
 ```
+
+### Modes
+- **Report mode** (default): Return review summary to channel/caller. No GitHub side effects.
+- **Comment mode** (`--comment`): Post consolidated review as a PR review comment via `gh pr review`. Each finding tagged with which reviewer(s) found it.
 
 ## Execution Steps
 
@@ -96,4 +101,6 @@ Key points: ...
 - Each reviewer is isolated — they cannot see each other's reviews
 - All three reviewers have ~1M context windows (GPT-5.5: 1.05M, Claude Opus 4.7: 1M, Gemini 3.1 Pro: 1M) — large PRs are fine for all
 - The review standard file is the single source of truth for what to check
-- Reviewers produce text output only. They do NOT post `gh pr review` — the human decides whether to submit the review to GitHub
+- In **report mode**: Reviewers produce text output only. No GitHub side effects — the human decides whether to act
+- In **comment mode**: After summary, post a consolidated `gh pr review --comment` to the PR with all findings. Individual reviewer identities are tagged inline (e.g. "[Stella+Nova]"). This is a COMMENT review, not APPROVE/REQUEST_CHANGES — the human still makes the final call
+- Cross-channel callers always get report mode. Comment mode is only available when used directly in #code-review
