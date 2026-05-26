@@ -4,102 +4,76 @@
 name: code-review
 description: Multi-model PR review with post-review reflection and PR tracking
 version: "1.0"
+start: parse_request
 
 nodes:
-  - id: parse_request
+  parse_request:
     task: |
       Parse the review request. Extract owner, repo, pr_number, and mode.
-      Formats:
-        `review <owner>/<repo>#<pr_number>`           → report mode (default)
-        `review <owner>/<repo>#<pr_number> --comment`  → comment mode
-      If called from another channel (cross-channel), force report mode regardless of flags.
-      If invalid format, reply with usage hint and stop.
+      User may provide a GitHub link, short format, or natural language.
+      Default mode is "report". If user asks to post to PR → "comment" mode.
+      Cross-channel callers always get report mode.
     next: load_prompt
 
-  - id: load_prompt
+  load_prompt:
     task: |
-      Load review standard from `prompts/`:
+      Load review standard from `~/.openclaw/workspace/code-review/prompts/`:
       1. Check `prompts/<repo>.prompt.md` (project-specific)
       2. Fallback to `prompts/default.prompt.md`
       Read the file content — this is what reviewers will use.
     next: spawn_reviewers
 
-  - id: spawn_reviewers
+  spawn_reviewers:
     task: |
       Spawn 3 independent reviewer subagents in parallel (sessions_spawn, mode: "run", runTimeoutSeconds: 0):
-      - 🌟 Stella: model `default-llm-sg/gpt-5.5`
-      - 🌠 Nova: model `default-llm-sg/claude-opus-4.7`
-      - 💫 Vega: model `default-llm-sg/gemini-3.1-pro-preview`
+      - 🌟 Stella: model `floway-jp/gpt-5.5`
+      - 🌠 Nova: model `floway-jp/claude-opus-4-7`
+      - 💫 Vega: model `floway-jp/gemini-3.1-pro-preview`
       Each gets the review standard + PR details. Do NOT pre-feed the diff.
       Let each reviewer pull via `gh pr view` and `gh pr diff` themselves.
-      Wait for all 3 to complete.
+      Each reviewer must `export https_proxy=http://127.0.0.1:1083` first.
+      Reviewers must NOT post to GitHub — text output only.
+      Use sessions_yield to wait for all 3 to complete.
     next: post_summary
 
-  - id: post_summary
+  post_summary:
     task: |
       Consolidate the 3 reviews into a structured summary:
       - Consensus findings (2+ reviewers agree) — high confidence
+      - Per-reviewer unique findings
       - Per-reviewer rating and key points
       - Overall verdict
-      Post to channel. Use the format from SKILL.md step 5.
+      Post to channel.
     next: post_comment
 
-  - id: post_comment
+  post_comment:
     task: |
       If mode is "comment":
         1. Parse each reviewer's findings in `[FILE:LINE] severity: description` format
-        2. Build the review payload with BOTH:
-           a. **Summary body**: consolidated verdict, consensus findings, per-reviewer ratings
-           b. **Inline comments**: each finding as a comment at the specific file + line
-           - Tag with reviewer(s): [Stella], [Nova+Vega], etc.
-           - Consensus findings (2+ reviewers on same file/area) get priority mention
-        3. Post as a single review via gh api (summary + inline comments in one call):
-           ```
-           gh api repos/{owner}/{repo}/pulls/{pr}/reviews \
-             -f event=COMMENT \
-             -f body="<summary with verdict and consensus>" \
-             --input comments.json
-           ```
-           Where comments.json contains: [{"path":"file","line":N,"body":"..."},...]
-        4. This is a COMMENT review, not APPROVE or REQUEST_CHANGES
-        5. Report to channel that review was posted (with link)
+        2. Build review payload with summary body + inline comments
+        3. Tag findings with reviewer(s): [Stella], [Nova+Vega], etc.
+        4. Post as COMMENT review (not APPROVE/REQUEST_CHANGES) via:
+           gh api repos/{owner}/{repo}/pulls/{pr}/reviews
+        5. Report to channel that review was posted
       If mode is "report":
         Skip — summary already posted to channel.
     next: reflection
 
-  - id: reflection
+  reflection:
     task: |
-      Post-review self-improvement. DO NOT SKIP THIS STEP.
+      Post-review self-improvement. DO NOT SKIP.
 
-      ## Layer 1: Record
-      Write structured run record to `runs/<repo>-<pr_number>.md`:
-      - Verdicts, consensus findings, divergences, prompt blind spots, reviewer notes
+      Layer 1 — Record: Write to `runs/<repo>-<pr_number>.md`
+      Layer 2 — Prompt Evolution: Read recent runs/, update prompts/ if blind spots found
+      Layer 3 — Reviewer Assessment: Update `stats.md` per-reviewer accuracy
+      Layer 4 — Process Evolution: Did the workflow work well? Update if needed.
 
-      ## Layer 2: Prompt Evolution
-      Read recent runs/ — look for new patterns.
-      If blind spots or recurring issues found → update prompts/ immediately.
-
-      ## Layer 3: Reviewer Assessment
-      Update `stats.md` — per-reviewer accuracy, strengths, weaknesses.
-      If a reviewer is consistently weak in a dimension → consider adjusting its task template or swapping model.
-
-      ## Layer 4: Process Evolution (meta)
-      Ask: did the review PROCESS work well this round?
-      - Was the summary format useful? Should it change?
-      - Did the workflow steps flow well? Missing a step? Redundant step?
-      - Is this reflection step itself asking the right questions?
-      If yes → update workflow.yaml, SKILL.md, or this reflection node itself.
-      Log any process changes to stats.md Meta-Evolution Log.
-
-      ## Commit
-      Any file changed → commit with `evolve: <what changed and why>`
-      If nothing changed → note "no evolution needed" in run record.
+      Commit any changes with `evolve: <what changed and why>`
     next: register_tracking
 
-  - id: register_tracking
+  register_tracking:
     task: |
-      Register PR for follow-up tracking:
-      1. Add entry to `tracking.json`:
-         { "owner": "...", "repo": "...", "pr": N, "reviewed_at": "ISO date", "status": "open", "ground_truth": null }
-      2. The tracking cron will periodically check these PRs for human review feedback.
-      This closes the loop — human feedback is the most valuable evolution signal.
+      Add entry to `tracking.json`:
+      { "owner": "...", "repo": "...", "pr": N, "reviewed_at": "ISO date", "status": "open", "ground_truth": null }
+      The tracking cron checks these PRs for human review feedback later.
+    terminal: true
