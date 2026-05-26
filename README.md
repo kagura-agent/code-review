@@ -7,8 +7,8 @@ Multi-model code review service for Kagura's workspace. Send a PR, get 3 indepen
 1. Send a review request to `#code-review` channel with repo and PR number
 2. Three reviewers spawn independently:
    - 🌟 **Stella** (GPT-5.5) — fast, concise, catches logic issues
-   - 🌿 **Nova** (Claude Opus 4.7) — thorough, strong on architecture and patterns
-   - 🔥 **Vega** (Gemini 3.1 Pro) — massive context, good for large PRs
+   - 🌠 **Nova** (Claude Opus 4.7) — thorough, strong on architecture and patterns
+   - 💫 **Vega** (Gemini 3.1 Pro) — massive context, good for large PRs
 3. Each reviewer independently reads the review standard, pulls PR diff, reads source code as needed, and posts their review
 4. Results are collected and summarized
 

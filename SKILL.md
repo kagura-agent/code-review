@@ -54,8 +54,8 @@ Spawn config:
 | Reviewer | Model | Provider/ID |
 |----------|-------|-------------|
 | 🌟 Stella | GPT-5.5 | `default-llm-sg/gpt-5.5` |
-| 🌿 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` |
-| 🔥 Vega | Gemini 3.1 Pro | `default-llm-sg/gemini-3.1-pro` |
+| 🌠 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` |
+| 💫 Vega | Gemini 3.1 Pro | `default-llm-sg/gemini-3.1-pro` |
 
 Use `sessions_spawn` with `mode: "run"` for each. All 3 are independent — spawn them in parallel.
 
@@ -94,6 +94,6 @@ Key points: ...
 ## Notes
 
 - Each reviewer is isolated — they cannot see each other's reviews
-- Large PRs: Stella (32k context) may need to be selective about what to read. Nova (200k) and Vega (1M) handle large diffs better
+- All three reviewers support 1M token context — large PRs are handled natively
 - The review standard file is the single source of truth for what to check
 - Reviewers should NOT post `gh pr review` — they only produce text output. The human decides whether to submit the review to GitHub
