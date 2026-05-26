@@ -9,5 +9,19 @@
     "verdict": "needs_changes",
     "reviewers": 2,
     "run_id": 2844
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 96,
+    "round": 3,
+    "mode": "comment",
+    "reviewed_at": "2026-05-26T18:10+08:00",
+    "status": "open",
+    "verdict": "ready",
+    "review_url": "https://github.com/kagura-agent/cove/pull/96#pullrequestreview-4362806507",
+    "reviewers": 2,
+    "run_id": 2846,
+    "ground_truth": null
   }
 ]
