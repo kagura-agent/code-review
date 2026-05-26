@@ -48,20 +48,21 @@ nodes:
     task: |
       If mode is "comment":
         1. Parse each reviewer's findings in `[FILE:LINE] severity: description` format
-        2. Build inline review comments array:
-           - Each finding becomes a comment at the specific file + line
+        2. Build the review payload with BOTH:
+           a. **Summary body**: consolidated verdict, consensus findings, per-reviewer ratings
+           b. **Inline comments**: each finding as a comment at the specific file + line
            - Tag with reviewer(s): [Stella], [Nova+Vega], etc.
            - Consensus findings (2+ reviewers on same file/area) get priority mention
-        3. Post via gh api:
+        3. Post as a single review via gh api (summary + inline comments in one call):
            ```
            gh api repos/{owner}/{repo}/pulls/{pr}/reviews \
              -f event=COMMENT \
-             -f body="Multi-model review summary (3 reviewers)" \
+             -f body="<summary with verdict and consensus>" \
              --input comments.json
            ```
            Where comments.json contains: [{"path":"file","line":N,"body":"..."},...]
         4. This is a COMMENT review, not APPROVE or REQUEST_CHANGES
-        5. Report to channel that inline comments were posted
+        5. Report to channel that review was posted (with link)
       If mode is "report":
         Skip — summary already posted to channel.
     next: reflection
