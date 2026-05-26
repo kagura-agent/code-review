@@ -31,7 +31,7 @@ Steps (enforced by workflow, do not skip any):
 |----------|-------|-------------|
 | 🌟 Stella | GPT-5.5 | `default-llm-sg/gpt-5.5` |
 | 🌠 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` |
-| 💫 Vega | Gemini 3.1 Pro | `default-llm-sg/gemini-3.1-pro` |
+| 💫 Vega | Gemini 2.5 Pro | `default-llm-sg/gemini-2.5-pro` |
 
 All three support 1M token context.
 
