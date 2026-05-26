@@ -9,26 +9,33 @@ When a message arrives in this channel matching:
 review <owner>/<repo>#<pr_number>
 ```
 
-## Execution Steps
+## Execution
 
-### 1. Parse Request
-Extract `owner`, `repo`, and `pr_number` from the message.
+**Use FlowForge.** Run `workflow.yaml` — it enforces all steps including reflection and tracking.
 
-### 2. Load Review Standard
-```bash
-# Check for project-specific prompt first
-PROMPT_FILE="prompts/${repo}.prompt.md"
-if [ ! -f "$PROMPT_FILE" ]; then
-  PROMPT_FILE="prompts/default.prompt.md"
-fi
 ```
-Read the prompt file content — this is the review standard.
+flowforge run workflow.yaml --input "review <owner>/<repo>#<pr_number>"
+```
 
-### 3. Spawn Three Reviewers
+Steps (enforced by workflow, do not skip any):
+1. **parse_request** — extract owner/repo/pr, validate format
+2. **load_prompt** — load project-specific or default review standard
+3. **spawn_reviewers** — 3 parallel subagents (Stella/Nova/Vega), each pulls diff independently
+4. **post_summary** — consolidate reviews, post to channel
+5. **reflection** — write run record, check for prompt evolution opportunities, update prompt if needed
+6. **register_tracking** — add PR to `tracking.json` for human-review follow-up
 
-Spawn 3 independent subagents, each with a different model. **Do NOT pre-feed the diff** — let each reviewer pull it themselves via `gh`.
+### Reviewer Config
 
-Each reviewer gets the same task template:
+| Reviewer | Model | Provider/ID |
+|----------|-------|-------------|
+| 🌟 Stella | GPT-5.5 | `default-llm-sg/gpt-5.5` |
+| 🌠 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` |
+| 💫 Vega | Gemini 3.1 Pro | `default-llm-sg/gemini-3.1-pro` |
+
+All three support 1M token context.
+
+### Reviewer Task Template
 
 ```
 You are a code reviewer. Your task:
@@ -50,25 +57,7 @@ Write your review. Be specific with file names and line numbers.
 At the end, rate: ✅ Ready / ⚠️ Needs Changes / ❌ Major Issues
 ```
 
-Spawn config:
-| Reviewer | Model | Provider/ID |
-|----------|-------|-------------|
-| 🌟 Stella | GPT-5.5 | `default-llm-sg/gpt-5.5` |
-| 🌠 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` |
-| 💫 Vega | Gemini 3.1 Pro | `default-llm-sg/gemini-3.1-pro` |
-
-Use `sessions_spawn` with `mode: "run"` for each. All 3 are independent — spawn them in parallel.
-
-### 4. Collect Results
-
-After all 3 complete, summarize:
-- Consensus issues (found by 2+ reviewers) — high confidence
-- Unique findings — worth checking but may be false positives
-- Overall verdict (if all say ✅, it's probably good)
-
-### 5. Post Summary
-
-Post the consolidated review summary back to the channel. Format:
+### Summary Format
 
 ```
 ## Code Review: <owner>/<repo>#<pr_number>
@@ -91,41 +80,13 @@ Key points: ...
 ### Overall Verdict: ✅/⚠️/❌
 ```
 
-### 6. Post-Review Reflection (self-improvement loop)
+### PR Tracking (cron-driven)
 
-After posting the summary, run a silent reflection step — not for the user, for the service itself.
-
-**Write to `runs/<repo>-<pr_number>.md`:**
-
-```markdown
-# Review: <owner>/<repo>#<pr_number>
-Date: <ISO date>
-Reviewers: Stella / Nova / Vega
-
-## Verdicts
-- Stella: ✅/⚠️/❌
-- Nova: ✅/⚠️/❌
-- Vega: ✅/⚠️/❌
-
-## Consensus Findings
-- <issues found by 2+ reviewers>
-
-## Divergences
-- <where reviewers disagreed, and which was more likely correct based on code evidence>
-
-## Prompt Blind Spots
-- <anything this review exposed that the prompt didn't cover>
-
-## Reviewer Notes
-- <which reviewer was strongest this round and why>
-```
-
-**Every 10 runs**, trigger a prompt evolution cycle:
-1. Read all `runs/` since last evolution
-2. Extract patterns: recurring blind spots, consistent reviewer strengths/weaknesses, noise dimensions
-3. Update `prompts/default.prompt.md` (or project-specific prompts) accordingly
-4. Commit with message `evolve: prompt iteration N — <what changed>`
-5. Write a one-line summary to `CHANGELOG.md`
+A cron job periodically checks `tracking.json` for PRs we've reviewed:
+- Pulls human review comments via `gh pr reviews` and `gh pr comments`
+- Compares human findings vs our findings → identifies prompt blind spots
+- Updates run records with `ground_truth` data
+- This is the highest-value evolution signal
 
 ## Notes
 

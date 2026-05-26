@@ -1,0 +1,61 @@
+# code-review workflow
+# FlowForge enforced — no step can be skipped
+
+name: code-review
+description: Multi-model PR review with post-review reflection and PR tracking
+version: "1.0"
+
+nodes:
+  - id: parse_request
+    task: |
+      Parse the review request. Extract owner, repo, and pr_number.
+      Validate format: `review <owner>/<repo>#<pr_number>`
+      If invalid, reply with usage hint and stop.
+    next: load_prompt
+
+  - id: load_prompt
+    task: |
+      Load review standard from `prompts/`:
+      1. Check `prompts/<repo>.prompt.md` (project-specific)
+      2. Fallback to `prompts/default.prompt.md`
+      Read the file content — this is what reviewers will use.
+    next: spawn_reviewers
+
+  - id: spawn_reviewers
+    task: |
+      Spawn 3 independent reviewer subagents in parallel (sessions_spawn, mode: "run"):
+      - 🌟 Stella: model `default-llm-sg/gpt-5.5`
+      - 🌠 Nova: model `default-llm-sg/claude-opus-4.7`
+      - 💫 Vega: model `default-llm-sg/gemini-3.1-pro`
+      Each gets the review standard + PR details. Do NOT pre-feed the diff.
+      Let each reviewer pull via `gh pr view` and `gh pr diff` themselves.
+      Wait for all 3 to complete.
+    next: post_summary
+
+  - id: post_summary
+    task: |
+      Consolidate the 3 reviews into a structured summary:
+      - Consensus findings (2+ reviewers agree) — high confidence
+      - Per-reviewer rating and key points
+      - Overall verdict
+      Post to channel. Use the format from SKILL.md step 5.
+    next: reflection
+
+  - id: reflection
+    task: |
+      Post-review self-improvement. DO NOT SKIP THIS STEP.
+      1. Write structured run record to `runs/<repo>-<pr_number>.md`:
+         - Verdicts, consensus findings, divergences, prompt blind spots, reviewer notes
+      2. Read recent runs/ — look for new patterns
+      3. If blind spots or recurring issues found → update prompt immediately, commit
+      4. If nothing new → note "no evolution needed" in run record
+      This is how the service gets better. Every review is an evolution opportunity.
+    next: register_tracking
+
+  - id: register_tracking
+    task: |
+      Register PR for follow-up tracking:
+      1. Add entry to `tracking.json`:
+         { "owner": "...", "repo": "...", "pr": N, "reviewed_at": "ISO date", "status": "open", "ground_truth": null }
+      2. The tracking cron will periodically check these PRs for human review feedback.
+      This closes the loop — human feedback is the most valuable evolution signal.
