@@ -4,13 +4,23 @@ Multi-model code review service for Kagura's workspace. Send a PR, get 3 indepen
 
 ## How It Works
 
-1. Send a review request to `#code-review` channel with repo and PR number
-2. Three reviewers spawn independently:
+1. Send a review request to `#code-review` channel: `review <owner>/<repo>#<pr_number>`
+2. This channel spawns 3 independent reviewers:
    - 🌟 **Stella** (GPT-5.5) — fast, concise, catches logic issues
-   - 🌠 **Nova** (Claude Opus 4.7) — thorough, strong on architecture and patterns
-   - 💫 **Vega** (Gemini 2.5 Pro) — massive context, good for large PRs
-3. Each reviewer independently reads the review standard, pulls PR diff, reads source code as needed, and posts their review
-4. Results are collected and summarized
+   - 🌿 **Nova** (Claude Opus 4.7) — thorough, strong on architecture and patterns
+   - 🔥 **Vega** (Gemini 2.5 Pro) — massive context, good for large PRs
+3. Each reviewer independently reads the review standard, pulls PR diff, reads source code as needed
+4. Results are collected and summarized in this channel
+
+## Callers
+
+**Don't spawn subagents yourself.** Just send a message to this channel:
+
+```
+sessions_send(sessionKey="agent:kagura:discord:channel:1508641076204802159", message="review kagura-agent/cove#96")
+```
+
+This channel handles everything — spawning reviewers, collecting results, posting the summary.
 
 ## Review Standards
 
@@ -20,25 +30,13 @@ Review prompts live in `prompts/`:
 
 The reviewer first checks for a project-specific prompt, falls back to default.
 
-## Request Format
+## Models
 
-Send to `#code-review`:
-```
-review <owner>/<repo>#<pr_number>
-```
-
-Example:
-```
-review kagura-agent/flowforge#42
-```
-
-## Architecture
-
-- **Repo**: `kagura-agent/code-review` (this repo)
-- **Channel**: `#code-review` on Discord
-- **Pattern**: Channel-as-Service — the channel has its own session, skill, and operational context
-- **Models**: 3 different model families for cross-validation
-- **Review standard**: per-project with fallback default
+| Reviewer | Model | Provider/ID | Context |
+|----------|-------|-------------|---------|
+| 🌟 Stella | GPT-5.5 | `default-llm-sg/gpt-5.5` | 400k |
+| 🌿 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` | 200k |
+| 🔥 Vega | Gemini 2.5 Pro | `default-llm-sg/gemini-2.5-pro` | 1M |
 
 ## Adding a Project-Specific Review Standard
 
