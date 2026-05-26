@@ -4,8 +4,17 @@
     "repo": "cove",
     "pr": 96,
     "reviewed_at": "2026-05-26T17:15+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r3": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": ["cors-preflight", "route-ordering"]
+    },
     "verdict": "needs_changes",
     "reviewers": 2,
     "run_id": 2844
@@ -17,11 +26,18 @@
     "round": 3,
     "mode": "comment",
     "reviewed_at": "2026-05-26T18:10+08:00",
-    "status": "open",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": []
+    },
     "verdict": "ready",
     "review_url": "https://github.com/kagura-agent/cove/pull/96#pullrequestreview-4362806507",
     "reviewers": 2,
-    "run_id": 2846,
-    "ground_truth": null
+    "run_id": 2846
   }
 ]

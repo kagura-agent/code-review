@@ -30,6 +30,12 @@
 - Fix: Added maxTokens=65536 + contextWindow=1048576 for all Gemini models (official Google specs)
 - Also discovered 12 other models with wrong maxTokens/contextWindow across 3 providers — all corrected
 
+## Ground Truth
+
+**Human reviewer**: daniyuu — APPROVED (no comments)
+**PR outcome**: MERGED 2026-05-26T11:00:07Z
+**Verdict accuracy**: ✅ Our "ready" matched human approval. No missed issues.
+
 ## Process Notes
 - FlowForge `advance` without `-w` flag defaults to wrong workflow when multiple active — need to always specify `-w code-review`
 - Got distracted debugging provider config mid-flow, should have noted FlowForge state and come back

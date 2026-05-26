@@ -26,10 +26,19 @@
 - **Stella only**: PUBLIC_PATHS exact-match fragility (trailing slash), missing test coverage for global middleware reject on non-@me routes.
 - **Nova only**: /api/health dead code in PUBLIC_PATHS, OAuth token in URL query (pre-existing risk amplified), config.oauth dependency undocumented, route registration order undocumented.
 
-## Prompt Blind Spots
+## Ground Truth
 
-- None obvious — the default prompt's "CORS/preflight interaction" dimension was directly useful (both reviewers caught it).
-- The "Route registration ordering" dimension also triggered well.
+**Human reviewer**: daniyuu (COLLABORATOR) — approved without comments after round 3 fixes.
+**PR outcome**: Merged 2026-05-26T11:00:07Z
+
+**Assessment**:
+- ✅ CORS OPTIONS preflight catch was correct and actionable — PR author fixed it before merge
+- ✅ Health endpoint test suggestion adopted
+- ✅ Round 1 "needs changes" → round 3 "ready" → human approved → merged. Review lifecycle worked as intended.
+- No human-caught blind spots (approval was clean)
+- Nova's unique findings (dead code in PUBLIC_PATHS, OAuth token in URL) were valid but non-blocking — not tested by human reviewer
+
+**Prompt effectiveness**: Default prompt's CORS/preflight and route-ordering dimensions triggered correctly. No blind spots identified this round.
 
 ## Process Notes
 
