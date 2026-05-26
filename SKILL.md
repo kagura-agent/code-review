@@ -14,6 +14,8 @@ User says anything that implies "review this PR" + provides a PR reference (link
 
 **Cross-channel callers:** Other channels/skills should send a structured message via `sessions_send`. Format is documented in the Callers section — that's for skill authors, not end users.
 
+**Return routing:** When a request comes from another channel, remember the source channel. After review completes, `sessions_send` the results BACK to the requesting channel. #code-review only keeps run logs, not results.
+
 ## Execution
 
 **Use FlowForge.** Do not manually execute individual steps.
@@ -50,7 +52,9 @@ Cross-channel callers always get report mode. Comment mode is only available in 
 sessions_send(sessionKey="agent:kagura:discord:channel:1508641076204802159", message="review kagura-agent/cove#96")
 ```
 
-This channel handles everything — FlowForge runs the workflow, spawns reviewers, collects results, posts summary.
+This channel handles everything — FlowForge runs the workflow, spawns reviewers, collects results, and **sends results back to the requesting channel**.
+
+**Return routing rule:** Results go back to whoever requested. If #cove asks for a review, results go to #cove. If requested directly in #code-review, results stay here.
 
 ## Reviewers
 
