@@ -7,8 +7,8 @@ Multi-model code review service for Kagura's workspace. Send a PR, get 3 indepen
 1. Send a review request to `#code-review` channel: `review <owner>/<repo>#<pr_number>`
 2. This channel spawns 3 independent reviewers:
    - 🌟 **Stella** (GPT-5.5) — fast, concise, catches logic issues
-   - 🌿 **Nova** (Claude Opus 4.7) — thorough, strong on architecture and patterns
-   - 🔥 **Vega** (Gemini 2.5 Pro) — massive context, good for large PRs
+   - 🌠 **Nova** (Claude Opus 4.7) — thorough, strong on architecture and patterns
+   - 💫 **Vega** (Gemini 3.1 Pro) — massive context, good for large PRs
 3. Each reviewer independently reads the review standard, pulls PR diff, reads source code as needed
 4. Results are collected and summarized in this channel
 
@@ -34,9 +34,9 @@ The reviewer first checks for a project-specific prompt, falls back to default.
 
 | Reviewer | Model | Provider/ID | Context |
 |----------|-------|-------------|---------|
-| 🌟 Stella | GPT-5.5 | `default-llm-sg/gpt-5.5` | 400k |
-| 🌿 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` | 200k |
-| 🔥 Vega | Gemini 2.5 Pro | `default-llm-sg/gemini-2.5-pro` | 1M |
+| 🌟 Stella | GPT-5.5 | `default-llm-sg/gpt-5.5` | 1.05M |
+| 🌠 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` | 1M |
+| 💫 Vega | Gemini 3.1 Pro | `default-llm-sg/gemini-3.1-pro-preview` | 1M |
 
 ## Adding a Project-Specific Review Standard
 

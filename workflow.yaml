@@ -26,7 +26,7 @@ nodes:
       Spawn 3 independent reviewer subagents in parallel (sessions_spawn, mode: "run"):
       - 🌟 Stella: model `default-llm-sg/gpt-5.5`
       - 🌠 Nova: model `default-llm-sg/claude-opus-4.7`
-      - 💫 Vega: model `default-llm-sg/gemini-2.5-pro`
+      - 💫 Vega: model `default-llm-sg/gemini-3.1-pro-preview`
       Each gets the review standard + PR details. Do NOT pre-feed the diff.
       Let each reviewer pull via `gh pr view` and `gh pr diff` themselves.
       Wait for all 3 to complete.
