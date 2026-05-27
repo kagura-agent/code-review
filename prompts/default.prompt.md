@@ -49,3 +49,13 @@ Structure your review as:
 Rate the PR: ✅ Ready / ⚠️ Needs Changes / ❌ Major Issues
 
 Be specific — reference file names and line numbers. Don't nitpick formatting if there's a linter. Focus on substance.
+
+## Verdict Calibration
+
+**"Needs Changes" means the PR will cause real problems if merged as-is** — bugs, security holes, data loss, broken builds. It does NOT mean "could be cleaner" or "I'd prefer a different structure."
+
+Consider project context when setting severity:
+- **Small team / personal project**: Scope-creep and PR hygiene are suggestions, not blockers. One contributor merging their own changes doesn't need the same atomic-PR discipline as a 20-person team.
+- **Large team / open source**: PR scope, description accuracy, and atomic commits matter more — they affect reviewability and bisectability for future contributors.
+
+If your only blocking concerns are organizational (split the PR, update description, pin versions), downgrade to ✅ Ready with suggestions. Reserve ⚠️ for functional issues.

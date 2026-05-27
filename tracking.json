@@ -48,9 +48,17 @@
     "repo": "cove",
     "pr": 100,
     "reviewed_at": "2026-05-27T04:16:06.154813Z",
-    "status": "open",
-    "ground_truth": null,
-    "last_checked": "2026-05-27T12:39+08:00",
-    "check_note": "No human reviews yet. PR still open."
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "needs_changes",
+      "accuracy": "over_flagged",
+      "blind_spots": [],
+      "noise": ["deploy scope creep", "npm version pinning", "swallowed stderr", "/tmp cleanup"],
+      "calibration": "verdict too conservative for small-team/personal project context"
+    },
+    "last_checked": "2026-05-27T14:30+08:00"
   }
 ]
