@@ -13,7 +13,10 @@
       "our_verdict_r3": "ready",
       "accuracy": "correct",
       "blind_spots": [],
-      "effective_dimensions": ["cors-preflight", "route-ordering"]
+      "effective_dimensions": [
+        "cors-preflight",
+        "route-ordering"
+      ]
     },
     "verdict": "needs_changes",
     "reviewers": 2,
@@ -39,5 +42,15 @@
     "review_url": "https://github.com/kagura-agent/cove/pull/96#pullrequestreview-4362806507",
     "reviewers": 2,
     "run_id": 2846
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 100,
+    "reviewed_at": "2026-05-27T04:16:06.154813Z",
+    "status": "open",
+    "ground_truth": null,
+    "last_checked": "2026-05-27T12:39+08:00",
+    "check_note": "No human reviews yet. PR still open."
   }
 ]
