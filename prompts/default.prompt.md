@@ -54,6 +54,8 @@ Be specific — reference file names and line numbers. Don't nitpick formatting 
 
 **"Needs Changes" means the PR will cause real problems if merged as-is** — bugs, security holes, data loss, broken builds. It does NOT mean "could be cleaner" or "I'd prefer a different structure."
 
+**PR description vs actual diff**: PR descriptions can go stale as code evolves across force-pushes. Always judge by the actual diff, not the description. If the description claims files/features that aren't in the diff, that's a "update the description" suggestion, NOT a sign of missing code. Check the diff to determine completeness, not the description.
+
 Consider project context when setting severity:
 - **Small team / personal project**: Scope-creep and PR hygiene are suggestions, not blockers. One contributor merging their own changes doesn't need the same atomic-PR discipline as a 20-person team.
 - **Large team / open source**: PR scope, description accuracy, and atomic commits matter more — they affect reviewability and bisectability for future contributors.
