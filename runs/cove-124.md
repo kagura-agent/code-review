@@ -42,6 +42,17 @@
 - **Final edit failure loses reply** (Stella) — final `editMessage` has no try/catch fallback. Valid critical issue.
 - Vega's ❌ was false positive — misread outdated PR description as missing code.
 
+## R6 Results (FlowForge #3353)
+
+| Reviewer | Model | Verdict |
+|----------|-------|---------|
+| 🌟 Stella | gpt-5.5 | ✅ Ready |
+| 🌠 Nova | claude-opus-4.7 | ✅ Ready |
+| 💫 Vega | gemini-3.1-pro-preview | ✅ Ready |
+
+R5 critical (final edit fallback) resolved. No new issues.
+Vega prompt fix worked — no false positive this round.
+
 ## Process Notes
 - R1-R3 were manual (no FlowForge) — lost reflection/tracking data
 - R4 first FlowForge-driven review — workflow works end-to-end
