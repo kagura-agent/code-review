@@ -15,9 +15,8 @@ Trigger: any message implying "review this PR" + a PR reference (link, `owner/re
 
 ## Modes
 
-- **report** (default) — summary in channel only
-- **comment** — summary + review posted to PR via `gh pr review`
-- Detect comment mode when user says "贴到PR", "post comment", "写到PR上", etc.
+- Default: always post review to PR via `gh pr review --comment`
+- Only skip PR posting if user explicitly says "不要贴PR" or "just channel"
 
 ## Execution
 
