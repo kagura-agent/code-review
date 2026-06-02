@@ -68,7 +68,8 @@ nodes:
       Layer 3 — Reviewer Assessment: Update `stats.md` per-reviewer accuracy
       Layer 4 — Process Evolution: Did the workflow work well? Update if needed.
 
-      Commit any changes with `evolve: <what changed and why>`
+      Commit and push any changes with `evolve: <what changed and why>`
+      Push is mandatory — local-only commits are invisible to reviewers.
     next: register_tracking
 
   register_tracking:
