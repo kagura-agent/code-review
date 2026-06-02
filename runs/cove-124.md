@@ -53,6 +53,35 @@
 R5 critical (final edit fallback) resolved. No new issues.
 Vega prompt fix worked — no false positive this round.
 
+## Ground Truth
+
+**Human reviewer**: daniyuu
+**Human verdict**: Approved (no comments)
+**Merged**: 2026-06-02T08:32:35Z
+
+### What we caught correctly
+- `disableBlockStreaming` semantics needed clarification (R1) → author confirmed and documented
+- Concurrent edit race condition (R1) → fixed with editQueue serialization
+- `deleteMessage` no-op callback (R1, R3) → wired up properly
+- Orphaned draft on streaming failure (R2) → cleanup implemented
+- Tool progress config passthrough missing (R2) → fixed
+- Scroll over-firing (R1) → narrowed dependencies
+- Final edit failure data loss risk (R5) → try/catch + fallback added
+- `.tsbuildinfo` in diff (R1) → cleaned up
+
+### What we missed
+- Nothing identified — human approved without comments, no findings we missed
+
+### Noise / over-flagging
+- Vega R5 false positive (❌ Major Issues from stale PR description) — prompt fix in R6 resolved this
+- Some non-blocking suggestions were repeated across rounds (deleteMessage callback parameter) before being addressed
+
+### Calibration
+- R1 verdict "Needs Changes" was **correct** — the critical issues (concurrent edits, deleteMessage no-op) were real bugs that got fixed
+- Iterative review through 6 rounds was valuable — each round caught new issues introduced by fixes (e.g., R5 caught final-edit fallback gap)
+- Self-review scenario (author = repo owner): human reviewer rubber-stamped, so our multi-model review was the actual quality gate
+- **Accuracy**: correct (issues found were real, fixes were verified)
+
 ## Process Notes
 - R1-R3 were manual (no FlowForge) — lost reflection/tracking data
 - R4 first FlowForge-driven review — workflow works end-to-end

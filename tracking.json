@@ -71,12 +71,22 @@
     "repo": "cove",
     "pr": 124,
     "reviewed_at": "2026-06-02T16:30+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_findings_correct": ["concurrent edit race", "deleteMessage no-op", "orphaned draft cleanup", "final edit fallback", "tsbuildinfo cleanup", "scroll over-firing", "tool progress config"],
+      "blind_spots": [],
+      "noise": ["vega R5 false positive from stale PR description"],
+      "accuracy": "correct",
+      "calibration": "iterative review was the actual quality gate; human rubber-stamped"
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 6,
     "flowforge_instance": 3346,
-    "notes": "R6: all issues resolved. 3/3 Ready."
+    "last_checked": "2026-06-02T20:26+08:00",
+    "notes": "R6: all issues resolved. 3/3 Ready. Merged 2026-06-02."
   }
 ]
