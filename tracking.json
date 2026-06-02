@@ -70,12 +70,13 @@
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 124,
-    "reviewed_at": "2026-06-02T14:45+08:00",
+    "reviewed_at": "2026-06-02T15:45+08:00",
     "status": "open",
     "ground_truth": null,
-    "verdict": "ready",
+    "verdict": "needs_changes",
     "reviewers": 3,
-    "rounds": 4,
-    "flowforge_instance": 3346
+    "rounds": 5,
+    "flowforge_instance": 3346,
+    "notes": "R5: final edit fallback missing (Stella). Vega false positive from stale PR description."
   }
 ]
