@@ -26,9 +26,9 @@ nodes:
   spawn_reviewers:
     task: |
       Spawn 3 independent reviewer subagents in parallel (sessions_spawn, mode: "run", runTimeoutSeconds: 0):
-      - 🌟 Stella: model `floway-jp/gpt-5.5`
-      - 🌠 Nova: model `floway-jp/claude-opus-4-7`
-      - 💫 Vega: model `floway-jp/gemini-3.1-pro-preview`
+      - 🌟 Stella: model `default-llm-sg/gpt-5.5`
+      - 🌠 Nova: model `default-llm-sg/claude-opus-4.7`
+      - 💫 Vega: model `default-llm-sg/gemini-3.1-pro-preview`
       Each gets the review standard + PR details. Do NOT pre-feed the diff.
       Let each reviewer pull via `gh pr view` and `gh pr diff` themselves.
       Each reviewer must `export https_proxy=http://127.0.0.1:1083` first.

@@ -1,79 +1,52 @@
-# Code Review Service — SKILL.md
+---
+name: code-review
+description: "Multi-model PR review — spawn 3 reviewers (GPT-5.5, Claude Opus 4.7, Gemini 3.1 Pro), consolidate findings, optionally post to GitHub."
+---
 
-Channel-as-service skill for multi-model code review.
+# Code Review
 
-## Trigger
+Trigger: any message implying "review this PR" + a PR reference (link, `owner/repo#123`, or just `#N` with context).
 
-This channel uses natural language — no fixed command format required.
+## Reviewers
 
-User says anything that implies "review this PR" + provides a PR reference (link, `owner/repo#123`, or just a number if context is clear). Auto-detect owner, repo, PR number.
+- 🌟 Stella — `default-llm-sg/gpt-5.5`
+- 🌠 Nova — `default-llm-sg/claude-opus-4.7`
+- 💫 Vega — `default-llm-sg/gemini-3.1-pro-preview`
 
-**Mode detection:**
-- Default: **report** (summary in channel only)
-- User mentions posting to PR ("贴到PR", "post comment", "写到PR上", etc.) → **comment** mode
+## Modes
 
-**Cross-channel callers:** Other channels/skills should send a structured message via `sessions_send`. Format is documented in the Callers section — that's for skill authors, not end users.
-
-**Return routing:** When a request comes from another channel, remember the source channel. After review completes, `sessions_send` the results BACK to the requesting channel. #code-review only keeps run logs, not results.
+- **report** (default) — summary in channel only
+- **comment** — summary + review posted to PR via `gh pr review`
+- Detect comment mode when user says "贴到PR", "post comment", "写到PR上", etc.
 
 ## Execution
 
-**Use FlowForge.** Do not manually execute individual steps.
+**Always use FlowForge. Never manually spawn reviewers.**
 
 ```bash
 flowforge run code-review --input '{"owner":"<owner>","repo":"<repo>","pr":<number>,"mode":"report|comment"}'
 ```
 
-The workflow is defined in `workflow.yaml` in this directory. It handles:
-1. Parse request → extract owner/repo/pr/mode
-2. Load review standard → project-specific or default prompt
-3. Spawn 3 independent reviewers (Stella/Nova/Vega, different model families)
-4. Collect and post consolidated summary
-5. Post to PR (comment mode only)
-6. Reflection — run record, prompt evolution, reviewer assessment, process evolution
-7. Register tracking — add to tracking.json for follow-up
+The workflow handles everything: reviewer spawning, prompt loading, consolidation, PR posting, reflection, and tracking. Manual spawning skips reflection and tracking — that's how we lose institutional memory.
 
-**Do not skip steps.** The workflow includes reflection and tracking that are easy to forget when doing it manually — that's the whole point of FlowForge.
+## Review Standards
 
-## Modes
+- `prompts/<repo>.prompt.md` — project-specific
+- `prompts/default.prompt.md` — fallback
 
-| Mode | Syntax | Behavior |
-|------|--------|----------|
-| Report (default) | `review owner/repo#123` | Summary in channel only |
-| Comment | `review owner/repo#123 --comment` | Summary + review posted to PR via `gh api` |
+## Cross-channel Callers
 
-Cross-channel callers always get report mode. Comment mode is only available in #code-review directly.
-
-## Callers
-
-**Don't spawn subagents yourself.** Just send a message to this channel:
-
+Other channels request review via `sessions_send`:
 ```
 sessions_send(sessionKey="agent:kagura:discord:channel:1508641076204802159", message="review kagura-agent/cove#96")
 ```
 
-This channel handles everything — FlowForge runs the workflow, spawns reviewers, collects results, and **sends results back to the requesting channel**.
-
-**Return routing rule:** Results go back to whoever requested. If #cove asks for a review, results go to #cove. If requested directly in #code-review, results stay here.
-
-## Reviewers
-
-| Reviewer | Model | Provider/ID |
-|----------|-------|-------------|
-| 🌟 Stella | GPT-5.5 | `default-llm-sg/gpt-5.5` |
-| 🌠 Nova | Claude Opus 4.7 | `default-llm-sg/claude-opus-4.7` |
-| 💫 Vega | Gemini 3.1 Pro | `default-llm-sg/gemini-3.1-pro-preview` |
-
-## Review Standards
-
-Review prompts live in `prompts/`:
-- `prompts/<repo>.prompt.md` — project-specific standards
-- `prompts/default.prompt.md` — fallback for any project
+Results route back to the requesting channel.
 
 ## Key Files
 
-- `workflow.yaml` — FlowForge workflow definition (source of truth for steps)
+- `workflow.yaml` — FlowForge workflow (source of truth)
 - `prompts/` — review standard prompts
-- `runs/` — run records (reflection output)
-- `stats.md` — per-reviewer assessment and meta-evolution log
+- `runs/` — run records
+- `stats.md` — per-reviewer assessment
 - `tracking.json` — PR follow-up tracking

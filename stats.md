@@ -4,14 +4,18 @@
 
 | Reviewer | Model | Reviews | Avg Runtime | Reliability | Notes |
 |----------|-------|---------|-------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 3 | ~2m30s | 3/3 (100%) | Thorough, catches build artifacts. Slower but consistent. |
-| 🌠 Nova | claude-opus-4.7 | 3 | ~40s | 3/3 (100%) | Fast, detailed suggestions, good security sense. |
-| 💫 Vega | gemini-3.1-pro-preview | 3 | N/A | 0/3 (0%) | Failed all 3 rounds. R1-R2: provider issue (0 tokens). R3: missing maxTokens config. Now fixed — pending verification. |
+| 🌟 Stella | gpt-5.5 | 7 | ~4m | 7/7 (100%) | Slowest but most thorough. Runs local tests (pnpm test/check/build). High token usage (~1M). |
+| 🌠 Nova | claude-opus-4.7 | 7 | ~2m | 7/7 (100%) | Fast, detailed suggestions, good security sense. Consistent. |
+| 💫 Vega | gemini-3.1-pro-preview | 7 | ~1.5m | 4/7 (57%) | R1-R3 (cove-96) failed due to provider/config issues. Fixed since cove-124 R2 — 4/4 since fix. Fastest. |
 
 ## Review History
 
-| PR | Repo | Date | Mode | Verdict | Instance |
-|----|------|------|------|---------|----------|
-| #96 | kagura-agent/cove | 2026-05-26 | report | ⚠️ Needs Changes | #2844 |
-| #96 | kagura-agent/cove | 2026-05-26 | report (r2) | ✅ Ready | #2844 |
-| #96 | kagura-agent/cove | 2026-05-26 | comment (r3) | ✅ Ready | #2846 |
+| PR | Repo | Date | Mode | Verdict | Notes |
+|----|------|------|------|---------|-------|
+| #96 | kagura-agent/cove | 2026-05-26 | report | ⚠️ Needs Changes | Vega failed (provider issue) |
+| #96 | kagura-agent/cove | 2026-05-26 | report (r2) | ✅ Ready | Vega failed again |
+| #96 | kagura-agent/cove | 2026-05-26 | comment (r3) | ✅ Ready | Vega failed (maxTokens) |
+| #124 | kagura-agent/cove | 2026-06-02 | report (R1) | ⚠️ Needs Changes | Wrong model IDs → Stella/Vega fallback to claude-opus-4.6 |
+| #124 | kagura-agent/cove | 2026-06-02 | report (R2) | ✅ Ready | Model IDs fixed, all 3 models correct |
+| #124 | kagura-agent/cove | 2026-06-02 | report (R3) | ✅ Ready | R2 suggestions addressed |
+| #124 | kagura-agent/cove | 2026-06-02 | report (R4) | ✅ Ready | First FlowForge-driven review |
