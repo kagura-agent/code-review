@@ -43,20 +43,8 @@ nodes:
       - Per-reviewer unique findings
       - Per-reviewer rating and key points
       - Overall verdict
-      Post to channel.
-    next: post_comment
-
-  post_comment:
-    task: |
-      If mode is "comment":
-        1. Parse each reviewer's findings in `[FILE:LINE] severity: description` format
-        2. Build review payload with summary body + inline comments
-        3. Tag findings with reviewer(s): [Stella], [Nova+Vega], etc.
-        4. Post as COMMENT review (not APPROVE/REQUEST_CHANGES) via:
-           gh api repos/{owner}/{repo}/pulls/{pr}/reviews
-        5. Report to channel that review was posted
-      If mode is "report":
-        Skip — summary already posted to channel.
+      Post to channel AND to the PR via `gh pr review --comment`.
+      Always post to PR regardless of mode — Luna wants review comments on the PR.
     next: reflection
 
   reflection:
