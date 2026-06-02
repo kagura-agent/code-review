@@ -56,9 +56,26 @@
       "our_verdict": "needs_changes",
       "accuracy": "over_flagged",
       "blind_spots": [],
-      "noise": ["deploy scope creep", "npm version pinning", "swallowed stderr", "/tmp cleanup"],
+      "noise": [
+        "deploy scope creep",
+        "npm version pinning",
+        "swallowed stderr",
+        "/tmp cleanup"
+      ],
       "calibration": "verdict too conservative for small-team/personal project context"
     },
     "last_checked": "2026-05-27T14:30+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 124,
+    "reviewed_at": "2026-06-02T14:45+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 4,
+    "flowforge_instance": 3346
   }
 ]
