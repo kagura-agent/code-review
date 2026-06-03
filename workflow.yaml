@@ -33,6 +33,8 @@ nodes:
       Let each reviewer pull via `gh pr view` and `gh pr diff` themselves.
       Each reviewer must `export https_proxy=http://127.0.0.1:1083` first.
       Reviewers must NOT post to GitHub — text output only.
+      Reviewers must output their review as plain text in their final message.
+      They must NOT use sessions_yield, sessions_send, or any messaging tool to deliver the review.
       Use sessions_yield to wait for all 3 to complete.
     next: post_summary
 
