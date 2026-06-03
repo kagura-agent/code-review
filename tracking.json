@@ -196,5 +196,18 @@
     "rounds": 3,
     "flowforge_instance": 3433,
     "notes": "R3: 3/3 ✅. XSS + paragraph collapse fixed. Vega clean for 2nd run after prompt fix."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 155,
+    "reviewed_at": "2026-06-03T10:25:43.464Z",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "flowforge_instance": 3444,
+    "notes": "Clean polish PR. 3/3 ✅. Vega 3rd consecutive clean."
   }
 ]
