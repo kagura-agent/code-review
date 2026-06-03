@@ -3,28 +3,34 @@
 **Repo**: kagura-agent/cove
 **Reviewed**: 2026-06-03
 **Files**: 5 (+938/-6)
-**FlowForge**: #3433
+**FlowForge**: #3433 (R1), #3440 (R2)
 
-## Verdicts
-| Reviewer | Model | Verdict |
-|----------|-------|---------|
-| Stella | GPT-5.5 | ⚠️ Needs Changes |
-| Nova | Claude Opus 4.7 | ⚠️ Needs Changes |
-| Vega | Gemini 3.1 Pro | ❌ Failed (timeout) |
+## Round 1 (react-markdown)
+| Reviewer | Verdict |
+|----------|---------|
+| Stella | ⚠️ Needs Changes |
+| Nova | ⚠️ Needs Changes |
+| Vega | ❌ Failed (timeout) |
 
-## Overall: ⚠️ Needs Changes
+Findings: p→span collapse, nested pre tags, no syntax highlighting claim.
 
-## Key Findings
-1. **`p` → `<span>` collapses multi-paragraph messages** (Stella+Nova) — real rendering bug
-2. **Nested `<pre><pre>` in fenced code blocks** (Stella) — double wrapping
-3. **No-language code blocks lose block styling** (Stella) — falls back to inline
-4. **No actual syntax highlighting** (Stella+Nova) — PR description overclaims
+## Round 2 (custom parser rewrite)
+| Reviewer | Verdict |
+|----------|---------|
+| Stella | ⚠️ Needs Changes |
+| Nova | ⚠️ Needs Changes |
+| Vega | ⚠️ Needs Changes |
+
+Findings: XSS via javascript: links (3/3), paragraph collapse persists (3/3), block-in-span invalid HTML (2/3).
+
+## Overall: ⚠️ Needs Changes (R2)
+
+## Key Milestones
+- **Vega recovered!** Prompt fix ("do not use sessions_yield") worked. First successful Vega review after 2 consecutive failures.
+- **3/3 consensus on XSS** — all three independently found the javascript: link vulnerability.
+- PR rewrote from react-markdown to custom parser between R1 and R2 — but core issues persisted.
 
 ## Reviewer Assessment
-- **Stella**: Ran build+lint. Found code block bugs (nested pre, no-language fallback) that Nova missed. Also caught table overflow and image sizing risks. Thorough.
-- **Nova**: Found the paragraph collapse bug with clear reproduction. Good UX observations (edited marker placement, React.memo). Strongest analysis of the rendering logic.
-- **Vega**: **Failed again** — timeout, 2nd consecutive failure. Reliability drops to 11/17 (65%).
-
-## Process Notes
-- Vega's consecutive failures are concerning. May need to investigate — is it the model, the proxy, or the diff size?
-- Both valid reviewers found the same critical (p→span) independently — high confidence it's a real bug.
+- **Stella**: 18/18 (100%). Found block-in-span + unused lang + table cell inline. Thorough.
+- **Nova**: 18/18 (100%). XSS analysis most detailed. Good architectural suggestions.
+- **Vega**: 12/18 (67%). Back from 2 consecutive fails. Clean review with good fix suggestion for paragraph collapse.

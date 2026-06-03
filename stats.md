@@ -4,9 +4,9 @@
 
 | Reviewer | Model | Reviews | Avg Runtime | Reliability | Notes |
 |----------|-------|---------|-------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 17 | ~3m | 17/17 (100%) | Most thorough. Runs tests locally. Catches rendering bugs others miss. |
-| 🌠 Nova | claude-opus-4.7 | 17 | ~2m | 17/17 (100%) | Consistently strongest. Best at logic analysis and UX implications. |
-| 💫 Vega | gemini-3.1-pro-preview | 17 | ~1m | 11/17 (65%) | 2 consecutive failures (cove-145 R1 + cove-156). Needs investigation. |
+| 🌟 Stella | gpt-5.5 | 18 | ~3m | 18/18 (100%) | Most thorough. Runs tests locally. Catches rendering/structural bugs. |
+| 🌠 Nova | claude-opus-4.7 | 18 | ~2m | 18/18 (100%) | Consistently strongest. Best at security (XSS), architecture, breaking changes. |
+| 💫 Vega | gemini-3.1-pro-preview | 18 | ~1m | 12/18 (67%) | Recovered after prompt fix (no sessions_yield). Good fix suggestions when working. |
 
 ## Review History
 
@@ -18,9 +18,8 @@
 | #143 | cove | 2026-06-03 | R1 | ✅ Ready |
 | #144 | cove | 2026-06-03 | R1-R2 | ✅ Ready (w/ caveat) |
 | #145 | cove | 2026-06-03 | R1-R2 | ✅ Ready |
-| #156 | cove | 2026-06-03 | R1 | ⚠️ Needs Changes |
+| #156 | cove | 2026-06-03 | R1-R2 | ⚠️ Needs Changes |
 
 ## Milestones
 - **cove-144 R1**: First PR where all 3 caught a genuine data-loss bug.
-- **cove-144 R2**: First split verdict — Stella found deeper edge case.
-- **cove-156**: Both valid reviewers caught same rendering bug (p→span). Vega 2nd consecutive fail.
+- **cove-156 R2**: 3/3 caught XSS vulnerability. Vega recovered after prompt fix.
