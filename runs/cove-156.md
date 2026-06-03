@@ -3,7 +3,7 @@
 **Repo**: kagura-agent/cove
 **Reviewed**: 2026-06-03
 **Files**: 5 (+938/-6)
-**FlowForge**: #3433 (R1), #3440 (R2)
+**FlowForge**: #3433 (R1), #3440 (R2), #3442 (R3)
 
 ## Round 1 (react-markdown)
 | Reviewer | Verdict |
@@ -12,8 +12,6 @@
 | Nova | ⚠️ Needs Changes |
 | Vega | ❌ Failed (timeout) |
 
-Findings: p→span collapse, nested pre tags, no syntax highlighting claim.
-
 ## Round 2 (custom parser rewrite)
 | Reviewer | Verdict |
 |----------|---------|
@@ -21,16 +19,26 @@ Findings: p→span collapse, nested pre tags, no syntax highlighting claim.
 | Nova | ⚠️ Needs Changes |
 | Vega | ⚠️ Needs Changes |
 
-Findings: XSS via javascript: links (3/3), paragraph collapse persists (3/3), block-in-span invalid HTML (2/3).
+## Round 3 (XSS + paragraph fixes)
+| Reviewer | Verdict |
+|----------|---------|
+| Stella | ✅ Ready |
+| Nova | ✅ Ready |
+| Vega | ✅ Ready |
 
-## Overall: ⚠️ Needs Changes (R2)
+## Overall: ✅ Ready (R3)
 
-## Key Milestones
-- **Vega recovered!** Prompt fix ("do not use sessions_yield") worked. First successful Vega review after 2 consecutive failures.
-- **3/3 consensus on XSS** — all three independently found the javascript: link vulnerability.
-- PR rewrote from react-markdown to custom parser between R1 and R2 — but core issues persisted.
+## Finding Evolution
+- R1: p→span collapse, nested pre tags
+- R2: XSS via javascript: links (3/3), paragraph collapse persists (3/3)
+- R3: Both fixed. Test suite format and XSS regression tests suggested.
 
 ## Reviewer Assessment
-- **Stella**: 18/18 (100%). Found block-in-span + unused lang + table cell inline. Thorough.
-- **Nova**: 18/18 (100%). XSS analysis most detailed. Good architectural suggestions.
-- **Vega**: 12/18 (67%). Back from 2 consecutive fails. Clean review with good fix suggestion for paragraph collapse.
+- Stella: 19/19 (100%). Consistently thorough across 3 rounds.
+- Nova: 19/19 (100%). Found XSS in R2, verified fix correctly in R3. Most detailed suggestions.
+- Vega: 13/19 (68%). R1 timeout, R2+R3 clean. Prompt fix ("no sessions_yield") effective.
+
+## Process Notes
+- 3 rounds to reach ✅. PR evolved significantly: react-markdown → custom parser → security fix.
+- Multi-round review process caught real bugs that would have shipped.
+- Vega's R2 recovery after prompt fix is a verified improvement.

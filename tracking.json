@@ -174,13 +174,13 @@
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 156,
-    "reviewed_at": "2026-06-03T09:11:12.083Z",
+    "reviewed_at": "2026-06-03T09:42:23.294Z",
     "status": "open",
     "ground_truth": null,
-    "verdict": "needs_changes",
+    "verdict": "ready",
     "reviewers": 2,
-    "rounds": 2,
+    "rounds": 3,
     "flowforge_instance": 3433,
-    "notes": "R2: custom parser. XSS + paragraph collapse. Vega recovered after prompt fix."
+    "notes": "R3: 3/3 ✅. XSS + paragraph collapse fixed. Vega clean for 2nd run after prompt fix."
   }
 ]
