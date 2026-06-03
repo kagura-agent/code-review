@@ -110,5 +110,17 @@
     "reviewers": 3,
     "rounds": 2,
     "notes": "R1 manual (not FlowForge), R2 via FlowForge #3410. 3/3 ✅ Ready both rounds."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 143,
+    "reviewed_at": "2026-06-03T05:56:34.927Z",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "flowforge_instance": 3422
   }
 ]
