@@ -156,5 +156,18 @@
     "flowforge_instance": 3424,
     "notes": "R1: critical migration ordering (3/3 consensus). R2: fixed, Stella found recovery edge case (1/3). Overall ready.",
     "last_checked": "2026-06-03T14:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 145,
+    "reviewed_at": "2026-06-03T07:14:33.121Z",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 2,
+    "rounds": 1,
+    "flowforge_instance": 3427,
+    "notes": "Vega failed (no output). 2/2 valid ✅. Breaking auth change flagged by Nova."
   }
 ]
