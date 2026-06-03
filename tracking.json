@@ -169,5 +169,18 @@
     "rounds": 2,
     "flowforge_instance": 3427,
     "notes": "R1: Vega failed. R2: 3/3 ✅ unanimous after code update. Breaking auth change flagged."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 156,
+    "reviewed_at": "2026-06-03T07:53:55.829Z",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "needs_changes",
+    "reviewers": 2,
+    "rounds": 1,
+    "flowforge_instance": 3433,
+    "notes": "Vega timeout. p→span collapse + code block nesting bugs."
   }
 ]
