@@ -4,9 +4,9 @@
 
 | Reviewer | Model | Reviews | Avg Runtime | Reliability | Notes |
 |----------|-------|---------|-------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 13 | ~3m | 13/13 (100%) | Most thorough. Reproduced migration bug with SQLite test (cove-144). Runs local tests. |
-| 🌠 Nova | claude-opus-4.7 | 13 | ~2m | 13/13 (100%) | Consistently strongest. Best at tracing failure paths and architectural edge cases. |
-| 💫 Vega | gemini-3.1-pro-preview | 13 | ~1.5m | 9/13 (69%) | 4 consecutive clean runs. Calibration good — ❌ for data-loss is defensible. Fastest. |
+| 🌟 Stella | gpt-5.5 | 14 | ~3m | 14/14 (100%) | Most thorough. Reproduces bugs with real tests. Found R2 recovery edge case others missed. |
+| 🌠 Nova | claude-opus-4.7 | 14 | ~2m | 14/14 (100%) | Consistently strongest on architecture. Best at tracing full code paths. |
+| 💫 Vega | gemini-3.1-pro-preview | 14 | ~1m | 10/14 (71%) | 5 consecutive clean runs. Fastest. Calibration steadily improving. |
 
 ## Review History
 
@@ -16,7 +16,8 @@
 | #124 | cove | 2026-06-02 | R1-R6 | ✅ Ready |
 | #125 | cove | 2026-06-03 | R1-R2 | ✅ Ready |
 | #143 | cove | 2026-06-03 | R1 | ✅ Ready |
-| #144 | cove | 2026-06-03 | R1 | ⚠️ Needs Changes |
+| #144 | cove | 2026-06-03 | R1-R2 | ✅ Ready (w/ caveat) |
 
 ## Milestones
-- **cove-144**: First PR where all 3 reviewers caught a genuine data-loss bug. Validates multi-model approach.
+- **cove-144 R1**: First PR where all 3 reviewers caught a genuine data-loss bug.
+- **cove-144 R2**: First split verdict — Stella found deeper edge case others missed. Value of model diversity.

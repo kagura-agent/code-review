@@ -147,14 +147,14 @@
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 144,
-    "reviewed_at": "2026-06-03T06:20:13.184Z",
+    "reviewed_at": "2026-06-03T06:32:42.232Z",
     "status": "open",
     "ground_truth": null,
-    "verdict": "needs_changes",
+    "verdict": "ready",
     "reviewers": 3,
-    "rounds": 1,
+    "rounds": 2,
     "flowforge_instance": 3424,
-    "notes": "Critical: migration ordering data loss. 3/3 consensus.",
+    "notes": "R1: critical migration ordering (3/3 consensus). R2: fixed, Stella found recovery edge case (1/3). Overall ready.",
     "last_checked": "2026-06-03T14:26+08:00"
   }
 ]
