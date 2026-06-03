@@ -3,28 +3,32 @@
 **Repo**: kagura-agent/cove
 **Reviewed**: 2026-06-03
 **Files**: 10 (+219/-158)
-**FlowForge**: #3427
+**FlowForge**: #3427 (R1), #3430 (R2)
 
-## Verdicts
-| Reviewer | Model | Verdict |
-|----------|-------|---------|
-| Stella | GPT-5.5 | ✅ Ready |
-| Nova | Claude Opus 4.7 | ✅ Ready |
-| Vega | Gemini 3.1 Pro | ❌ Failed (no output) |
+## Round 1
+| Reviewer | Verdict |
+|----------|---------|
+| Stella | ✅ Ready |
+| Nova | ✅ Ready |
+| Vega | ❌ Failed (no output) |
 
-## Overall: ✅ Ready (2/2 valid)
+## Round 2 (after code update)
+| Reviewer | Verdict |
+|----------|---------|
+| Stella | ✅ Ready |
+| Nova | ✅ Ready |
+| Vega | ✅ Ready |
 
-## Key Findings
-1. **Gateway integration tests needed** (Stella+Nova) — TestDispatcher doesn't exercise real WS handshake
-2. **RESUME opcode exported but unimplemented** (Stella+Nova) — stub needs comment
-3. **Breaking auth change** (Nova) — new IDENTIFY requires DB token from localStorage
-4. **Dead code** (Stella) — unused `useUserStore.getState()` in WS store
+## Overall: ✅ Ready
+
+## Key Findings (R1+R2)
+1. **Gateway integration tests needed** (Stella+Nova, both rounds) — persistent finding
+2. **RESUME opcode placeholder** (Stella+Nova) — needs TODO comment
+3. **Heartbeat watchdog pre-IDENTIFY** (Stella+Nova R2) — 82.5s timeout before IDENTIFY
+4. **Breaking auth change** (Nova) — cove-token required in localStorage
+5. **Client readyState guard** (Vega R2) — wrap heartbeat send in OPEN check
 
 ## Reviewer Assessment
-- **Stella**: Ran tests+build locally. Good suggestions on duplicate IDENTIFY rejection and send() consistency. Solid.
-- **Nova**: Strongest again — caught the breaking auth change (cove-token migration). Detailed protocol analysis with heartbeat timing, typing echo, seq bounds. Excellent.
-- **Vega**: **Failed** — no output despite making tool calls. Breaks the 5-run clean streak. Reliability drops to 10/15 (67%).
-
-## Process Notes
-- First 2-reviewer review (Vega failed). Still valuable — Stella and Nova complement each other well.
-- Nova's breaking-auth-change catch is the kind of finding that prevents real production issues.
+- **Stella**: 16/16 (100%). Consistent. R2 added duplicate-IDENTIFY and connected-status-before-READY findings.
+- **Nova**: 16/16 (100%). Strongest again — breaking auth catch, heartbeat cleanup duplication, session.user mutability. Most detailed protocol analysis.
+- **Vega**: R1 failed (no output), R2 recovered with a clean ✅. 11/16 (69%). Unique R2 finding: readyState guard for heartbeat send.
