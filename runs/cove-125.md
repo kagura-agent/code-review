@@ -38,3 +38,13 @@
 - R1 was run MANUALLY (not via FlowForge) — violated SKILL.md. R2 was run via FlowForge correctly.
 - R1→R2 on same code: Vega flipped ⚠️→✅, findings shifted. Non-determinism in reviewer output is expected but worth tracking.
 - Finding consistency R1→R2: magic numbers + send button persisted (high signal). getComputedStyle + MemberList split disappeared (lower signal or model variance).
+
+## Ground Truth (2026-06-03)
+- **Human reviewer**: daniyuu
+- **Human verdict**: Approved (no comments)
+- **Human findings**: None
+- **Our verdict**: ✅ Ready (R2 unanimous)
+- **Accuracy**: Correct — we approved, human approved
+- **Blind spots**: None detected
+- **Noise**: None — our suggestions (magic numbers, send button, avatar contrast) were valid quality items even if human didn't flag them. Non-blocking for personal project context.
+- **Calibration**: Good. R1 Vega over-flagged getComputedStyle but self-corrected in R2. Final unanimous Ready aligned with human outcome.

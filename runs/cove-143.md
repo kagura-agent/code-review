@@ -29,3 +29,13 @@
 ## Process Notes
 - FlowForge #3422 used correctly this time.
 - All 3 reviewers well-calibrated for a refactor PR — correctly ✅ Ready, no over-severity.
+
+## Ground Truth (2026-06-03)
+- **Human reviewer**: daniyuu
+- **Human verdict**: Approved (no comments)
+- **Human findings**: None
+- **Our verdict**: ✅ Ready (unanimous)
+- **Accuracy**: Correct — we approved, human approved
+- **Blind spots**: None detected
+- **Noise**: None — all findings were valid observations for a "no behavioral changes" refactor PR
+- **Calibration**: Excellent. Unanimous Ready for a mechanical refactor, human agreed. Nova's behavioral-change catch (no-op broadcast) was legitimate signal even though human didn't flag it.
