@@ -148,27 +148,49 @@
     "repo": "cove",
     "pr": 144,
     "reviewed_at": "2026-06-03T06:32:42.232Z",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": ["migration-ordering", "data-loss-prevention"],
+      "noise": [],
+      "calibration": "R1 caught real critical (migration ordering → silent data loss), 3/3 consensus. R2 correctly cleared after fix. Stella's recovery edge case was valid but non-blocking. Human approved without comments — iterative review was the quality gate."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3424,
-    "notes": "R1: critical migration ordering (3/3 consensus). R2: fixed, Stella found recovery edge case (1/3). Overall ready.",
-    "last_checked": "2026-06-03T14:26+08:00"
+    "notes": "R1: critical migration ordering (3/3 consensus). R2: fixed, Stella found recovery edge case (1/3). Merged 2026-06-03.",
+    "last_checked": "2026-06-03T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 145,
     "reviewed_at": "2026-06-03T07:25:26.058Z",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "ready",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "R1: 2/2 ready (Vega failed to produce output). R2: 3/3 unanimous after code update. Breaking auth change correctly flagged by Nova. Human approved without comments."
+    },
     "verdict": "ready",
     "reviewers": 2,
     "rounds": 2,
     "flowforge_instance": 3427,
-    "notes": "R1: Vega failed. R2: 3/3 ✅ unanimous after code update. Breaking auth change flagged."
+    "notes": "R1: Vega failed. R2: 3/3 ✅ unanimous. Merged 2026-06-03.",
+    "last_checked": "2026-06-03T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -202,13 +224,23 @@
     "repo": "cove",
     "pr": 155,
     "reviewed_at": "2026-06-03T10:25:43.464Z",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Unanimous ready, human approved quickly. Clean polish PR — correctly identified as low-risk."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
     "flowforge_instance": 3444,
-    "notes": "Clean polish PR. 3/3 ✅. Vega 3rd consecutive clean."
+    "notes": "Clean polish PR. 3/3 ✅. Merged 2026-06-03.",
+    "last_checked": "2026-06-03T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -221,6 +253,7 @@
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3460,
-    "notes": "R2: 3/3 ✅. AppEnv typing fix resolved build failure. Vega 5th consecutive clean."
+    "notes": "R2: 3/3 ✅. AppEnv typing fix resolved build failure. Vega 5th consecutive clean.",
+    "last_checked": "2026-06-03T20:26+08:00"
   }
 ]
