@@ -122,5 +122,18 @@
     "reviewers": 3,
     "rounds": 1,
     "flowforge_instance": 3422
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 144,
+    "reviewed_at": "2026-06-03T06:20:13.184Z",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "rounds": 1,
+    "flowforge_instance": 3424,
+    "notes": "Critical: migration ordering data loss. 3/3 consensus."
   }
 ]
