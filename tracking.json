@@ -209,5 +209,18 @@
     "rounds": 1,
     "flowforge_instance": 3444,
     "notes": "Clean polish PR. 3/3 ✅. Vega 3rd consecutive clean."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 165,
+    "reviewed_at": "2026-06-03T12:13:46.243Z",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "rounds": 1,
+    "flowforge_instance": 3460,
+    "notes": "Stella caught tsc build failure others missed. Vega 4th consecutive clean."
   }
 ]
