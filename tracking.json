@@ -250,27 +250,48 @@
     "repo": "cove",
     "pr": 165,
     "reviewed_at": "2026-06-03T12:25:56.418Z",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": ["hono-app-typing", "build-failure-detection"],
+      "noise": [],
+      "calibration": "R1 caught real tsc build failure (AppEnv typing) that tests missed. R2 confirmed fix. Human approved without comments — iterative review was the quality gate."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3460,
-    "notes": "R2: 3/3 ✅. AppEnv typing fix resolved build failure. Vega 5th consecutive clean.",
-    "last_checked": "2026-06-03T20:26+08:00"
+    "notes": "R1: Stella caught real build failure (AppEnv typing). R2: 3/3 ✅. Merged 2026-06-03.",
+    "last_checked": "2026-06-04T02:26+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 166,
     "reviewed_at": "2026-06-03T13:59:18.423Z",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Unanimous ready, human approved quickly. Solid defensive programming — validation and migration guard correctly assessed as ready."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
     "flowforge_instance": 3468,
-    "notes": "Clean 3/3 ✅. Migration guard + validation. Vega 6th consecutive clean."
+    "notes": "Clean 3/3 ✅. Migration guard + validation. Vega 6th consecutive clean. Merged 2026-06-03.",
+    "last_checked": "2026-06-04T02:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -283,6 +304,7 @@
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3474,
-    "notes": "R2: 3/3 ✅. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean."
+    "notes": "R2: 3/3 ✅. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean.",
+    "last_checked": "2026-06-04T02:26+08:00"
   }
 ]
