@@ -4,9 +4,9 @@
 
 | Reviewer | Model | Reviews | Avg Runtime | Reliability | Notes |
 |----------|-------|---------|-------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 21 | ~3m | 21/21 (100%) | Runs build+test. Catches compile-time issues others miss. |
-| 🌠 Nova | claude-opus-4.7 | 21 | ~2m | 21/21 (100%) | Strongest on security + architecture. |
-| 💫 Vega | gemini-3.1-pro-preview | 21 | ~1m | 15/21 (71%) | 4 consecutive clean runs. |
+| 🌟 Stella | gpt-5.5 | 22 | ~3m | 22/22 (100%) | Runs build+test. Catches compile-time issues. |
+| 🌠 Nova | claude-opus-4.7 | 22 | ~2m | 22/22 (100%) | Strongest on security + architecture. |
+| 💫 Vega | gemini-3.1-pro-preview | 22 | ~1m | 16/22 (73%) | 5 consecutive clean runs after prompt fix. |
 
 ## Review History
 
@@ -20,4 +20,4 @@
 | #145 | cove | 2026-06-03 | R1-R2 | ✅ Ready |
 | #155 | cove | 2026-06-03 | R1 | ✅ Ready |
 | #156 | cove | 2026-06-03 | R1-R3 | ✅ Ready |
-| #165 | cove | 2026-06-04 | R1 | ⚠️ Needs Changes |
+| #165 | cove | 2026-06-04 | R1-R2 | ✅ Ready |
