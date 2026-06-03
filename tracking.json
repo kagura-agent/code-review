@@ -157,7 +157,10 @@
       "our_verdict_r2": "ready",
       "accuracy": "correct",
       "blind_spots": [],
-      "effective_dimensions": ["migration-ordering", "data-loss-prevention"],
+      "effective_dimensions": [
+        "migration-ordering",
+        "data-loss-prevention"
+      ],
       "noise": [],
       "calibration": "R1 caught real critical (migration ordering → silent data loss), 3/3 consensus. R2 correctly cleared after fix. Stella's recovery edge case was valid but non-blocking. Human approved without comments — iterative review was the quality gate."
     },
@@ -255,5 +258,18 @@
     "flowforge_instance": 3460,
     "notes": "R2: 3/3 ✅. AppEnv typing fix resolved build failure. Vega 5th consecutive clean.",
     "last_checked": "2026-06-03T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 166,
+    "reviewed_at": "2026-06-03T13:59:18.423Z",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "flowforge_instance": 3468,
+    "notes": "Clean 3/3 ✅. Migration guard + validation. Vega 6th consecutive clean."
   }
 ]
