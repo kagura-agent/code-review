@@ -175,8 +175,22 @@
     "repo": "cove",
     "pr": 156,
     "reviewed_at": "2026-06-03T09:42:23.294Z",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "xss-security",
+        "paragraph-rendering",
+        "code-block-nesting"
+      ],
+      "calibration": "iterative review was the quality gate; caught real XSS before merge"
+    },
     "verdict": "ready",
     "reviewers": 2,
     "rounds": 3,
