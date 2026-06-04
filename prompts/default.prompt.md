@@ -67,7 +67,7 @@ Rate the PR: ✅ Ready / ⚠️ Needs Changes / ❌ Major Issues
 
 Be specific — reference file names and line numbers. Don't nitpick formatting if there's a linter. Focus on substance.
 
-**Write your review to `/tmp/review-<your-name>.md`** (e.g. `/tmp/review-stella.md`). Then output the file path as your final message. This ensures large reviews aren't truncated.
+**Write your review to `~/.openclaw/workspace/code-review/reviews/<repo>-<pr>-<your-name>.md`** (e.g. `reviews/cove-175-stella.md`). Then output the file path as your final message. This ensures large reviews aren't truncated and creates a persistent record.
 
 ## Output Constraints
 

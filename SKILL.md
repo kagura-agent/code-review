@@ -41,8 +41,8 @@ If manually spawning (e.g. flowforge unavailable), remember to also do:
 
 ## Review Output
 
-Reviewers write to `/tmp/review-<name>.md` (stella/nova/vega). Parent reads from files.
-This prevents session history truncation for large reviews.
+Reviewers write to `reviews/<repo>-<pr>-<name>.md` (e.g. `reviews/cove-175-stella.md`).
+Parent reads from files, not session history. Prevents truncation + creates persistent record.
 
 ## Re-review Protocol
 
