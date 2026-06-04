@@ -28,3 +28,38 @@
 - First PR with reviews written to files instead of session history — success, both readable
 - Stella's timeout (9min) suggests she may be running full build which takes too long
 - 2/3 is acceptable for this round but need to investigate Stella's reliability
+
+## Round 2 — 2026-06-04 (FlowForge)
+
+**Verdict:** ⚠️ Needs Changes (3/3 unanimous, Vega ❌ Major)
+
+### R1 → R2 fixes
+- Channel dedup ✅
+- Prototype pollution (Set + Object.create(null)) ✅
+- Emit iteration safety (spread copy) ✅
+
+### Escalated (unaddressed)
+- Silent message drop (3/3)
+- Missing tests (3/3)
+- Typing state coupling (3/3)
+- useEffect deps/timers (2/3)
+
+### Reviewer Performance (Round 2)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ⚠️ | Completed in 2m47s (vs R1 timeout). Found 3 new suggestions (payload guards, handler error isolation, WS cleanup). Diff-focus constraint removed — she reads source when needed and that's her strength |
+| 🌠 Nova | ⚠️ | Most thorough. Timer leak on teardown was unique. Previous issues table with severity tracking excellent |
+| 💫 Vega | ❌ | Strictest on escalation. Clean, concise. Less unique depth than other two |
+
+### Layer 2 — Prompt Evolution Check
+- Re-review escalation rule worked perfectly — all 3 independently escalated the same 4 issues
+- Product Impact dimension worked — all 3 analyzed user-facing consequences of message drop
+- Removed diff-focus constraint from prompt — Luna's feedback: "每个reviewer想怎么做是他们自己的决定"
+- No new repeated patterns across runs to escalate
+- No prompt changes needed this round (beyond the removal above) ✅
+
+### Process Notes
+- First review fully driven by FlowForge! parse → load_prompt → spawn → post → reflection → track
+- All 3 reviewers wrote to files — no truncation issues
+- Stella completed successfully with no timeout (removed diff-focus constraint was unnecessary — real fix was file output reducing overhead)
+- Re-review protocol (escalation + anti-confirmation bias + previous issues checklist) dramatically improved R2 quality
