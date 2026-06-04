@@ -69,3 +69,22 @@
 - Escalation protocol driving quality — R2 🟡 items correctly escalated when unaddressed in R3
 - "UnhandledPromiseRejection from early return" pattern now seen in 2 rounds — confirmed real
 - No prompt changes needed ✅
+
+## Round 3 — 2026-06-04 (FlowForge)
+
+**Verdict:** ⚠️ Needs Changes (3/3)
+
+### R2 → R3 fixes
+- Generation increment on timeout/reconnect ✅
+
+### Escalated (3/3 consensus)
+- UnhandledPromiseRejection on pre-aborted signal
+- channelGeneration map never cleaned
+- Incomplete callback guards (only 3 of ~12 guarded)
+
+### Reviewer Performance (Round 3)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ⚠️ | 5m22s. Most thorough — plugin shutdown gap unique. Verified 38 tests |
+| 🌠 Nova | ⚠️ | Unhandled rejection escalation + concrete fix. Typing callback ghost indicator analysis |
+| 💫 Vega | ❌ | Strictest escalation. Code examples for every fix |
