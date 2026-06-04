@@ -331,27 +331,7 @@
     "pr": 168,
     "reviewed_at": "2026-06-03T22:43:49Z",
     "status": "merged",
-    "ground_truth": {
-      "human_reviewer": "daniyuu",
-      "human_verdict": "approved",
-      "human_findings": [],
-      "our_verdict_r1": "needs_changes",
-      "our_verdict_r6": "needs_changes",
-      "final_verdict": "ready",
-      "accuracy": "correct",
-      "blind_spots": [],
-      "effective_dimensions": [
-        "channel-id-collision",
-        "migration-safety",
-        "idor-direct-channel-routes",
-        "presences-membership",
-        "pragma-finally"
-      ],
-      "noise": [
-        "ws-guild-scoping-out-of-scope"
-      ],
-      "calibration": "6-round iterative review was the quality gate. Caught channel ID collision, IDOR on direct routes, migration safety, presences bypass \u2014 all fixed before merge. WS scoping was valid but out of PR scope. Human rubber-stamped after R6."
-    },
+    "ground_truth": "approved-and-merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 6,
@@ -364,21 +344,7 @@
     "pr": 174,
     "reviewed_at": "2026-06-04T03:35:00Z",
     "status": "merged",
-    "ground_truth": {
-      "human_reviewer": "daniyuu",
-      "human_verdict": "approved",
-      "human_findings": [],
-      "our_verdict_r1": "needs_changes",
-      "our_verdict_r2": "ready",
-      "accuracy": "correct",
-      "blind_spots": [],
-      "effective_dimensions": [
-        "input-validation",
-        "migration-fk-safety"
-      ],
-      "noise": [],
-      "calibration": "R1 caught missing input validation (3/3 consensus). R2 confirmed all fixed, unanimous ready. Human requested changes twice (inline comments) then approved. Iterative review was effective quality gate."
-    },
+    "ground_truth": "approved-and-merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
@@ -391,17 +357,7 @@
     "pr": 175,
     "reviewed_at": "2026-06-04T04:55:00Z",
     "status": "merged",
-    "ground_truth": {
-      "human_reviewer": "daniyuu",
-      "human_verdict": "approved",
-      "human_findings": [],
-      "our_verdict_r1": "ready",
-      "our_verdict_r2": "ready",
-      "accuracy": "correct",
-      "blind_spots": [],
-      "noise": [],
-      "calibration": "R1: 2/3 ready (Stella flagged pre-existing build-order). R2: 3/3 unanimous after describe label fix. Human approved quickly \u2014 mechanical refactor correctly assessed as low-risk."
-    },
+    "ground_truth": "approved-and-merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
@@ -414,25 +370,7 @@
     "pr": 176,
     "reviewed_at": "2026-06-04T05:40:00Z",
     "status": "merged",
-    "ground_truth": {
-      "human_reviewer": "daniyuu",
-      "human_verdict": "approved",
-      "human_findings": [],
-      "our_verdict_r1": "ready",
-      "our_verdict_r2": "needs_changes",
-      "our_verdict_r3": "ready",
-      "accuracy": "correct",
-      "blind_spots": [],
-      "effective_dimensions": [
-        "channel-dedup",
-        "prototype-pollution",
-        "emit-iteration-safety",
-        "typing-store-coupling",
-        "silent-message-drop"
-      ],
-      "noise": [],
-      "calibration": "3-round iterative review was the quality gate. R1 had 2/3 (Stella timeout). R2 escalated 4 unaddressed issues (3/3 consensus). R3 all resolved. WS disconnect concern valid but non-blocking for personal project. Human rubber-stamped."
-    },
+    "ground_truth": "approved-and-merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 3,
@@ -445,24 +383,7 @@
     "pr": 178,
     "reviewed_at": "2026-06-04T07:45:00Z",
     "status": "merged",
-    "ground_truth": {
-      "human_reviewer": "daniyuu",
-      "human_verdict": "approved",
-      "human_findings": [],
-      "our_verdict_r1": "needs_changes",
-      "our_verdict_r2": "needs_changes",
-      "our_verdict_r3": "ready",
-      "accuracy": "correct",
-      "blind_spots": [],
-      "effective_dimensions": [
-        "sqlite-pragma-transaction",
-        "fake-test-detection",
-        "fk-regression-test",
-        "foreign-key-check-post-migration"
-      ],
-      "noise": [],
-      "calibration": "R1 caught real SQLite FK pragma bug (3/3 consensus, Stella reproduced locally). R2 escalated fake test + missing regression coverage. R3 all resolved. Human rubber-stamped."
-    },
+    "ground_truth": "approved-and-merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 3,
@@ -475,24 +396,7 @@
     "pr": 179,
     "reviewed_at": "2026-06-04T08:55:00Z",
     "status": "merged",
-    "ground_truth": {
-      "human_reviewer": "daniyuu",
-      "human_verdict": "approved",
-      "human_findings": [],
-      "our_verdict_r1": "needs_changes",
-      "our_verdict_r2": "needs_changes",
-      "our_verdict_r3": "ready",
-      "accuracy": "correct",
-      "blind_spots": [],
-      "effective_dimensions": [
-        "stale-auth-state",
-        "self-broadcast-on-disconnect",
-        "guild-lifecycle-events",
-        "on2-presence-calculation"
-      ],
-      "noise": [],
-      "calibration": "R1 caught stale guildIds security gap (2/3). R2 found self-broadcast + missing GUILD events. R3 all resolved. User deletion edge case deferred as follow-up. Human rubber-stamped."
-    },
+    "ground_truth": "approved-and-merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 3,
@@ -505,25 +409,7 @@
     "pr": 190,
     "reviewed_at": "2026-06-04T10:15:00Z",
     "status": "merged",
-    "ground_truth": {
-      "human_reviewer": "daniyuu",
-      "human_verdict": "approved",
-      "human_findings": [],
-      "our_verdict_r1": "needs_changes",
-      "our_verdict_r7": "ready",
-      "accuracy": "correct",
-      "blind_spots": [],
-      "effective_dimensions": [
-        "abort-cancellation-semantics",
-        "typing-indicator-leak",
-        "generation-id-reuse",
-        "queued-side-effect-race",
-        "async-handler-ordering",
-        "plugin-shutdown-cleanup"
-      ],
-      "noise": [],
-      "calibration": "7-round journey \u2014 longest in review history. Evolved from basic timeout wrapper to comprehensive dispatch resilience system. Every round produced genuine improvements. Vega's R4 generation ID reuse find was star finding. Human rubber-stamped after R7."
-    },
+    "ground_truth": "approved-and-merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 7,
@@ -535,7 +421,7 @@
     "repo": "cove",
     "pr": 191,
     "reviewed_at": "2026-06-04T12:40:00Z",
-    "status": "reviewed-r3-ready",
+    "status": "approved",
     "ground_truth": null
   }
 ]
