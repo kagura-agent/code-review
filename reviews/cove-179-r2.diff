@@ -1,0 +1,585 @@
+From d5a2412ce92f4394f965fbb1378c25593efb19ed Mon Sep 17 00:00:00 2001
+From: kagura-agent <kagura.agent.ai@gmail.com>
+Date: Thu, 4 Jun 2026 16:36:24 +0800
+Subject: [PATCH 1/2] refactor(ws): scope gateway events by guild membership
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Track guild IDs on GatewaySession (populated during IDENTIFY)
+- GatewayDispatcher now accepts ChannelsRepo for channel→guild resolution
+- broadcastToGuild: MESSAGE_CREATE/UPDATE/DELETE, CHANNEL_UPDATE, TYPING_START
+  only reach sessions whose guildIds includes the event's guild
+- broadcastToGuildMembers: PRESENCE_UPDATE only reaches sessions
+  sharing at least one guild with the user going online/offline
+- READY presences filtered to users sharing guilds with the connector
+- REQUEST_TYPING validates guild membership before broadcasting
+- Add gateway.test.ts with guild-scoped broadcasting tests
+
+Closes #173
+---
+ packages/server/src/__tests__/api.test.ts     |   2 +-
+ packages/server/src/__tests__/gateway.test.ts | 154 ++++++++++++++++++
+ packages/server/src/index.ts                  |   4 +-
+ packages/server/src/routes/messages.ts        |   2 +-
+ packages/server/src/ws/dispatcher.ts          |  64 ++++++--
+ packages/server/src/ws/index.ts               |   8 +-
+ packages/server/src/ws/session.ts             |  12 +-
+ 7 files changed, 228 insertions(+), 18 deletions(-)
+ create mode 100644 packages/server/src/__tests__/gateway.test.ts
+
+diff --git a/packages/server/src/__tests__/api.test.ts b/packages/server/src/__tests__/api.test.ts
+index 6efb07b..8e76d4c 100644
+--- a/packages/server/src/__tests__/api.test.ts
++++ b/packages/server/src/__tests__/api.test.ts
+@@ -27,7 +27,7 @@ describe("Cove API — Discord-compatible", () => {
+     override channelUpdate(channel: Channel): void {
+       broadcastEvents.push({ t: "CHANNEL_UPDATE", d: channel });
+     }
+-    override typingStart(channelId: string, user: { id: string; username: string }): void {
++    override typingStart(channelId: string, user: { id: string; username: string }, _guildId?: string): void {
+       broadcastEvents.push({ t: "TYPING_START", d: { channel_id: channelId, user_id: user.id, username: user.username, timestamp: Date.now() } });
+     }
+   }
+diff --git a/packages/server/src/__tests__/gateway.test.ts b/packages/server/src/__tests__/gateway.test.ts
+new file mode 100644
+index 0000000..6581c18
+--- /dev/null
++++ b/packages/server/src/__tests__/gateway.test.ts
+@@ -0,0 +1,154 @@
++import { describe, it, expect, beforeEach, vi } from "vitest";
++import { GatewayDispatcher } from "../ws/dispatcher.js";
++import type { GatewaySession } from "../ws/session.js";
++import type { ChannelsRepo } from "../repos/channels.js";
++import type { Channel } from "@cove/shared";
++
++function mockSession(id: string, userId: string, guilds: string[]): GatewaySession {
++  const dispatched: { event: string; data: unknown }[] = [];
++  return {
++    id,
++    user: { id: userId, username: `user-${userId}`, bot: false },
++    guildIds: new Set(guilds),
++    isIdentified: true,
++    dispatch: vi.fn((event: string, data: unknown) => {
++      dispatched.push({ event, data });
++    }),
++    dispatched,
++  } as unknown as GatewaySession & { dispatched: typeof dispatched };
++}
++
++function mockChannelsRepo(mapping: Record<string, string>): ChannelsRepo {
++  return {
++    getById(id: string): Channel | null {
++      const guildId = mapping[id];
++      if (!guildId) return null;
++      return { id, guild_id: guildId, name: "test", type: 0, topic: null, position: 0 } as Channel;
++    },
++  } as ChannelsRepo;
++}
++
++describe("GatewayDispatcher guild-scoped broadcasting", () => {
++  let dispatcher: GatewayDispatcher;
++  let sessionA: ReturnType<typeof mockSession>;
++  let sessionB: ReturnType<typeof mockSession>;
++
++  beforeEach(() => {
++    const channels = mockChannelsRepo({
++      "chan-1": "guild-a",
++      "chan-2": "guild-b",
++    });
++    dispatcher = new GatewayDispatcher(channels);
++
++    sessionA = mockSession("s1", "user-1", ["guild-a"]);
++    sessionB = mockSession("s2", "user-2", ["guild-b"]);
++
++    dispatcher.addSession(sessionA);
++    dispatcher.addSession(sessionB);
++
++    // Clear calls from addSession's presenceUpdate side-effects
++    vi.mocked(sessionA.dispatch).mockClear();
++    vi.mocked(sessionB.dispatch).mockClear();
++  });
++
++  describe("messageCreate", () => {
++    it("sends to sessions in the correct guild", () => {
++      dispatcher.messageCreate({ id: "m1", channel_id: "chan-1", content: "hello" } as any);
++
++      expect(sessionA.dispatch).toHaveBeenCalledWith("MESSAGE_CREATE", expect.objectContaining({ id: "m1" }));
++      expect(sessionB.dispatch).not.toHaveBeenCalledWith("MESSAGE_CREATE", expect.anything());
++    });
++
++    it("does not broadcast when channel is not found", () => {
++      dispatcher.messageCreate({ id: "m1", channel_id: "unknown", content: "hello" } as any);
++
++      expect(sessionA.dispatch).not.toHaveBeenCalled();
++      expect(sessionB.dispatch).not.toHaveBeenCalled();
++    });
++  });
++
++  describe("messageUpdate", () => {
++    it("sends only to the correct guild", () => {
++      dispatcher.messageUpdate({ id: "m1", channel_id: "chan-2", content: "edited" } as any);
++
++      expect(sessionB.dispatch).toHaveBeenCalledWith("MESSAGE_UPDATE", expect.objectContaining({ id: "m1" }));
++      expect(sessionA.dispatch).not.toHaveBeenCalled();
++    });
++  });
++
++  describe("messageDelete", () => {
++    it("sends only to the correct guild", () => {
++      dispatcher.messageDelete("chan-1", "m1");
++
++      expect(sessionA.dispatch).toHaveBeenCalledWith("MESSAGE_DELETE", { id: "m1", channel_id: "chan-1" });
++      expect(sessionB.dispatch).not.toHaveBeenCalled();
++    });
++  });
++
++  describe("typingStart", () => {
++    it("sends only to sessions in the correct guild", () => {
++      dispatcher.typingStart("chan-1", { id: "user-1", username: "u1" }, "guild-a");
++
++      expect(sessionA.dispatch).toHaveBeenCalledWith("TYPING_START", expect.objectContaining({ channel_id: "chan-1" }));
++      expect(sessionB.dispatch).not.toHaveBeenCalled();
++    });
++  });
++
++  describe("presenceUpdate", () => {
++    it("sends online to sessions sharing a guild", () => {
++      const sessionA2 = mockSession("s3", "user-3", ["guild-a"]);
++      dispatcher.addSession(sessionA2);
++
++      // user-3 just came online — sessionA shares guild-a so should receive it
++      expect(sessionA.dispatch).toHaveBeenCalledWith("PRESENCE_UPDATE", { user: { id: "user-3" }, status: "online" });
++      // sessionB is in guild-b only, should not receive
++      expect(sessionB.dispatch).not.toHaveBeenCalledWith("PRESENCE_UPDATE", expect.objectContaining({ user: { id: "user-3" } }));
++    });
++
++    it("sends offline only to sessions sharing a guild", () => {
++      const sessionA2 = mockSession("s3", "user-3", ["guild-a"]);
++      dispatcher.addSession(sessionA2);
++
++      // Clear mocks from the online event
++      vi.mocked(sessionA.dispatch).mockClear();
++      vi.mocked(sessionB.dispatch).mockClear();
++
++      dispatcher.removeSession(sessionA2);
++
++      expect(sessionA.dispatch).toHaveBeenCalledWith("PRESENCE_UPDATE", { user: { id: "user-3" }, status: "offline" });
++      expect(sessionB.dispatch).not.toHaveBeenCalled();
++    });
++  });
++
++  describe("cross-guild isolation", () => {
++    it("sessions in different guilds never receive each other's events", () => {
++      dispatcher.messageCreate({ id: "m1", channel_id: "chan-1", content: "a" } as any);
++      dispatcher.messageCreate({ id: "m2", channel_id: "chan-2", content: "b" } as any);
++      dispatcher.typingStart("chan-1", { id: "user-1", username: "u1" }, "guild-a");
++      dispatcher.typingStart("chan-2", { id: "user-2", username: "u2" }, "guild-b");
++
++      const aCalls = vi.mocked(sessionA.dispatch).mock.calls;
++      const bCalls = vi.mocked(sessionB.dispatch).mock.calls;
++
++      // sessionA should only have guild-a events
++      for (const [event, data] of aCalls) {
++        if (event === "MESSAGE_CREATE") {
++          expect((data as any).channel_id).toBe("chan-1");
++        }
++        if (event === "TYPING_START") {
++          expect((data as any).channel_id).toBe("chan-1");
++        }
++      }
++
++      // sessionB should only have guild-b events
++      for (const [event, data] of bCalls) {
++        if (event === "MESSAGE_CREATE") {
++          expect((data as any).channel_id).toBe("chan-2");
++        }
++        if (event === "TYPING_START") {
++          expect((data as any).channel_id).toBe("chan-2");
++        }
++      }
++    });
++  });
++});
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index 5c7f9d3..f97ce34 100644
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -18,7 +18,7 @@ const googleClientId = process.env["GOOGLE_CLIENT_ID"];
+ const googleClientSecret = process.env["GOOGLE_CLIENT_SECRET"];
+ const baseUrl = process.env["BASE_URL"] ?? `http://localhost:${PORT}`;
+ 
+-const dispatcher = new GatewayDispatcher();
++const dispatcher = new GatewayDispatcher(repos.channels);
+ 
+ const app = createApp(db, repos, dispatcher, {
+   gatewayUrl: process.env["GATEWAY_URL"] ?? `ws://localhost:${PORT}/gateway`,
+@@ -35,5 +35,5 @@ const server = serve({ fetch: app.fetch, port: PORT }, (info) => {
+   console.log(`🏝️  Cove server running on http://localhost:${info.port}`);
+ });
+ 
+-setupGateway(server as any, repos.users, repos.guilds, dispatcher);
++setupGateway(server as any, repos.users, repos.guilds, dispatcher, repos.channels);
+ console.log("🏝️  Gateway WebSocket ready on /gateway");
+diff --git a/packages/server/src/routes/messages.ts b/packages/server/src/routes/messages.ts
+index a0389b4..92c9c0c 100644
+--- a/packages/server/src/routes/messages.ts
++++ b/packages/server/src/routes/messages.ts
+@@ -127,7 +127,7 @@ export function messagesRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Ho
+       return c.json({ message: "Unknown Channel", code: 10003 }, 404);
+     }
+ 
+-    dispatcher?.typingStart(channelId, { id: author.id, username: author.username });
++    dispatcher?.typingStart(channelId, { id: author.id, username: author.username }, ch.guild_id);
+ 
+     return c.body(null, 204);
+   });
+diff --git a/packages/server/src/ws/dispatcher.ts b/packages/server/src/ws/dispatcher.ts
+index f884218..65cb9ca 100644
+--- a/packages/server/src/ws/dispatcher.ts
++++ b/packages/server/src/ws/dispatcher.ts
+@@ -1,10 +1,13 @@
+ import type { Message, Channel } from "@cove/shared";
+ import type { GatewaySession } from "./session.js";
++import type { ChannelsRepo } from "../repos/channels.js";
+ 
+ export class GatewayDispatcher {
+   private sessions = new Set<GatewaySession>();
+   private userSessions = new Map<string, Set<string>>();
+ 
++  constructor(private channelsRepo?: ChannelsRepo) {}
++
+   addSession(session: GatewaySession): void {
+     this.sessions.add(session);
+     if (session.user) {
+@@ -20,7 +23,6 @@ export class GatewayDispatcher {
+   }
+ 
+   removeSession(session: GatewaySession): void {
+-    this.sessions.delete(session);
+     if (session.user) {
+       const userId = session.user.id;
+       const sessions = this.userSessions.get(userId);
+@@ -28,34 +30,57 @@ export class GatewayDispatcher {
+         sessions.delete(session.id);
+         if (sessions.size === 0) {
+           this.userSessions.delete(userId);
+-          this.presenceUpdate(userId, "offline");
++          // Broadcast before removing from sessions so guild IDs are still accessible
++          this.broadcastToGuildMembers(userId, "PRESENCE_UPDATE", {
++            user: { id: userId },
++            status: "offline",
++          });
+         }
+       }
+     }
++    this.sessions.delete(session);
+   }
+ 
+   getOnlineUserIds(): string[] {
+     return Array.from(this.userSessions.keys());
+   }
+ 
++  getSessionGuildIds(userId: string): string[] {
++    const guildIds = new Set<string>();
++    for (const session of this.sessions) {
++      if (session.user?.id === userId) {
++        for (const gid of session.guildIds) {
++          guildIds.add(gid);
++        }
++      }
++    }
++    return Array.from(guildIds);
++  }
++
+   messageCreate(message: Message): void {
+-    this.broadcast("MESSAGE_CREATE", message);
++    const guildId = this.resolveGuildForChannel(message.channel_id);
++    if (!guildId) return;
++    this.broadcastToGuild(guildId, "MESSAGE_CREATE", message);
+   }
+ 
+   messageUpdate(message: Message): void {
+-    this.broadcast("MESSAGE_UPDATE", message);
++    const guildId = this.resolveGuildForChannel(message.channel_id);
++    if (!guildId) return;
++    this.broadcastToGuild(guildId, "MESSAGE_UPDATE", message);
+   }
+ 
+   messageDelete(channelId: string, messageId: string): void {
+-    this.broadcast("MESSAGE_DELETE", { id: messageId, channel_id: channelId });
++    const guildId = this.resolveGuildForChannel(channelId);
++    if (!guildId) return;
++    this.broadcastToGuild(guildId, "MESSAGE_DELETE", { id: messageId, channel_id: channelId });
+   }
+ 
+   channelUpdate(channel: Channel): void {
+-    this.broadcast("CHANNEL_UPDATE", channel);
++    this.broadcastToGuild(channel.guild_id, "CHANNEL_UPDATE", channel);
+   }
+ 
+-  typingStart(channelId: string, user: { id: string; username: string }): void {
+-    this.broadcast("TYPING_START", {
++  typingStart(channelId: string, user: { id: string; username: string }, guildId: string): void {
++    this.broadcastToGuild(guildId, "TYPING_START", {
+       channel_id: channelId,
+       user_id: user.id,
+       username: user.username,
+@@ -64,15 +89,32 @@ export class GatewayDispatcher {
+   }
+ 
+   private presenceUpdate(userId: string, status: "online" | "offline"): void {
+-    this.broadcast("PRESENCE_UPDATE", {
++    this.broadcastToGuildMembers(userId, "PRESENCE_UPDATE", {
+       user: { id: userId },
+       status,
+     });
+   }
+ 
+-  private broadcast(event: string, data: unknown): void {
++  private resolveGuildForChannel(channelId: string): string | null {
++    if (!this.channelsRepo) return null;
++    const channel = this.channelsRepo.getById(channelId);
++    return channel?.guild_id ?? null;
++  }
++
++  private broadcastToGuild(guildId: string, event: string, data: unknown): void {
++    for (const session of this.sessions) {
++      if (session.guildIds.has(guildId)) {
++        session.dispatch(event, data);
++      }
++    }
++  }
++
++  private broadcastToGuildMembers(userId: string, event: string, data: unknown): void {
++    const userGuildIds = this.getSessionGuildIds(userId);
+     for (const session of this.sessions) {
+-      session.dispatch(event, data);
++      if (userGuildIds.some((gid) => session.guildIds.has(gid))) {
++        session.dispatch(event, data);
++      }
+     }
+   }
+ }
+diff --git a/packages/server/src/ws/index.ts b/packages/server/src/ws/index.ts
+index 229eb90..610af49 100644
+--- a/packages/server/src/ws/index.ts
++++ b/packages/server/src/ws/index.ts
+@@ -2,6 +2,7 @@ import type { Server as HttpServer } from "node:http";
+ import { WebSocketServer } from "ws";
+ import type { UsersRepo } from "../repos/users.js";
+ import type { GuildsRepo } from "../repos/guilds.js";
++import type { ChannelsRepo } from "../repos/channels.js";
+ import { GatewayOpcode, type GatewayPayload } from "@cove/shared";
+ import { GatewaySession } from "./session.js";
+ import { GatewayDispatcher } from "./dispatcher.js";
+@@ -9,7 +10,7 @@ import { GatewayDispatcher } from "./dispatcher.js";
+ const HEARTBEAT_INTERVAL = 41250;
+ const HEARTBEAT_TIMEOUT = HEARTBEAT_INTERVAL * 2;
+ 
+-export function setupGateway(server: HttpServer, users: UsersRepo, guilds: GuildsRepo, dispatcher: GatewayDispatcher): void {
++export function setupGateway(server: HttpServer, users: UsersRepo, guilds: GuildsRepo, dispatcher: GatewayDispatcher, channels: ChannelsRepo): void {
+   const wss = new WebSocketServer({ server, path: "/gateway" });
+ 
+   wss.on("connection", (ws) => {
+@@ -81,7 +82,10 @@ export function setupGateway(server: HttpServer, users: UsersRepo, guilds: Guild
+             if (!session.isIdentified || !session.user) break;
+             const d = payload.d as { channel_id?: string } | null;
+             if (!d?.channel_id) break;
+-            dispatcher.typingStart(d.channel_id, session.user);
++            const channel = channels.getById(d.channel_id);
++            if (!channel) break;
++            if (!session.guildIds.has(channel.guild_id)) break;
++            dispatcher.typingStart(d.channel_id, session.user, channel.guild_id);
+             break;
+           }
+ 
+diff --git a/packages/server/src/ws/session.ts b/packages/server/src/ws/session.ts
+index 5808368..6d55fc8 100644
+--- a/packages/server/src/ws/session.ts
++++ b/packages/server/src/ws/session.ts
+@@ -9,6 +9,7 @@ export class GatewaySession {
+   private seq = 0;
+   private identified = false;
+   user: { id: string; username: string; bot: boolean } | null = null;
++  readonly guildIds: Set<string> = new Set();
+ 
+   constructor(private ws: WebSocket) {
+     this.id = randomUUID();
+@@ -37,8 +38,17 @@ export class GatewaySession {
+   identify(user: { id: string; username: string; bot: boolean }, dispatcher: GatewayDispatcher, guildsRepo: GuildsRepo): void {
+     this.user = user;
+     this.identified = true;
+-    const presences = dispatcher.getOnlineUserIds().map((id) => ({ user: { id }, status: "online" as const }));
++
+     const guilds = guildsRepo.listForUser(user.id);
++    for (const guild of guilds) {
++      this.guildIds.add(guild.id);
++    }
++
++    const onlineUserIds = dispatcher.getOnlineUserIds();
++    const presences = onlineUserIds
++      .filter((id) => dispatcher.getSessionGuildIds(id).some((gid) => this.guildIds.has(gid)))
++      .map((id) => ({ user: { id }, status: "online" as const }));
++
+     this.seq++;
+     this.ws.send(JSON.stringify({
+       op: GatewayOpcode.DISPATCH,
+
+From 6dfe76934273f6ff51cddca5de0845d5efcf3206 Mon Sep 17 00:00:00 2001
+From: kagura-agent <kagura.agent.ai@gmail.com>
+Date: Thu, 4 Jun 2026 17:21:39 +0800
+Subject: [PATCH 2/2] fix: live guild membership updates, required
+ channelsRepo, DM TODO
+
+- Add addGuildToUser/removeGuildFromUser to GatewayDispatcher for live
+  WebSocket session updates when members are added/removed via API
+- Wire dispatcher into agent routes (PUT/DELETE members endpoints)
+- Make channelsRepo required in GatewayDispatcher constructor instead
+  of optional, removing silent null-check fallback
+- Add TODO(#111) comment for DM channel broadcast path
+- Add test verifying kicked user stops receiving events immediately
+---
+ packages/server/src/__tests__/api.test.ts     |  3 ++
+ packages/server/src/__tests__/gateway.test.ts | 28 +++++++++++++++++++
+ packages/server/src/app.ts                    |  2 +-
+ packages/server/src/routes/agents.ts          |  5 +++-
+ packages/server/src/ws/dispatcher.ts          | 21 ++++++++++++--
+ 5 files changed, 55 insertions(+), 4 deletions(-)
+
+diff --git a/packages/server/src/__tests__/api.test.ts b/packages/server/src/__tests__/api.test.ts
+index 8e76d4c..2cb9aa6 100644
+--- a/packages/server/src/__tests__/api.test.ts
++++ b/packages/server/src/__tests__/api.test.ts
+@@ -15,6 +15,9 @@ describe("Cove API — Discord-compatible", () => {
+   let defaultGuildId: string;
+ 
+   class TestDispatcher extends GatewayDispatcher {
++    constructor() {
++      super({ getById: () => null } as any);
++    }
+     override messageCreate(message: Message): void {
+       broadcastEvents.push({ t: "MESSAGE_CREATE", d: message });
+     }
+diff --git a/packages/server/src/__tests__/gateway.test.ts b/packages/server/src/__tests__/gateway.test.ts
+index 6581c18..190e0df 100644
+--- a/packages/server/src/__tests__/gateway.test.ts
++++ b/packages/server/src/__tests__/gateway.test.ts
+@@ -151,4 +151,32 @@ describe("GatewayDispatcher guild-scoped broadcasting", () => {
+       }
+     });
+   });
++
++  describe("live guild membership update", () => {
++    it("adds and removes guild visibility for a user at runtime", () => {
++      // user-2 starts in guild-b only, so should NOT receive guild-a messages
++      dispatcher.messageCreate({ id: "m1", channel_id: "chan-1", content: "before" } as any);
++      expect(sessionA.dispatch).toHaveBeenCalledWith("MESSAGE_CREATE", expect.objectContaining({ id: "m1" }));
++      expect(sessionB.dispatch).not.toHaveBeenCalled();
++
++      vi.mocked(sessionA.dispatch).mockClear();
++      vi.mocked(sessionB.dispatch).mockClear();
++
++      // Simulate user-2 joining guild-a
++      dispatcher.addGuildToUser("user-2", "guild-a");
++
++      dispatcher.messageCreate({ id: "m2", channel_id: "chan-1", content: "after join" } as any);
++      expect(sessionB.dispatch).toHaveBeenCalledWith("MESSAGE_CREATE", expect.objectContaining({ id: "m2" }));
++
++      vi.mocked(sessionA.dispatch).mockClear();
++      vi.mocked(sessionB.dispatch).mockClear();
++
++      // Simulate user-2 being kicked from guild-a
++      dispatcher.removeGuildFromUser("user-2", "guild-a");
++
++      dispatcher.messageCreate({ id: "m3", channel_id: "chan-1", content: "after kick" } as any);
++      expect(sessionA.dispatch).toHaveBeenCalledWith("MESSAGE_CREATE", expect.objectContaining({ id: "m3" }));
++      expect(sessionB.dispatch).not.toHaveBeenCalled();
++    });
++  });
+ });
+diff --git a/packages/server/src/app.ts b/packages/server/src/app.ts
+index 6c1ad12..fd6e739 100644
+--- a/packages/server/src/app.ts
++++ b/packages/server/src/app.ts
+@@ -44,7 +44,7 @@ export function createApp(
+ 
+   app.route(API_PREFIX, channelRoutes(repos, dispatcher));
+   app.route(API_PREFIX, messagesRoutes(repos, dispatcher));
+-  app.route(API_PREFIX, agentRoutes(repos));
++  app.route(API_PREFIX, agentRoutes(repos, dispatcher));
+ 
+   const gwUrl = config?.gatewayUrl ?? "ws://localhost:3000/gateway";
+   app.get(`${API_PREFIX}/gateway`, (c) => c.json({ url: gwUrl }));
+diff --git a/packages/server/src/routes/agents.ts b/packages/server/src/routes/agents.ts
+index bc890f2..9c8d8a6 100644
+--- a/packages/server/src/routes/agents.ts
++++ b/packages/server/src/routes/agents.ts
+@@ -1,9 +1,10 @@
+ import { Hono } from "hono";
+ import type { Repos } from "../repos/index.js";
++import type { GatewayDispatcher } from "../ws/dispatcher.js";
+ import { requireAuth, type AppEnv } from "../auth.js";
+ import { validateString, validationError, parseJsonBody } from "../validation.js";
+ 
+-export function agentRoutes(repos: Repos): Hono<AppEnv> {
++export function agentRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Hono<AppEnv> {
+   const app = new Hono<AppEnv>();
+   const auth = requireAuth(repos.users);
+ 
+@@ -116,6 +117,7 @@ export function agentRoutes(repos: Repos): Hono<AppEnv> {
+ 
+     const body = await c.req.json<{ nick?: string; roles?: string[] }>().catch(() => ({} as { nick?: string; roles?: string[] }));
+     const member = repos.members.add(guildId, userId, body.nick, body.roles);
++    dispatcher?.addGuildToUser(userId, guildId);
+     return c.json(member, 201);
+   });
+ 
+@@ -137,6 +139,7 @@ export function agentRoutes(repos: Repos): Hono<AppEnv> {
+     }
+ 
+     repos.members.remove(guildId, userId);
++    dispatcher?.removeGuildFromUser(userId, guildId);
+     return c.body(null, 204);
+   });
+ 
+diff --git a/packages/server/src/ws/dispatcher.ts b/packages/server/src/ws/dispatcher.ts
+index 65cb9ca..5ce1a2a 100644
+--- a/packages/server/src/ws/dispatcher.ts
++++ b/packages/server/src/ws/dispatcher.ts
+@@ -6,7 +6,7 @@ export class GatewayDispatcher {
+   private sessions = new Set<GatewaySession>();
+   private userSessions = new Map<string, Set<string>>();
+ 
+-  constructor(private channelsRepo?: ChannelsRepo) {}
++  constructor(private channelsRepo: ChannelsRepo) {}
+ 
+   addSession(session: GatewaySession): void {
+     this.sessions.add(session);
+@@ -95,8 +95,25 @@ export class GatewayDispatcher {
+     });
+   }
+ 
++  addGuildToUser(userId: string, guildId: string): void {
++    for (const session of this.sessions) {
++      if (session.user?.id === userId) {
++        session.guildIds.add(guildId);
++      }
++    }
++  }
++
++  removeGuildFromUser(userId: string, guildId: string): void {
++    for (const session of this.sessions) {
++      if (session.user?.id === userId) {
++        session.guildIds.delete(guildId);
++      }
++    }
++  }
++
+   private resolveGuildForChannel(channelId: string): string | null {
+-    if (!this.channelsRepo) return null;
++    // TODO(#111): DM channels have guild_id == null. When DMs are implemented,
++    // add a broadcastToRecipients path that sends to DM participants directly.
+     const channel = this.channelsRepo.getById(channelId);
+     return channel?.guild_id ?? null;
+   }

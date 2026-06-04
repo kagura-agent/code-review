@@ -434,7 +434,7 @@
     "repo": "cove",
     "pr": 179,
     "reviewed_at": "2026-06-04T08:55:00Z",
-    "status": "open",
+    "status": "reviewed-r2-needs-changes",
     "ground_truth": null
   }
 ]
