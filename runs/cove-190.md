@@ -88,3 +88,28 @@
 | 🌟 Stella | ⚠️ | 5m22s. Most thorough — plugin shutdown gap unique. Verified 38 tests |
 | 🌠 Nova | ⚠️ | Unhandled rejection escalation + concrete fix. Typing callback ghost indicator analysis |
 | 💫 Vega | ❌ | Strictest escalation. Code examples for every fix |
+
+## Round 4 — 2026-06-04 (FlowForge)
+
+**Verdict:** ⚠️ Needs Changes (2/3)
+
+### R3 → R4 fixes
+- UnhandledPromiseRejection → dispatch.catch(() => {}) ✅
+- Callback guards → isCurrent() on all 11 callbacks ✅
+- channelGeneration cleanup → delete in finally ⚠️ introduces reuse bug
+
+### Key finding: Generation ID reuse (Vega)
+channelGeneration.delete() resets counter, next dispatch gets same gen as stale one.
+Elegant fix: use AbortController reference equality instead of numeric counter.
+
+### Reviewer Performance (Round 4)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ❌ | 4m18s. Queued side-effect race analysis is deepest. Reconnect map leak. But Vega's reuse bug is more critical |
+| 🌠 Nova | ✅ | All criticals resolved from his perspective. Reconnect leak noted as follow-up. Most balanced |
+| 💫 Vega | ⚠️ | **Star find of the session** — generation ID reuse via .delete() is a deterministic logic bug. AbortController identity fix is elegant and simplifies code |
+
+### Layer 2 — Prompt Evolution Check
+- "Counter reset via delete creates reuse vulnerability" — novel pattern. Identity-based guards (object ref) > numeric counters
+- Vega's best unique find across all reviews today — architectural suggestion that eliminates an entire data structure
+- No prompt changes needed ✅
