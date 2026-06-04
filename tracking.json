@@ -522,12 +522,20 @@
         "plugin-shutdown-cleanup"
       ],
       "noise": [],
-      "calibration": "7-round journey — longest in review history. Evolved from basic timeout wrapper to comprehensive dispatch resilience system. Every round produced genuine improvements. Vega's R4 generation ID reuse find was star finding. Human rubber-stamped after R7."
+      "calibration": "7-round journey \u2014 longest in review history. Evolved from basic timeout wrapper to comprehensive dispatch resilience system. Every round produced genuine improvements. Vega's R4 generation ID reuse find was star finding. Human rubber-stamped after R7."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 7,
     "notes": "7-round journey. R4 Vega star find (gen ID reuse). R7: 3/3 unanimous. Merged 2026-06-04T11:58Z.",
     "last_checked": "2026-06-04T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 191,
+    "reviewed_at": "2026-06-04T12:40:00Z",
+    "status": "open",
+    "ground_truth": null
   }
 ]
