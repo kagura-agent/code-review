@@ -413,36 +413,121 @@
     "repo": "cove",
     "pr": 176,
     "reviewed_at": "2026-06-04T05:40:00Z",
-    "status": "open-r3-ready",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "ready",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "channel-dedup",
+        "prototype-pollution",
+        "emit-iteration-safety",
+        "typing-store-coupling",
+        "silent-message-drop"
+      ],
+      "noise": [],
+      "calibration": "3-round iterative review was the quality gate. R1 had 2/3 (Stella timeout). R2 escalated 4 unaddressed issues (3/3 consensus). R3 all resolved. WS disconnect concern valid but non-blocking for personal project. Human rubber-stamped."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 3,
-    "notes": "R3: 2/3 \u2705 (Stella flags WS disconnect, non-blocking). All R2 escalated issues resolved. Awaiting human review.",
-    "last_checked": "2026-06-04T14:34+08:00"
+    "notes": "R1: Stella timeout. R2: 3/3 unanimous needs_changes. R3: 2/3 ready. Merged 2026-06-04T07:06Z.",
+    "last_checked": "2026-06-04T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 178,
     "reviewed_at": "2026-06-04T07:45:00Z",
-    "status": "reviewed-r3-ready",
-    "ground_truth": null
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "sqlite-pragma-transaction",
+        "fake-test-detection",
+        "fk-regression-test",
+        "foreign-key-check-post-migration"
+      ],
+      "noise": [],
+      "calibration": "R1 caught real SQLite FK pragma bug (3/3 consensus, Stella reproduced locally). R2 escalated fake test + missing regression coverage. R3 all resolved. Human rubber-stamped."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 3,
+    "notes": "R1: FK pragma no-op in transaction (3/3). R2: fake test escalated. R3: 3/3 unanimous ready. Merged 2026-06-04T08:19Z.",
+    "last_checked": "2026-06-04T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 179,
     "reviewed_at": "2026-06-04T08:55:00Z",
-    "status": "reviewed-r3-ready",
-    "ground_truth": null
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "stale-auth-state",
+        "self-broadcast-on-disconnect",
+        "guild-lifecycle-events",
+        "on2-presence-calculation"
+      ],
+      "noise": [],
+      "calibration": "R1 caught stale guildIds security gap (2/3). R2 found self-broadcast + missing GUILD events. R3 all resolved. User deletion edge case deferred as follow-up. Human rubber-stamped."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 3,
+    "notes": "R1: stale guildIds (Stella+Nova). R2: self-broadcast + GUILD events (3/3). R3: 2/3 ready. Merged 2026-06-04T09:49Z.",
+    "last_checked": "2026-06-04T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 190,
     "reviewed_at": "2026-06-04T10:15:00Z",
-    "status": "reviewed-r7-ready",
-    "ground_truth": null
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r7": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "abort-cancellation-semantics",
+        "typing-indicator-leak",
+        "generation-id-reuse",
+        "queued-side-effect-race",
+        "async-handler-ordering",
+        "plugin-shutdown-cleanup"
+      ],
+      "noise": [],
+      "calibration": "7-round journey — longest in review history. Evolved from basic timeout wrapper to comprehensive dispatch resilience system. Every round produced genuine improvements. Vega's R4 generation ID reuse find was star finding. Human rubber-stamped after R7."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 7,
+    "notes": "7-round journey. R4 Vega star find (gen ID reuse). R7: 3/3 unanimous. Merged 2026-06-04T11:58Z.",
+    "last_checked": "2026-06-04T20:26+08:00"
   }
 ]
