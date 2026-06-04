@@ -125,3 +125,26 @@ Direct channel/message routes bypass guild membership — 3/3 independently flag
 - 5 rounds total for this PR — each round fixed what was found, steady convergence
 - All 3 reviewers readable every round since output constraints added (R3+)
 - Prompt evolution from R3 (security tests = Critical) validated across R4 and R5
+
+## Round 6 — 2026-06-04
+
+**Verdict:** ⚠️ Needs Changes (2/3) — WS scoping carry-over from R5
+
+### What changed R5→R6
+- Code diff appears unchanged on the WS concern — no new WS-related changes detected
+
+### Reviewer Performance (Round 6)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ⚠️ | Same WS concern as R5. Consistent position |
+| 🌠 Nova | ✅ | No critical. 8 suggestions, all valid non-blocking |
+| 💫 Vega | ⚠️ | Now also flagging WS (didn't in R5) — may be influenced by diff growing |
+
+### Layer 2 — Prompt Evolution Check
+- WS scoping is an architectural concern, not a prompt blind spot
+- No new repeated patterns across last 5 runs
+- Prompt working as intended — test requirement producing consistent reviewer behavior
+- No changes needed ✅
+
+### Decision
+WS guild scoping is out of this PR's scope (#140). Recommend merge + follow-up issue.
