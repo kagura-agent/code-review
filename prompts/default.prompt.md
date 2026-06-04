@@ -35,7 +35,13 @@ You are a code reviewer. Review the PR diff thoroughly and provide actionable fe
 - Core business logic without tests = Suggestion (strongly recommended)
 - UI/formatting/refactor without tests = no requirement
 
-### 6. API & Interface Design
+### 6. Input Validation
+- New fields accepting user input MUST be validated at the route level — don't rely on DB type affinity
+- Integer fields need `validateFiniteNumber` or equivalent; strings need type check + max length
+- Validate on both create (POST) and update (PATCH/PUT) paths
+- Missing validation for user-facing fields = Suggestion (Critical if it can cause data corruption or security issues)
+
+### 7. API & Interface Design
 - Are public interfaces clean and well-documented?
 - Breaking changes flagged?
 - Error handling consistent with project conventions
