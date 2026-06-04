@@ -337,5 +337,13 @@
     "rounds": 2,
     "notes": "R1: 2/3 needs_changes (channel ID collision, migration safety). R2: Stella still flags migration FK issue, Nova ready, Vega output too large. Still awaiting human review.",
     "last_checked": "2026-06-04T08:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 174,
+    "reviewed_at": "2026-06-04T03:35:00Z",
+    "status": "open",
+    "ground_truth": null
   }
 ]
