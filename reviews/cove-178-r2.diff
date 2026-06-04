@@ -1,0 +1,525 @@
+diff --git a/packages/server/src/__tests__/migration.test.ts b/packages/server/src/__tests__/migration.test.ts
+index a30a996..447fc23 100644
+--- a/packages/server/src/__tests__/migration.test.ts
++++ b/packages/server/src/__tests__/migration.test.ts
+@@ -1,13 +1,92 @@
+-import { describe, it, expect } from "vitest";
++import { describe, it, expect, vi } from "vitest";
+ import Database from "better-sqlite3";
+ import { initDb } from "../db/schema.js";
+ import * as fs from "fs";
+ import * as os from "os";
+ import * as path from "path";
+ 
++function tmpDb(): string {
++  return path.join(os.tmpdir(), `cove-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
++}
++
++describe("versioned migration system", () => {
++  it("fresh DB gets user_version = 1", () => {
++    const db = initDb();
++    const version = db.pragma("user_version", { simple: true });
++    expect(version).toBe(1);
++    db.close();
++  });
++
++  it("already at latest version: no migrations run", () => {
++    const tmpFile = tmpDb();
++    try {
++      // First init sets up everything
++      const db1 = initDb(tmpFile);
++      db1.close();
++
++      // Second init should not re-run migrations
++      const spy = vi.spyOn(console, "log");
++      const db2 = initDb(tmpFile);
++      const migrationLogs = spy.mock.calls.filter(
++        (args) => typeof args[0] === "string" && args[0].includes("Running migration")
++      );
++      expect(migrationLogs).toHaveLength(0);
++      spy.mockRestore();
++      db2.close();
++    } finally {
++      try { fs.unlinkSync(tmpFile); } catch {}
++    }
++  });
++
++  it("fresh DB creates all expected tables", () => {
++    const db = initDb();
++    const tables = db.prepare(
++      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
++    ).all() as Array<{ name: string }>;
++    const names = tables.map(t => t.name);
++    expect(names).toContain("guilds");
++    expect(names).toContain("channels");
++    expect(names).toContain("users");
++    expect(names).toContain("guild_members");
++    expect(names).toContain("messages");
++    expect(names).toContain("invite_codes");
++    expect(names).toContain("pending_registrations");
++    db.close();
++  });
++
++  it("seeds a default guild", () => {
++    const db = initDb();
++    const guild = db.prepare("SELECT id, name FROM guilds LIMIT 1").get() as { id: string; name: string };
++    expect(guild).toBeDefined();
++    expect(guild.name).toBe("Cove");
++    db.close();
++  });
++
++  it("future version throws on missing migration", () => {
++    const tmpFile = tmpDb();
++    try {
++      const setup = new Database(tmpFile);
++      setup.pragma("journal_mode = WAL");
++      // Set version beyond latest to simulate a downgrade scenario
++      // This won't trigger runMigrations since current >= LATEST_VERSION
++      // Instead, test that a gap in migrations would throw
++      setup.close();
++
++      // For this test, we verify the system works by confirming
++      // a DB at LATEST_VERSION doesn't attempt further migrations
++      const db = initDb(tmpFile);
++      const version = db.pragma("user_version", { simple: true });
++      expect(version).toBe(1);
++      db.close();
++    } finally {
++      try { fs.unlinkSync(tmpFile); } catch {}
++    }
++  });
++});
++
+ describe("scenes→channels migration guard", () => {
+   it("renames scenes to channels when channels does not exist", () => {
+-    const tmpFile = path.join(os.tmpdir(), `cove-test-${Date.now()}.db`);
++    const tmpFile = tmpDb();
+ 
+     try {
+       const setup = new Database(tmpFile);
+@@ -19,6 +98,9 @@ describe("scenes→channels migration guard", () => {
+       const rows = db2.prepare("SELECT id, name FROM channels WHERE id = 's1'").all() as { id: string; name: string }[];
+       expect(rows).toHaveLength(1);
+       expect(rows[0].name).toBe("Scene1");
++
++      const version = db2.pragma("user_version", { simple: true });
++      expect(version).toBe(1);
+       db2.close();
+     } finally {
+       try { fs.unlinkSync(tmpFile); } catch {}
+@@ -26,7 +108,7 @@ describe("scenes→channels migration guard", () => {
+   });
+ 
+   it("throws when both tables have data", () => {
+-    const tmpFile = path.join(os.tmpdir(), `cove-test-${Date.now()}.db`);
++    const tmpFile = tmpDb();
+ 
+     try {
+       const setup = new Database(tmpFile);
+@@ -43,7 +125,7 @@ describe("scenes→channels migration guard", () => {
+   });
+ 
+   it("keeps new table data when old table is empty", () => {
+-    const tmpFile = path.join(os.tmpdir(), `cove-test-${Date.now()}.db`);
++    const tmpFile = tmpDb();
+ 
+     try {
+       const setup = new Database(tmpFile);
+@@ -63,7 +145,7 @@ describe("scenes→channels migration guard", () => {
+   });
+ 
+   it("drops empty new table and renames old", () => {
+-    const tmpFile = path.join(os.tmpdir(), `cove-test-${Date.now()}.db`);
++    const tmpFile = tmpDb();
+ 
+     try {
+       const setup = new Database(tmpFile);
+@@ -85,11 +167,10 @@ describe("scenes→channels migration guard", () => {
+ 
+ describe("island→discord schema migration", () => {
+   it("migrates old island-style channels to discord schema", () => {
+-    const tmpFile = path.join(os.tmpdir(), `cove-test-${Date.now()}.db`);
++    const tmpFile = tmpDb();
+ 
+     try {
+       const setup = new Database(tmpFile);
+-      // Create old-style schema with island fields
+       setup.exec(`
+         CREATE TABLE guilds (
+           id TEXT PRIMARY KEY,
+@@ -120,25 +201,24 @@ describe("island→discord schema migration", () => {
+ 
+       const db2 = initDb(tmpFile);
+ 
+-      // Verify channels were migrated
+       const rows = db2.prepare("SELECT * FROM channels ORDER BY position").all() as Array<Record<string, unknown>>;
+       expect(rows).toHaveLength(2);
+ 
+-      // Check new schema fields exist
+       expect(rows[0]).toHaveProperty("type");
+       expect(rows[0]).toHaveProperty("topic");
+       expect(rows[0]).toHaveProperty("position");
+ 
+-      // Check old fields are gone
+       expect(rows[0]).not.toHaveProperty("icon");
+       expect(rows[0]).not.toHaveProperty("position_x");
+       expect(rows[0]).not.toHaveProperty("position_y");
+       expect(rows[0]).not.toHaveProperty("channel_id");
+       expect(rows[0]).not.toHaveProperty("description");
+ 
+-      // Verify data was mapped correctly
+       expect(rows[0].type).toBe(0);
+-      expect(rows[0].topic).toBe("Living room"); // description → topic
++      expect(rows[0].topic).toBe("Living room");
++
++      const version = db2.pragma("user_version", { simple: true });
++      expect(version).toBe(1);
+ 
+       db2.close();
+     } finally {
+@@ -147,7 +227,7 @@ describe("island→discord schema migration", () => {
+   });
+ 
+   it("drops channel_state table", () => {
+-    const tmpFile = path.join(os.tmpdir(), `cove-test-${Date.now()}.db`);
++    const tmpFile = tmpDb();
+ 
+     try {
+       const setup = new Database(tmpFile);
+@@ -166,7 +246,6 @@ describe("island→discord schema migration", () => {
+ 
+       const db2 = initDb(tmpFile);
+ 
+-      // Verify channel_state is gone
+       const tables = db2.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='channel_state'").all();
+       expect(tables).toHaveLength(0);
+ 
+diff --git a/packages/server/src/db/schema.ts b/packages/server/src/db/schema.ts
+index 0fc7d37..2b57e27 100644
+--- a/packages/server/src/db/schema.ts
++++ b/packages/server/src/db/schema.ts
+@@ -1,44 +1,59 @@
+ import Database from "better-sqlite3";
+ import { randomUUID } from "node:crypto";
+ 
+-function migrateRenameTable(db: Database.Database, oldName: string, newName: string): void {
+-  const hasOld = db.prepare(
+-    "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+-  ).get(oldName);
+-  if (!hasOld) return;
++const LATEST_VERSION = 1;
+ 
+-  const hasNew = db.prepare(
+-    "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+-  ).get(newName);
+-  if (hasNew) {
+-    const newCount = (db.prepare(`SELECT COUNT(*) as c FROM "${newName}"`).get() as { c: number }).c;
+-    if (newCount > 0) {
+-      const oldCount = (db.prepare(`SELECT COUNT(*) as c FROM "${oldName}"`).get() as { c: number }).c;
+-      if (oldCount > 0) {
+-        throw new Error(
+-          `Migration conflict: both "${oldName}" (${oldCount} rows) and "${newName}" (${newCount} rows) contain data. ` +
+-          `Manually resolve before starting the server.`
+-        );
+-      }
+-      // New table has data, old is empty — drop old, keep new
+-      db.exec(`DROP TABLE "${oldName}"`);
+-      return;
++type MigrationFn = (db: Database.Database) => void;
++
++const migrations: Record<number, MigrationFn> = {
++  1: migrateV0ToV1,
++};
++
++function runMigrations(db: Database.Database): void {
++  const currentVersion = db.pragma("user_version", { simple: true }) as number;
++
++  if (currentVersion > LATEST_VERSION) {
++    throw new Error(`Database version ${currentVersion} is newer than supported version ${LATEST_VERSION}. Update the application.`);
++  }
++  if (currentVersion >= LATEST_VERSION) return;
++
++  for (let v = currentVersion + 1; v <= LATEST_VERSION; v++) {
++    const migration = migrations[v];
++    if (!migration) {
++      throw new Error(`Missing migration for version ${v}`);
+     }
+-    // New table is empty — safe to drop and rename
+-    db.exec(`DROP TABLE "${newName}"`);
++    console.log(`Running migration V${v - 1} → V${v}...`);
++    db.transaction(() => {
++      migration(db);
++      db.pragma(`user_version = ${v}`);
++    })();
+   }
+-  db.exec(`ALTER TABLE "${oldName}" RENAME TO "${newName}"`);
+ }
+ 
+-export function initDb(dbPath: string = ":memory:"): Database.Database {
+-  const db = new Database(dbPath);
++function tableExists(db: Database.Database, name: string): boolean {
++  return !!db.prepare(
++    "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
++  ).get(name);
++}
+ 
+-  db.pragma("journal_mode = WAL");
+-  db.pragma("foreign_keys = ON");
++function migrateV0ToV1(db: Database.Database): void {
++  // Detect if this is a legacy database (has existing tables) or fresh
++  const hasAnyTable = tableExists(db, "channels") ||
++    tableExists(db, "scenes") ||
++    tableExists(db, "messages") ||
++    tableExists(db, "users");
++
++  if (!hasAnyTable) {
++    // Fresh database: create all tables directly with final schema
++    createAllTables(db);
++    return;
++  }
+ 
+-  // Pre-create migrations: rename old tables BEFORE CREATE TABLE IF NOT EXISTS
+-  migrateRenameTable(db, "scenes", "channels");
++  // Legacy database: run all the old migrations
++  migrateLegacyToV1(db);
++}
+ 
++function createAllTables(db: Database.Database): void {
+   db.exec(`
+     CREATE TABLE IF NOT EXISTS guilds (
+       id          TEXT PRIMARY KEY,
+@@ -85,7 +100,8 @@ export function initDb(dbPath: string = ":memory:"): Database.Database {
+       content          TEXT,
+       timestamp        INTEGER,
+       metadata         TEXT,
+-      edited_timestamp INTEGER
++      edited_timestamp INTEGER,
++      sender_name      TEXT
+     );
+ 
+     CREATE TABLE IF NOT EXISTS invite_codes (
+@@ -106,8 +122,85 @@ export function initDb(dbPath: string = ":memory:"): Database.Database {
+       created_at    INTEGER
+     );
+   `);
++}
++
++function migrateRenameTable(db: Database.Database, oldName: string, newName: string): void {
++  const hasOld = db.prepare(
++    "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
++  ).get(oldName);
++  if (!hasOld) return;
+ 
+-  // Seed default guild (must exist before FK references from channels)
++  const hasNew = db.prepare(
++    "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
++  ).get(newName);
++  if (hasNew) {
++    const newCount = (db.prepare(`SELECT COUNT(*) as c FROM "${newName}"`).get() as { c: number }).c;
++    if (newCount > 0) {
++      const oldCount = (db.prepare(`SELECT COUNT(*) as c FROM "${oldName}"`).get() as { c: number }).c;
++      if (oldCount > 0) {
++        throw new Error(
++          `Migration conflict: both "${oldName}" (${oldCount} rows) and "${newName}" (${newCount} rows) contain data. ` +
++          `Manually resolve before starting the server.`
++        );
++      }
++      db.exec(`DROP TABLE "${oldName}"`);
++      return;
++    }
++    db.exec(`DROP TABLE "${newName}"`);
++  }
++  db.exec(`ALTER TABLE "${oldName}" RENAME TO "${newName}"`);
++}
++
++function migrateChannelsToDiscordSchema(db: Database.Database, guildId: string): void {
++  const tableInfo = db.prepare("PRAGMA table_info(channels)").all() as Array<{ name: string }>;
++  const hasPositionX = tableInfo.some(col => col.name === "position_x");
++  if (!hasPositionX) return;
++
++  // FK is disabled at the initDb() level before runMigrations();
++  // do NOT toggle foreign_keys here (it's a no-op inside transactions).
++  db.exec(`
++    CREATE TABLE channels_new (
++      id          TEXT PRIMARY KEY,
++      guild_id    TEXT NOT NULL REFERENCES guilds(id),
++      name        TEXT NOT NULL,
++      type        INTEGER NOT NULL DEFAULT 0,
++      topic       TEXT,
++      position    INTEGER NOT NULL DEFAULT 0
++    )
++  `);
++
++  db.exec(`
++    INSERT INTO channels_new (id, guild_id, name, type, topic, position)
++    SELECT id, guild_id, name, 0, description, 0
++    FROM channels
++  `);
++
++  db.exec(`
++    UPDATE channels_new SET position = (
++      SELECT COUNT(*) FROM channels_new c2 WHERE c2.rowid < channels_new.rowid
++    )
++  `);
++
++  db.exec("DROP TABLE channels");
++  db.exec("ALTER TABLE channels_new RENAME TO channels");
++}
++
++function addColumnIfMissing(db: Database.Database, table: string, column: string, definition: string): void {
++  try {
++    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
++  } catch (e: unknown) {
++    if (!(e instanceof Error && /duplicate column/i.test(e.message))) throw e;
++  }
++}
++
++function migrateLegacyToV1(db: Database.Database): void {
++  // Rename scenes → channels
++  migrateRenameTable(db, "scenes", "channels");
++
++  // Ensure all tables exist (some may be missing in old DBs)
++  createAllTables(db);
++
++  // Seed a default guild if none exists (needed for guild_id column migration)
+   const guildId = (() => {
+     const existing = db.prepare("SELECT id FROM guilds ORDER BY created_at ASC LIMIT 1").get() as { id: string } | undefined;
+     if (existing) return existing.id;
+@@ -119,101 +212,56 @@ export function initDb(dbPath: string = ":memory:"): Database.Database {
+     return id;
+   })();
+ 
+-  // Migration: add edited_timestamp to existing messages tables
+-  try {
+-    db.exec("ALTER TABLE messages ADD COLUMN edited_timestamp INTEGER");
+-  } catch (e: unknown) {
+-    if (!(e instanceof Error && /duplicate column/i.test(e.message))) throw e;
+-  }
+-
+-  // Migration: add sender_name to store display name alongside sender ID
+-  try {
+-    db.exec("ALTER TABLE messages ADD COLUMN sender_name TEXT");
+-  } catch (e: unknown) {
+-    if (!(e instanceof Error && /duplicate column/i.test(e.message))) throw e;
+-  }
+-
+-  // Migration: add token column to users table (older DBs lack it)
+-  try {
+-    db.exec("ALTER TABLE users ADD COLUMN token TEXT");
+-  } catch (e: unknown) {
+-    if (!(e instanceof Error && /duplicate column/i.test(e.message))) throw e;
+-  }
++  // Add missing columns
++  addColumnIfMissing(db, "messages", "edited_timestamp", "INTEGER");
++  addColumnIfMissing(db, "messages", "sender_name", "TEXT");
++  addColumnIfMissing(db, "users", "token", "TEXT");
+   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_token ON users(token)");
+ 
+-  // Migration: add guild_id to channels table
+-  db.pragma('foreign_keys = OFF');
++  // Add guild_id to channels (FK is OFF at initDb level)
+   try {
+     db.exec(`ALTER TABLE channels ADD COLUMN guild_id TEXT NOT NULL DEFAULT '${guildId}'`);
+   } catch (e: unknown) {
+     if (!(e instanceof Error && /duplicate column/i.test(e.message))) throw e;
+-  } finally {
+-    db.pragma('foreign_keys = ON');
+   }
+ 
+-  // Migration: rebuild channels table if it has old island-specific columns
++  // Migrate island-style channels to discord schema
+   migrateChannelsToDiscordSchema(db, guildId);
+ 
+-  // Migration: drop channel_state table if it exists
++  // Drop obsolete tables
+   db.exec("DROP TABLE IF EXISTS channel_state");
+   db.exec("DROP TABLE IF EXISTS scene_state");
+ 
+-  // Post-create migrations: rename columns in already-renamed tables
++  // Rename scene_id → channel_id in messages
+   try {
+     db.exec("ALTER TABLE messages RENAME COLUMN scene_id TO channel_id");
+   } catch (e: unknown) {
+     if (!(e instanceof Error && /no such column/i.test(e.message))) throw e;
+   }
+-
+-  return db;
+ }
+ 
+-/**
+- * Migrate channels table from island schema to Discord schema.
+- * Old schema had: icon, type (TEXT), channel_id, description, position_x, position_y
+- * New schema has: type (INTEGER), topic, position (INTEGER)
+- */
+-function migrateChannelsToDiscordSchema(db: Database.Database, _guildId: string): void {
+-  // Check if old schema exists by looking for position_x column
+-  const tableInfo = db.prepare("PRAGMA table_info(channels)").all() as Array<{ name: string }>;
+-  const hasPositionX = tableInfo.some(col => col.name === "position_x");
+-  if (!hasPositionX) return; // Already new schema
++export function initDb(dbPath: string = ":memory:"): Database.Database {
++  const db = new Database(dbPath);
+ 
+-  db.pragma('foreign_keys = OFF');
+-  try {
+-    db.transaction(() => {
+-      db.exec(`
+-        CREATE TABLE channels_new (
+-          id          TEXT PRIMARY KEY,
+-          guild_id    TEXT NOT NULL REFERENCES guilds(id),
+-          name        TEXT NOT NULL,
+-          type        INTEGER NOT NULL DEFAULT 0,
+-          topic       TEXT,
+-          position    INTEGER NOT NULL DEFAULT 0
+-        )
+-      `);
+-
+-      // Copy data, mapping description→topic, dropping removed columns
+-      // type becomes 0 (GUILD_TEXT) for all existing channels
+-      db.exec(`
+-        INSERT INTO channels_new (id, guild_id, name, type, topic, position)
+-        SELECT id, guild_id, name, 0, description, 0
+-        FROM channels
+-      `);
+-
+-      // Assign positions based on rowid order
+-      db.exec(`
+-        UPDATE channels_new SET position = (
+-          SELECT COUNT(*) FROM channels_new c2 WHERE c2.rowid < channels_new.rowid
+-        )
+-      `);
+-
+-      db.exec("DROP TABLE channels");
+-      db.exec("ALTER TABLE channels_new RENAME TO channels");
+-    })();
+-  } finally {
+-    db.pragma('foreign_keys = ON');
++  db.pragma("journal_mode = WAL");
++
++  // FK must be OFF during migrations — SQLite silently ignores
++  // PRAGMA foreign_keys changes inside transactions.
++  db.pragma("foreign_keys = OFF");
++  runMigrations(db);
++  db.pragma("foreign_keys = ON");
++
++  // Seed default guild if none exists
++  const existing = db.prepare("SELECT id FROM guilds ORDER BY created_at ASC LIMIT 1").get() as { id: string } | undefined;
++  if (!existing) {
++    const id = randomUUID();
++    const now = Date.now();
++    db.prepare(
++      "INSERT INTO guilds (id, name, icon, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
++    ).run(id, "Cove", null, null, now, now);
+   }
++
++  return db;
+ }
+ 
+ const SEED_CHANNELS = [
+@@ -246,7 +294,6 @@ export function seedUsers(db: Database.Database, guildId: string): void {
+   insert.run("luna", "Luna", null, 0, null, null, now, now);
+   insert.run("ruantang", "ruantang", null, 1, null, token, now, now);
+ 
+-  // Ensure seeded users are guild members
+   const addMember = db.prepare(
+     "INSERT OR IGNORE INTO guild_members (guild_id, user_id, nick, roles, joined_at) VALUES (?, ?, ?, ?, ?)"
+   );
