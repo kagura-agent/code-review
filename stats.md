@@ -4,9 +4,9 @@
 
 | Reviewer | Model | Reviews | Avg Runtime | Reliability | Notes |
 |----------|-------|---------|-------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 25 | ~3m | 25/25 (100%) | Runs build+test. Catches edge cases. |
-| 🌠 Nova | claude-opus-4.7 | 25 | ~2m | 25/25 (100%) | Strongest on security + architecture. |
-| 💫 Vega | gemini-3.1-pro-preview | 25 | ~1m | 19/25 (76%) | 8 consecutive clean runs. |
+| 🌟 Stella | gpt-5.5 | 28 | ~3m | 28/28 (100%) | Runs build+test. Catches edge cases. Deepest on migration/DB issues. |
+| 🌠 Nova | claude-opus-4.7 | 28 | ~2m | 28/28 (100%) | Strongest on security + architecture. Most calibrated severity. |
+| 💫 Vega | gemini-3.1-pro-preview | 28 | ~1m | 21/28 (75%) | R2 #168 oversized (fixed with output constraints). IDOR framing clearest in R3. |
 
 ## Review History
 
@@ -23,3 +23,4 @@
 | #165 | cove | 2026-06-04 | R1-R2 | ✅ Ready |
 | #166 | cove | 2026-06-04 | R1 | ✅ Ready |
 | #167 | cove | 2026-06-04 | R1-R2 | ✅ Ready |
+| #168 | cove | 2026-06-04 | R1-R3 | ⚠️ In progress |

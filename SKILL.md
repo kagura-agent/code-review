@@ -20,13 +20,24 @@ Trigger: any message implying "review this PR" + a PR reference (link, `owner/re
 
 ## Execution
 
-**Always use FlowForge. Never manually spawn reviewers.**
+**Use FlowForge when possible. Manual spawn is acceptable as fallback.**
 
 ```bash
-flowforge run code-review --input '{"owner":"<owner>","repo":"<repo>","pr":<number>,"mode":"report|comment"}'
+# Start workflow (interactive, step-by-step)
+flowforge run code-review
+# Then advance each step with results:
+flowforge advance --result '<step output>'
 ```
 
-The workflow handles everything: reviewer spawning, prompt loading, consolidation, PR posting, reflection, and tracking. Manual spawning skips reflection and tracking — that's how we lose institutional memory.
+FlowForge is step-by-step — it does NOT accept `--input` for one-shot execution.
+The workflow guides: parse → load prompt → spawn reviewers → consolidate → reflect → track.
+
+If manually spawning (e.g. flowforge unavailable), remember to also do:
+- Post-review reflection (write to `runs/`)
+- **Cross-run pattern check**: read last 5 runs, find repeated suggestions, escalate to prompt
+- Update `stats.md` with reviewer performance
+- Update `tracking.json`
+- Reflection is NOT optional in manual mode — it's where prompt evolution happens
 
 ## Review Standards
 

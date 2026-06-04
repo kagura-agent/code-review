@@ -1,0 +1,63 @@
+# cove#168 — introduce proper guild storage
+
+**Date:** 2026-06-04
+**Verdict:** ⚠️ Needs Changes (2/3)
+
+## Reviewer Performance
+
+| Reviewer | Verdict | Unique Finds | Accuracy Notes |
+|----------|---------|-------------|----------------|
+| 🌟 Stella (GPT-5.5) | ⚠️ | Migration silent failure, membership enforcement | Deepest analysis — found the SQLite ALTER TABLE edge case |
+| 🌠 Nova (Opus 4.7) | ✅ | getById cross-guild leak, positional arg drift | Thorough but calibrated as non-blocking; good for stable codebase |
+| 💫 Vega (Gemini 3.1 Pro) | ⚠️ | — | Focused on channel ID collision, less depth than others |
+
+## Consensus Issues
+1. Channel ID collision across guilds (3/3)
+2. DEFAULT 'cove' hardcoded in SQL (2/3)
+
+## Process Notes
+- FlowForge `--input` param doesn't exist — manually spawned reviewers. SKILL.md fixed.
+- All three completed in ~3 minutes
+- Stella found the most non-obvious issue (SQLite migration + catch swallowing)
+
+## Re-review (Round 2) — 2026-06-04
+
+**Verdict:** ✅ Ready with caveats (improved)
+
+### Round 1 → Round 2 fixes
+- Channel ID: slug → UUID ✅
+- Auth + membership on guild routes ✅  
+- Migration error handling: pattern match ✅
+
+### Remaining
+- Migration REFERENCES + FK enforcement edge case (Stella)
+- Test coverage for auth paths (both)
+
+### Reviewer Performance (Round 2)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ⚠️ | Found SQLite ALTER TABLE + FK edge case — deepest again |
+| 🌠 Nova | ✅ | 8 suggestions, all well-calibrated, UUID behavioral break was unique |
+| 💫 Vega | ? | Output exceeded size limit, review unreadable |
+
+### Process Notes
+- Vega (Gemini 3.1 Pro) produced oversized output that got truncated — need to add output length guidance to reviewer prompts
+
+## Round 3 — 2026-06-04
+
+**Verdict:** ⚠️ Needs Changes (3/3 unanimous)
+
+### Key Finding
+Direct channel/message routes bypass guild membership — 3/3 independently flagged same IDOR. This is the remaining blocker.
+
+### Reviewer Performance (Round 3)
+| Reviewer | Verdict | Unique Finds |
+|----------|---------|-------------|
+| 🌟 Stella | ⚠️ | Exact line numbers for all affected routes, ran full build to verify tests |
+| 🌠 Nova | ⚠️ | getDefaultId fallback + duplicate names, most suggestions |
+| 💫 Vega | ⚠️ | PRAGMA finally block, IDOR framing clearest |
+
+### Process Notes
+- Output constraint in prompt worked — Vega's review was readable this time
+- All 3 reviewers converged on the same critical issue independently — high confidence finding
+- Round-over-round tracking table added to PR comment for visibility

@@ -54,8 +54,20 @@ nodes:
       Post-review self-improvement. DO NOT SKIP.
 
       Layer 1 — Record: Write to `runs/<repo>-<pr_number>.md`
-      Layer 2 — Prompt Evolution: Read recent runs/, update prompts/ if blind spots found
-      Layer 3 — Reviewer Assessment: Update `stats.md` per-reviewer accuracy
+
+      Layer 2 — Prompt Evolution (cross-run pattern check):
+        1. Read the last 5 runs in `runs/`
+        2. For each Suggestion that appeared in 2+ different PRs: escalate to prompt.
+           - Security/auth suggestion repeated → make it Critical in prompt
+           - Any category repeated 3+ times → add explicit rule to prompt
+        3. For each Critical that reviewers disagreed on severity: clarify calibration in prompt.
+        4. If a reviewer found something the prompt didn't cover at all: add the dimension.
+        5. Write what you changed and why in the run record.
+
+      Layer 3 — Reviewer Assessment: Update `stats.md` per-reviewer accuracy.
+        - Track: unique finds, false positives, missed issues (found by others but not this reviewer)
+        - Flag if a reviewer is consistently weaker on a dimension
+
       Layer 4 — Process Evolution: Did the workflow work well? Update if needed.
 
       Commit and push any changes with `evolve: <what changed and why>`
