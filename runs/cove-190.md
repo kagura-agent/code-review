@@ -19,3 +19,29 @@
 - "Abort doesn't actually cancel" is a new pattern — first occurrence. Async cancellation semantics
 - "Typing indicator leak on error path" — relates to cleanup-on-all-paths, not a new prompt dimension
 - No prompt changes needed ✅
+
+## Round 2 — 2026-06-04 (FlowForge)
+
+**Verdict:** ✅ Ready (2/3)
+
+### R1 → R2 fixes
+- Abort observational → mitigated with generation token fence ✅
+- Typing indicator leak → cleanup in catch paths ✅
+- Error string compare → custom Error subclasses ✅
+
+### Reviewer disagreement
+- Stella ❌: generation not incremented on timeout/reconnect — stale dispatch can still send
+- Nova ⚠️: mitigated to safe behavior, configurable timeout + map cleanup needed
+- Vega ✅: generation pattern is elegant, ready
+
+### Reviewer Performance (Round 2)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ❌ | 2m49s. Found generation invalidation gap on timeout/reconnect. Guards incomplete for all callbacks. Most thorough |
+| 🌠 Nova | ⚠️ | "Close to ready." Map cleanup leak unique. Honest about trade-off documentation |
+| 💫 Vega | ✅ | UnhandledPromiseRejection on early return — unique library-level find |
+
+### Layer 2 — Prompt Evolution Check
+- "Generation token invalidation completeness" — new pattern. When you add a guard, need to verify ALL paths increment it
+- "UnhandledPromiseRejection from early return" — async error handling pattern, first occurrence
+- No prompt changes needed ✅
