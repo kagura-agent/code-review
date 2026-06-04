@@ -33,9 +33,22 @@ nodes:
       Let each reviewer pull via `gh pr view` and `gh pr diff` themselves.
       Each reviewer must `export https_proxy=http://127.0.0.1:1083` first.
       Reviewers must NOT post to GitHub — text output only.
-      Reviewers must output their review as plain text in their final message.
+      Reviewers must write their review to `/tmp/review-<name>.md` (stella/nova/vega).
+      Then output the file path as their final message.
+      This prevents truncation of large reviews via session history.
+      Parent reads reviews from files, not session history.
       They must NOT use sessions_yield, sessions_send, or any messaging tool to deliver the review.
       Use sessions_yield to wait for all 3 to complete.
+
+      **For re-reviews (Round 2+):**
+      Include the previous round's consolidated review in each reviewer's prompt.
+      Add these re-review rules:
+      1. Check each previous issue one by one — was it addressed?
+      2. ESCALATION RULE: If an issue from the previous round was NOT addressed by the author,
+         escalate its severity (Suggestion → Critical). Never downgrade unaddressed issues.
+      3. ANTI-CONFIRMATION BIAS: "Your previous acceptance doesn't mean it was correct.
+         Re-evaluate with fresh eyes. Finding new issues in code you previously approved is expected."
+      4. Also do a fresh review of any new code.
     next: post_summary
 
   post_summary:

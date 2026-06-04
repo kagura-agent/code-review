@@ -39,6 +39,19 @@ If manually spawning (e.g. flowforge unavailable), remember to also do:
 - Update `tracking.json`
 - Reflection is NOT optional in manual mode — it's where prompt evolution happens
 
+## Review Output
+
+Reviewers write to `/tmp/review-<name>.md` (stella/nova/vega). Parent reads from files.
+This prevents session history truncation for large reviews.
+
+## Re-review Protocol
+
+For Round 2+, include the previous consolidated review in each reviewer's prompt with:
+1. Check each previous issue — was it addressed?
+2. **Escalation rule**: Unaddressed issues from last round → escalate severity. Never downgrade.
+3. **Anti-confirmation bias**: "Your previous acceptance doesn't mean correct. Re-evaluate fresh."
+4. Fresh review of any new code.
+
 ## Review Standards
 
 - `prompts/<repo>.prompt.md` — project-specific
