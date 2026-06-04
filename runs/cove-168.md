@@ -61,3 +61,35 @@ Direct channel/message routes bypass guild membership — 3/3 independently flag
 - Output constraint in prompt worked — Vega's review was readable this time
 - All 3 reviewers converged on the same critical issue independently — high confidence finding
 - Round-over-round tracking table added to PR comment for visibility
+
+## Round 4 — 2026-06-04
+
+**Verdict:** ✅ Ready (2/3)
+
+### Round 3 → Round 4 fixes
+- requireGuildMember helper + consistent application ✅
+- Non-member test suite (9 negative cases) ✅
+- PRAGMA in finally ✅
+- getDefaultId fail-fast at startup ✅
+
+### Remaining
+- Presences endpoint no membership check (Stella critical / Nova suggestion)
+- Partial negative test coverage for some auth branches (Stella)
+
+### Reviewer Performance (Round 4)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ⚠️ | Found presences gap + ran full test suite locally. Test coverage requirement worked — she flagged missing negative tests as Critical per updated prompt |
+| 🌠 Nova | ✅ | Same presences finding but calibrated as suggestion. 7 suggestions, all valid |
+| 💫 Vega | ✅ | Clean pass, output within limits. Weakest depth — missed presences gap |
+
+### Layer 2 — Prompt Evolution Check
+- Read last 5 runs: cove-165 through cove-168
+- Security test requirement (added after R3) triggered correctly in R4 — Stella escalated missing negative tests to Critical
+- No new repeated patterns found across runs
+- Prompt change validated: working as intended ✅
+
+### Process Notes
+- All 3 reviews readable (Vega output constraint working)
+- Updated prompt successfully changed reviewer behavior — Stella explicitly cited test requirement
+- Presences is the last holdout, consistent with the incremental fix pattern across rounds
