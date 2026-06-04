@@ -93,3 +93,35 @@ Direct channel/message routes bypass guild membership — 3/3 independently flag
 - All 3 reviews readable (Vega output constraint working)
 - Updated prompt successfully changed reviewer behavior — Stella explicitly cited test requirement
 - Presences is the last holdout, consistent with the incremental fix pattern across rounds
+
+## Round 5 — 2026-06-04
+
+**Verdict:** ✅ Ready (2/3)
+
+### Round 4 → Round 5 fixes
+- Presences endpoint membership check ✅
+- 16-case non-member test suite ✅
+- getDefaultId fail-fast + memoize ✅
+- requireGuildMember helper centralized ✅
+
+### Remaining (follow-up)
+- WS layer not guild-scoped (Stella only — out of PR scope)
+
+### Reviewer Performance (Round 5)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ⚠️ | Went deepest again — found WS layer gap. Ran full build. But arguably over-scoped for this PR |
+| 🌠 Nova | ✅ | 6 suggestions, all calibrated. SQL interpolation concern was unique and valid |
+| 💫 Vega | ✅ | Found position calculation edge case — unique and non-obvious. Improved from earlier rounds |
+
+### Layer 2 — Prompt Evolution Check
+- Read last 5 runs (cove-165 through cove-168)
+- Security test requirement working well — reviewers correctly flagged comprehensive negative tests as positive
+- No new repeated suggestion patterns found
+- Stella's WS concern is architectural, not a prompt gap — prompt correctly covers "what the PR touches"
+- No prompt changes needed this round ✅
+
+### Process Notes
+- 5 rounds total for this PR — each round fixed what was found, steady convergence
+- All 3 reviewers readable every round since output constraints added (R3+)
+- Prompt evolution from R3 (security tests = Critical) validated across R4 and R5

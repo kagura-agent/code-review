@@ -316,13 +316,13 @@
         "rest-gateway-shape-mismatch"
       ],
       "noise": [],
-      "calibration": "R1 caught real ghost presence edge case (duplicate IDENTIFY) + style duplication + shape mismatch. R2 confirmed all fixed, 3/3 unanimous. Human approved without comments — iterative review was the quality gate."
+      "calibration": "R1 caught real ghost presence edge case (duplicate IDENTIFY) + style duplication + shape mismatch. R2 confirmed all fixed, 3/3 unanimous. Human approved without comments \u2014 iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3474,
-    "notes": "R2: 3/3 ✅. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean. Merged 2026-06-03.",
+    "notes": "R2: 3/3 \u2705. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean. Merged 2026-06-03.",
     "last_checked": "2026-06-04T08:26+08:00"
   },
   {
@@ -330,7 +330,7 @@
     "repo": "cove",
     "pr": 168,
     "reviewed_at": "2026-06-03T22:43:49Z",
-    "status": "open",
+    "status": "reviewed-r5",
     "ground_truth": null,
     "verdict": "needs_changes",
     "reviewers": 3,
