@@ -350,7 +350,7 @@
       "noise": [
         "ws-guild-scoping-out-of-scope"
       ],
-      "calibration": "6-round iterative review was the quality gate. Caught channel ID collision, IDOR on direct routes, migration safety, presences bypass — all fixed before merge. WS scoping was valid but out of PR scope. Human rubber-stamped after R6."
+      "calibration": "6-round iterative review was the quality gate. Caught channel ID collision, IDOR on direct routes, migration safety, presences bypass \u2014 all fixed before merge. WS scoping was valid but out of PR scope. Human rubber-stamped after R6."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -382,7 +382,7 @@
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
-    "notes": "R1: input validation (3/3). R2: 3/3 ✅. Human had inline comments. Merged 2026-06-04T04:37Z.",
+    "notes": "R1: input validation (3/3). R2: 3/3 \u2705. Human had inline comments. Merged 2026-06-04T04:37Z.",
     "last_checked": "2026-06-04T14:34+08:00"
   },
   {
@@ -400,12 +400,12 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "R1: 2/3 ready (Stella flagged pre-existing build-order). R2: 3/3 unanimous after describe label fix. Human approved quickly — mechanical refactor correctly assessed as low-risk."
+      "calibration": "R1: 2/3 ready (Stella flagged pre-existing build-order). R2: 3/3 unanimous after describe label fix. Human approved quickly \u2014 mechanical refactor correctly assessed as low-risk."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
-    "notes": "Template string interpolation caught. 3/3 ✅ R2. Merged 2026-06-04T05:10Z.",
+    "notes": "Template string interpolation caught. 3/3 \u2705 R2. Merged 2026-06-04T05:10Z.",
     "last_checked": "2026-06-04T14:34+08:00"
   },
   {
@@ -418,7 +418,15 @@
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 3,
-    "notes": "R3: 2/3 ✅ (Stella flags WS disconnect, non-blocking). All R2 escalated issues resolved. Awaiting human review.",
+    "notes": "R3: 2/3 \u2705 (Stella flags WS disconnect, non-blocking). All R2 escalated issues resolved. Awaiting human review.",
     "last_checked": "2026-06-04T14:34+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 178,
+    "reviewed_at": "2026-06-04T07:45:00Z",
+    "status": "open",
+    "ground_truth": null
   }
 ]
