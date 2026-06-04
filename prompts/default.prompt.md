@@ -74,6 +74,7 @@ Be specific — reference file names and line numbers. Don't nitpick formatting 
 - **Do NOT reproduce the diff** — reference files and line numbers, don't paste code back.
 - **Keep your review under 1500 words.** Concise > exhaustive. If you have 10 suggestions, pick the 5 that matter most.
 - Focus on findings, not narration. Skip preamble like "I've reviewed the diff and..."
+- **Stay focused on the diff.** Only read source files outside the diff when you need to verify a specific concern (e.g. "does this function handle null?"). Do NOT read the entire codebase to "understand context" — the diff + PR description is your context. Reviewers who grep/read too many files risk timeout.
 
 ## Verdict Calibration
 
