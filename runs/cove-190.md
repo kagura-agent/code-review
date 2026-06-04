@@ -141,3 +141,31 @@ Elegant fix: use AbortController reference equality instead of numeric counter.
 - "Async handler ordering race" — important new pattern. When async handlers share mutable state, registration order ≠ arrival order
 - Queued side-effect race is a repeated pattern (3 rounds now) — but it's specific to this PR's async queue design, not a general prompt concern
 - No prompt changes needed ✅
+
+## Round 6 — 2026-06-04 (FlowForge)
+
+**Verdict:** ⚠️ Needs Changes (3/3)
+
+### R5 → R6 fixes
+- Queued side-effect race in sendOrEdit + deliver ✅ (both isCurrent() re-checks added)
+
+### Remaining (3/3 consensus)
+- Async handler ordering race — controller after await (escalated 🔴)
+- Plugin shutdown doesn't abort (escalated 🔴)
+- Configurable timeout (6th round 🟡)
+
+### Reviewer Performance (Round 6)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ⚠️ | 4m51s. Found deliver fallback race (cleanupAndSend after failed edit). Most complete previous-issues tracking |
+| 🌠 Nova | ⚠️ | Handler ordering fix code example is clearest. Also found dispatch.catch missing in onAbort path |
+| 💫 Vega | ❌ | Strictest. Same findings, concrete code examples for all 3 fixes |
+
+### Layer 2 — Prompt Evolution Check
+- "Controller installed after await" is now a 2-round pattern — async handler ordering matters
+- All remaining fixes are ~10 lines total — the PR is architecturally sound
+- No prompt changes needed ✅
+
+### Summary: 6-round journey
+R1: abort doesn't cancel → R2: generation fence → R3: generation on timeout → R4: ID reuse bug →
+R5: AbortController identity + queue guards needed → R6: queue guards ✅, handler ordering + shutdown left
