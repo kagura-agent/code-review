@@ -45,3 +45,27 @@
 - "Generation token invalidation completeness" — new pattern. When you add a guard, need to verify ALL paths increment it
 - "UnhandledPromiseRejection from early return" — async error handling pattern, first occurrence
 - No prompt changes needed ✅
+
+## Round 3 — 2026-06-04 (FlowForge)
+
+**Verdict:** ⚠️ Needs Changes (3/3)
+
+### R2 → R3 fixes
+- Generation on timeout/reconnect ✅ (Stella's R2 blocker resolved)
+
+### Escalated (3/3 consensus)
+- UnhandledPromiseRejection on pre-aborted signal
+- channelGeneration map never cleaned
+- Not all callbacks guarded
+
+### Reviewer Performance (Round 3)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ⚠️ | 5m22s. Most thorough — tested locally, listed every unguarded callback. Plugin shutdown gap unique |
+| 🌠 Nova | ⚠️ | Escalated unhandled rejection from suggestion to critical. Typing callback proxy suggestion unique |
+| 💫 Vega | ❌ | Strictest. Concrete code fix for unhandled rejection |
+
+### Layer 2 — Prompt Evolution Check
+- Escalation protocol driving quality — R2 🟡 items correctly escalated when unaddressed in R3
+- "UnhandledPromiseRejection from early return" pattern now seen in 2 rounds — confirmed real
+- No prompt changes needed ✅
