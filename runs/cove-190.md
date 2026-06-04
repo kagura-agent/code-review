@@ -113,3 +113,31 @@ Elegant fix: use AbortController reference equality instead of numeric counter.
 - "Counter reset via delete creates reuse vulnerability" — novel pattern. Identity-based guards (object ref) > numeric counters
 - Vega's best unique find across all reviews today — architectural suggestion that eliminates an entire data structure
 - No prompt changes needed ✅
+
+## Round 5 — 2026-06-04 (FlowForge)
+
+**Verdict:** ⚠️ Needs Changes (3/3, Stella late)
+
+### R4 → R5 fixes
+- Generation ID reuse → AbortController reference equality ✅ (Vega's R4 design adopted)
+- channelGeneration map leak → eliminated (map removed) ✅
+
+### Remaining issues (2/3 or 3/3 consensus)
+- Queued side-effect race in sendOrEdit + deliver (3/3)
+- Plugin shutdown doesn't abort (Nova + Vega + Stella)
+- Configurable timeout (all, 5th round)
+
+### New finding (Stella unique)
+- Async handler race: controller installed after await → older message can abort newer dispatch
+
+### Reviewer Performance (Round 5)
+| Reviewer | Verdict | Notes |
+|----------|---------|-------|
+| 🌟 Stella | ❌ | 3m34s (late but completed). **Star find**: async handler ordering race — unique across all reviewers. Controller installed after multiple awaits = old message can abort new one |
+| 🌠 Nova | ⚠️ | Most thorough queued race analysis with concrete trace. 7 suggestions |
+| 💫 Vega | ⚠️ | Concise, focused on the queue guard fix |
+
+### Layer 2 — Prompt Evolution Check
+- "Async handler ordering race" — important new pattern. When async handlers share mutable state, registration order ≠ arrival order
+- Queued side-effect race is a repeated pattern (3 rounds now) — but it's specific to this PR's async queue design, not a general prompt concern
+- No prompt changes needed ✅
