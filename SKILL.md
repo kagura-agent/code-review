@@ -20,24 +20,22 @@ Trigger: any message implying "review this PR" + a PR reference (link, `owner/re
 
 ## Execution
 
-**Use FlowForge when possible. Manual spawn is acceptable as fallback.**
+**必须用 FlowForge。不接受手动替代。**
 
 ```bash
-# Start workflow (interactive, step-by-step)
+# 开始 workflow
 flowforge run code-review
-# Then advance each step with results:
-flowforge advance --result '<step output>'
+# 每步执行完后推进：
+flowforge advance --result '<step output>' -w code-review
+# 查看当前进度：
+flowforge status -w code-review
 ```
 
-FlowForge is step-by-step — it does NOT accept `--input` for one-shot execution.
-The workflow guides: parse → load prompt → spawn reviewers → consolidate → reflect → track.
+FlowForge 逐步推进，不能跳步。workflow 保证 reflection 和 tracking 不被遗漏。
 
-If manually spawning (e.g. flowforge unavailable), remember to also do:
-- Post-review reflection (write to `runs/`)
-- **Cross-run pattern check**: read last 5 runs, find repeated suggestions, escalate to prompt
-- Update `stats.md` with reviewer performance
-- Update `tracking.json`
-- Reflection is NOT optional in manual mode — it's where prompt evolution happens
+**手动 spawn 只在 FlowForge 完全不可用时才允许。** 如果手动执行，必须逐条对照 workflow.yaml 的每个节点，确认全部完成。
+
+已验证 FlowForge 可正常运行此 workflow（2026-06-04 实测）。
 
 ## Review Output
 
@@ -69,7 +67,14 @@ Results route back to the requesting channel.
 ## Key Files
 
 - `workflow.yaml` — FlowForge workflow (source of truth)
-- `prompts/` — review standard prompts
-- `runs/` — run records
-- `stats.md` — per-reviewer assessment
+- `prompts/` — review standard prompts (default + per-repo)
+- `reviews/` — reviewer output files (persistent, git-tracked)
+- `runs/` — run records + reflection
+- `stats.md` — per-reviewer capability assessment (updated by tracking cron)
 - `tracking.json` — PR follow-up tracking
+
+## Automated Assessment
+
+`code-review-pr-tracking` cron (every 6h) does two things:
+1. **PR tracking** — check human review feedback, write ground truth to runs/
+2. **Reviewer capability assessment** — aggregate runs/ data, update stats.md with dimension strengths, trends, unique find rates
