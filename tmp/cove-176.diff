@@ -1,0 +1,278 @@
+diff --git a/packages/client/src/App.tsx b/packages/client/src/App.tsx
+index fd353f0..9cd3449 100644
+--- a/packages/client/src/App.tsx
++++ b/packages/client/src/App.tsx
+@@ -10,6 +10,7 @@ import { ChatArea } from "./components/ChatArea";
+ import { MemberList } from "./components/MemberList";
+ import { SettingsPanel } from "./components/SettingsPanel";
+ import * as api from "./lib/api";
++import { setupGatewaySubscriptions, teardownGatewaySubscriptions } from "./lib/gateway-subscriptions";
+ import { API_PREFIX } from "@cove/shared";
+ import type { CSSProperties } from "react";
+ 
+@@ -179,7 +180,11 @@ export default function App() {
+       if (chs.length > 0) setActiveChannel(chs[0].id);
+     }).catch(() => message.error("Failed to load channels"))
+       .finally(() => setChannelsLoading(false));
++    setupGatewaySubscriptions();
+     connect();
++    return () => {
++      teardownGatewaySubscriptions();
++    };
+   }, [needsSetup, authLoading, setChannels, setActiveChannel, connect]);
+ 
+   if (authLoading) {
+diff --git a/packages/client/src/lib/gateway-dispatcher.ts b/packages/client/src/lib/gateway-dispatcher.ts
+new file mode 100644
+index 0000000..b560fbe
+--- /dev/null
++++ b/packages/client/src/lib/gateway-dispatcher.ts
+@@ -0,0 +1,41 @@
++import type { Message, Channel } from "../types";
++
++export interface GatewayEventMap {
++  MESSAGE_CREATE: Message;
++  MESSAGE_UPDATE: Message;
++  MESSAGE_DELETE: { id: string; channel_id: string };
++  TYPING_START: { channel_id: string; user_id: string; username?: string };
++  PRESENCE_UPDATE: { user: { id: string }; status: "online" | "offline" };
++  READY: { presences?: Array<{ user: { id: string }; status: string }> };
++  CHANNEL_CREATE: Channel;
++  CHANNEL_UPDATE: Channel;
++  CHANNEL_DELETE: { id: string };
++}
++
++type Handler<T> = (data: T) => void;
++
++class GatewayDispatcher {
++  private handlers: { [K in keyof GatewayEventMap]?: Array<Handler<GatewayEventMap[K]>> } = {};
++
++  on<K extends keyof GatewayEventMap>(event: K, handler: Handler<GatewayEventMap[K]>): void {
++    const list = (this.handlers[event] ?? []) as Array<Handler<GatewayEventMap[K]>>;
++    list.push(handler);
++    (this.handlers as Record<string, unknown>)[event] = list;
++  }
++
++  off<K extends keyof GatewayEventMap>(event: K, handler: Handler<GatewayEventMap[K]>): void {
++    const list = this.handlers[event] as Array<Handler<GatewayEventMap[K]>> | undefined;
++    if (!list) return;
++    (this.handlers as Record<string, unknown>)[event] = list.filter((h) => h !== handler);
++  }
++
++  emit<K extends keyof GatewayEventMap>(event: K, data: GatewayEventMap[K]): void {
++    const list = this.handlers[event] as Array<Handler<GatewayEventMap[K]>> | undefined;
++    if (!list) return;
++    for (const handler of list) {
++      handler(data);
++    }
++  }
++}
++
++export const dispatcher = new GatewayDispatcher();
+diff --git a/packages/client/src/lib/gateway-subscriptions.ts b/packages/client/src/lib/gateway-subscriptions.ts
+new file mode 100644
+index 0000000..f56eb01
+--- /dev/null
++++ b/packages/client/src/lib/gateway-subscriptions.ts
+@@ -0,0 +1,95 @@
++import { dispatcher } from "./gateway-dispatcher";
++import type { GatewayEventMap } from "./gateway-dispatcher";
++import { useMessageStore } from "../stores/useMessageStore";
++import { useChannelStore } from "../stores/useChannelStore";
++import { usePresenceStore } from "../stores/usePresenceStore";
++import { useUserStore } from "../stores/useUserStore";
++import { useWebSocketStore } from "../stores/useWebSocketStore";
++
++type Handler<K extends keyof GatewayEventMap> = (data: GatewayEventMap[K]) => void;
++
++// eslint-disable-next-line @typescript-eslint/no-explicit-any
++let handlers: Array<{ event: keyof GatewayEventMap; handler: (data: any) => void }> = [];
++
++function subscribe<K extends keyof GatewayEventMap>(event: K, handler: (data: GatewayEventMap[K]) => void): void {
++  dispatcher.on(event, handler);
++  handlers.push({ event, handler });
++}
++
++export function setupGatewaySubscriptions(): void {
++  teardownGatewaySubscriptions();
++
++  subscribe("MESSAGE_CREATE", (msg) => {
++    const activeId = useChannelStore.getState().activeChannelId;
++    if (msg.channel_id === activeId) {
++      useMessageStore.getState().addMessage(msg.channel_id, msg);
++    }
++    useWebSocketStore.getState().clearTyping(msg.channel_id, msg.author.id);
++  });
++
++  subscribe("MESSAGE_UPDATE", (msg) => {
++    useMessageStore.getState().updateMessage(msg.channel_id, msg.id, msg.content, msg.edited_timestamp);
++  });
++
++  subscribe("MESSAGE_DELETE", (data) => {
++    useMessageStore.getState().removeMessage(data.channel_id, data.id);
++  });
++
++  subscribe("TYPING_START", (data) => {
++    const selfId = useUserStore.getState().id;
++    if (data.user_id === selfId) return;
++    const ws = useWebSocketStore.getState();
++    ws.clearTyping(data.channel_id, data.user_id);
++    const timeout = setTimeout(() => {
++      useWebSocketStore.getState().clearTyping(data.channel_id, data.user_id);
++    }, 8000);
++    useWebSocketStore.setState((s) => {
++      const existing = s.typingUsers[data.channel_id] ?? [];
++      return {
++        typingUsers: {
++          ...s.typingUsers,
++          [data.channel_id]: [
++            ...existing,
++            { userId: data.user_id, username: data.username ?? data.user_id, timeout },
++          ],
++        },
++      };
++    });
++  });
++
++  subscribe("PRESENCE_UPDATE", (data) => {
++    if (data.status === "online") {
++      usePresenceStore.getState().setOnline(data.user.id);
++    } else {
++      usePresenceStore.getState().setOffline(data.user.id);
++    }
++  });
++
++  subscribe("READY", (data) => {
++    if (data.presences) {
++      usePresenceStore.getState().initPresences(
++        data.presences.filter((p) => p.status === "online").map((p) => p.user.id),
++      );
++    }
++  });
++
++  subscribe("CHANNEL_CREATE", (channel) => {
++    useChannelStore.getState().addChannel(channel);
++  });
++
++  subscribe("CHANNEL_UPDATE", (channel) => {
++    useChannelStore.getState().updateChannel(channel);
++  });
++
++  subscribe("CHANNEL_DELETE", (data) => {
++    useChannelStore.getState().removeChannel(data.id);
++  });
++}
++
++export function teardownGatewaySubscriptions(): void {
++  for (const { event, handler } of handlers) {
++    // eslint-disable-next-line @typescript-eslint/no-explicit-any
++    dispatcher.off(event as any, handler);
++  }
++  handlers = [];
++}
+diff --git a/packages/client/src/stores/useChannelStore.ts b/packages/client/src/stores/useChannelStore.ts
+index a1864cb..4d2efd5 100644
+--- a/packages/client/src/stores/useChannelStore.ts
++++ b/packages/client/src/stores/useChannelStore.ts
+@@ -7,6 +7,7 @@ interface ChannelState {
+   setChannels: (channels: Channel[]) => void;
+   setActiveChannel: (id: string | null) => void;
+   addChannel: (channel: Channel) => void;
++  updateChannel: (channel: Channel) => void;
+   removeChannel: (id: string) => void;
+ }
+ 
+@@ -16,6 +17,9 @@ export const useChannelStore = create<ChannelState>((set) => ({
+   setChannels: (channels) => set({ channels }),
+   setActiveChannel: (id) => set({ activeChannelId: id }),
+   addChannel: (channel) => set((s) => ({ channels: [...s.channels, channel] })),
++  updateChannel: (channel) => set((s) => ({
++    channels: s.channels.map((c) => c.id === channel.id ? channel : c),
++  })),
+   removeChannel: (id) => set((s) => ({
+     channels: s.channels.filter((c) => c.id !== id),
+     activeChannelId: s.activeChannelId === id ? null : s.activeChannelId,
+diff --git a/packages/client/src/stores/useWebSocketStore.ts b/packages/client/src/stores/useWebSocketStore.ts
+index 8ff69ee..97a4a4a 100644
+--- a/packages/client/src/stores/useWebSocketStore.ts
++++ b/packages/client/src/stores/useWebSocketStore.ts
+@@ -1,9 +1,6 @@
+ import { create } from "zustand";
+-import type { Message } from "../types";
+-import { useUserStore } from "./useUserStore";
+-import { useMessageStore } from "./useMessageStore";
+-import { useChannelStore } from "./useChannelStore";
+-import { usePresenceStore } from "./usePresenceStore";
++import { dispatcher } from "../lib/gateway-dispatcher";
++import type { GatewayEventMap } from "../lib/gateway-dispatcher";
+ 
+ type WsStatus = "connected" | "connecting" | "disconnected";
+ 
+@@ -72,49 +69,8 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
+         if (payload.op === 11) {
+           return;
+         }
+-        if (payload.t === "READY") {
+-          const data = payload.d as { presences?: Array<{ user: { id: string }; status: string }> };
+-          if (data.presences) {
+-            usePresenceStore.getState().initPresences(
+-              data.presences.filter((p) => p.status === "online").map((p) => p.user.id),
+-            );
+-          }
+-        }
+-        const msgStore = useMessageStore.getState();
+-        const activeId = useChannelStore.getState().activeChannelId;
+-        if (payload.t === "MESSAGE_CREATE") {
+-          const msg = payload.d as Message;
+-          if (msg.channel_id === activeId) msgStore.addMessage(msg.channel_id, msg);
+-          get().clearTyping(msg.channel_id, msg.author.id);
+-        } else if (payload.t === "MESSAGE_UPDATE") {
+-          const msg = payload.d as Message;
+-          msgStore.updateMessage(msg.channel_id, msg.id, msg.content, msg.edited_timestamp);
+-        } else if (payload.t === "MESSAGE_DELETE") {
+-          const data = payload.d as { id: string; channel_id: string };
+-          msgStore.removeMessage(data.channel_id, data.id);
+-        } else if (payload.t === "TYPING_START") {
+-          const data = payload.d as { channel_id: string; user_id: string; username?: string };
+-          const selfId = useUserStore.getState().id;
+-          if (data.user_id === selfId) return;
+-          const { clearTyping } = get();
+-          clearTyping(data.channel_id, data.user_id);
+-          const timeout = setTimeout(() => clearTyping(data.channel_id, data.user_id), 8000);
+-          set((s) => {
+-            const existing = s.typingUsers[data.channel_id] ?? [];
+-            return {
+-              typingUsers: {
+-                ...s.typingUsers,
+-                [data.channel_id]: [...existing, { userId: data.user_id, username: data.username ?? data.user_id, timeout }],
+-              },
+-            };
+-          });
+-        } else if (payload.t === "PRESENCE_UPDATE") {
+-          const data = payload.d as { user: { id: string }; status: "online" | "offline" };
+-          if (data.status === "online") {
+-            usePresenceStore.getState().setOnline(data.user.id);
+-          } else {
+-            usePresenceStore.getState().setOffline(data.user.id);
+-          }
++        if (payload.t && payload.t in gatewayEvents) {
++          dispatcher.emit(payload.t as keyof GatewayEventMap, payload.d as GatewayEventMap[keyof GatewayEventMap]);
+         }
+       } catch { /* ignore non-JSON */ }
+     };
+@@ -143,3 +99,15 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
+     set({ status: "disconnected" });
+   },
+ }));
++
++const gatewayEvents: Record<string, true> = {
++  MESSAGE_CREATE: true,
++  MESSAGE_UPDATE: true,
++  MESSAGE_DELETE: true,
++  TYPING_START: true,
++  PRESENCE_UPDATE: true,
++  READY: true,
++  CHANNEL_CREATE: true,
++  CHANNEL_UPDATE: true,
++  CHANNEL_DELETE: true,
++};
