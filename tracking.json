@@ -330,36 +330,95 @@
     "repo": "cove",
     "pr": 168,
     "reviewed_at": "2026-06-03T22:43:49Z",
-    "status": "reviewed-r5",
-    "ground_truth": null,
-    "verdict": "needs_changes",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r6": "needs_changes",
+      "final_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "channel-id-collision",
+        "migration-safety",
+        "idor-direct-channel-routes",
+        "presences-membership",
+        "pragma-finally"
+      ],
+      "noise": [
+        "ws-guild-scoping-out-of-scope"
+      ],
+      "calibration": "6-round iterative review was the quality gate. Caught channel ID collision, IDOR on direct routes, migration safety, presences bypass — all fixed before merge. WS scoping was valid but out of PR scope. Human rubber-stamped after R6."
+    },
+    "verdict": "ready",
     "reviewers": 3,
-    "rounds": 2,
-    "notes": "R1: 2/3 needs_changes (channel ID collision, migration safety). R2: Stella still flags migration FK issue, Nova ready, Vega output too large. Still awaiting human review.",
-    "last_checked": "2026-06-04T08:26+08:00"
+    "rounds": 6,
+    "notes": "R6: REST fully secured, WS scoping deferred as follow-up. Merged 2026-06-04T02:29Z.",
+    "last_checked": "2026-06-04T14:34+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 174,
     "reviewed_at": "2026-06-04T03:35:00Z",
-    "status": "reviewed-r2-ready",
-    "ground_truth": null
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "input-validation",
+        "migration-fk-safety"
+      ],
+      "noise": [],
+      "calibration": "R1 caught missing input validation (3/3 consensus). R2 confirmed all fixed, unanimous ready. Human requested changes twice (inline comments) then approved. Iterative review was effective quality gate."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 2,
+    "notes": "R1: input validation (3/3). R2: 3/3 ✅. Human had inline comments. Merged 2026-06-04T04:37Z.",
+    "last_checked": "2026-06-04T14:34+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 175,
     "reviewed_at": "2026-06-04T04:55:00Z",
-    "status": "reviewed-r2-ready",
-    "ground_truth": null
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "ready",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "R1: 2/3 ready (Stella flagged pre-existing build-order). R2: 3/3 unanimous after describe label fix. Human approved quickly — mechanical refactor correctly assessed as low-risk."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 2,
+    "notes": "Template string interpolation caught. 3/3 ✅ R2. Merged 2026-06-04T05:10Z.",
+    "last_checked": "2026-06-04T14:34+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 176,
     "reviewed_at": "2026-06-04T05:40:00Z",
-    "status": "reviewed-r3-ready",
-    "ground_truth": null
+    "status": "open-r3-ready",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 3,
+    "notes": "R3: 2/3 ✅ (Stella flags WS disconnect, non-blocking). All R2 escalated issues resolved. Awaiting human review.",
+    "last_checked": "2026-06-04T14:34+08:00"
   }
 ]
