@@ -77,3 +77,23 @@
 - **Vega**: Consistent edge-case finder across all 3 rounds (N1 in R2, dispatch gap in R3)
 - **Nova**: Best at distinguishing blocking vs polish. 7 new items found but correctly triaged
 - **Stella**: Strong on lifecycle analysis. Caught ref-reset flaw others downplayed
+
+## Round 4 (2026-06-05)
+
+### R3 Resolution
+- Stale MESSAGE_ACK dispatch: ✅ Fixed (3/3) — set() returns boolean, gated dispatch
+- Implicit self-ack broadcast: ✅ Fixed (3/3) — POST handler dispatches MESSAGE_ACK
+- Auto-ack dedup: ✅ Fixed (2/3) — module-scope Map. Stella flags reload gap.
+- S3/S4 cosmetics: ✅ Fixed (finally, after 4 rounds)
+
+### Verdict: 1/3 ✅, 2/3 ⚠️ → Consolidated ✅ Ready with follow-ups
+- Nova: clean ship-it. Best at distinguishing blocking vs polish
+- Stella: strictest on escalation rules, catches reload dedup gap
+- Vega: deleted-message edge case persistent across 3 rounds, good tenacity
+
+### Total Review Stats (4 rounds)
+- R1: 3/3 ⚠️ (5 criticals found)
+- R2: 2/3 ✅ (self-msg bug found by Vega)
+- R3: 1/3 ✅ 1/3 ⚠️ 1/3 ❌ (dispatch consistency)
+- R4: 1/3 ✅ 2/3 ⚠️ (edge cases only, core solid)
+- All original criticals resolved ✅
