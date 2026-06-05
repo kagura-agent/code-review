@@ -23,3 +23,24 @@
 - **Stella**: Most thorough — found client-side regressions (C2, C3) others missed
 - **Nova**: Best API design analysis, caught CHANNEL_DELETE payload gap
 - **Vega**: Approved too readily — missed stale last_message_id and client regressions
+
+## Round 2 (2026-06-05)
+
+### R1 Resolution
+- last_message_id: ✅ Fixed (recomputeLastMessageId helper)
+- Client clear button: ✅ Fixed (compatibility route restored)
+- CHANNEL_DELETE guild_id: ✅ Fixed
+- Bulk-delete transaction: ✅ Fixed
+- MESSAGE_DELETE_BULK: ❌ Handler added but not in allowlist
+- Delete author check: ❌ Still open
+
+### New Findings
+- Stella: MESSAGE_DELETE_BULK unreachable (allowlist missing)
+- Stella: Clear-all doesn't broadcast
+- Vega: @me alias breaks ownership check
+- Nova: Repos.db exposure, bulk re-render, unauthenticated /gateway/bot
+
+### Verdict: 1/3 ❌, 2/3 ⚠️ → Consolidated ⚠️
+- Stella: catches the most — found allowlist gap and clear-all broadcast issue
+- Nova: best at auth/security analysis, comprehensive suggestion tracking
+- Vega: @me alias catch is a good find
