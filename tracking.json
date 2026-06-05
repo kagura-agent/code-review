@@ -583,8 +583,8 @@
     "reviewed_at": "2026-06-05T14:10+08:00",
     "status": "open",
     "ground_truth": null,
-    "rounds": 2,
-    "notes": "R1: 2/3 \u274c (security: snowflake as auth token). R2: 3/3 \u26a0\ufe0f (C1 fixed, CAST index + idMap collision remain). Upgraded from \u274c to \u26a0\ufe0f.",
-    "last_checked": "2026-06-05T16:00+08:00"
+    "rounds": 3,
+    "notes": "R1: \u274c security (snowflake auth token). R2: \u26a0\ufe0f (CAST index, idMap). R3: \u2705 Ready. All blockers resolved. Follow-ups: email UNIQUE, worker ID.",
+    "last_checked": "2026-06-05T16:20+08:00"
   }
 ]

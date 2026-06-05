@@ -48,3 +48,21 @@
 - Stella: Most thorough migration analysis, found global idMap collision
 - Nova: Most comprehensive, found silent drop + email uniqueness
 - Vega: Concise, focused on confirmed fixes
+
+## Round 3 (2026-06-05)
+
+### R2 Resolution
+- CAST index bypass: ✅ Fixed (queries use raw id comparison now)
+- Per-table idMap: ✅ Fixed (6 separate maps)
+- Channel timestamps: ✅ Fixed (MIN(message.ts) → guild.created_at → now)
+- Orphan logging: ✅ Fixed (before/after counts)
+- email UNIQUE: ⚠️ Only fresh DBs
+
+### New Findings
+- Stella: TEXT ordering width mismatch (18 vs 19 digit snowflakes)
+- Nova: Messages recreate doesn't filter orphan channel_id
+- Vega: Strict escalation of Worker ID
+
+### Verdict: 1/3 ✅, 1/3 ⚠️, 1/3 ❌ → Consolidated ✅ Ready
+- All R1/R2 blockers resolved across 3 rounds
+- Remaining items are edge cases/future-proofing
