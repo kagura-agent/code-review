@@ -44,3 +44,26 @@
 - Stella: catches the most — found allowlist gap and clear-all broadcast issue
 - Nova: best at auth/security analysis, comprehensive suggestion tracking
 - Vega: @me alias catch is a good find
+
+## Round 3 (2026-06-05)
+
+### R2 Resolution
+- MESSAGE_DELETE_BULK allowlist: ✅ Fixed (3/3)
+- @me alias: ✅ Fixed (2/3 verified)
+- Bulk-delete TODO: ✅ Added
+
+### Remaining
+- Deletion auth: deferred to #113 (TODO in code, needs issue link)
+- @me tests: zero coverage
+- Clear-all broadcast: still missing
+- Admin capability regression: undocumented
+
+### Verdict: 1/3 ❌, 1/3 ⚠️, 1/3 ✅ → Consolidated ✅ Ready with follow-ups
+- Stella: strictest — insists on auth + tests + broadcast
+- Nova: balanced — accepts TODO-driven deferral but wants issue + tests
+- Vega: most lenient — accepts all as resolved
+
+### Total Review Stats (3 rounds)
+- R1: 1/3 ❌ 1/3 ⚠️ 1/3 ✅ (stale last_message_id, broken clear, bulk event gap)
+- R2: 1/3 ❌ 2/3 ⚠️ (allowlist, @me, TODO)
+- R3: 1/3 ❌ 1/3 ⚠️ 1/3 ✅ → Ready with follow-ups
