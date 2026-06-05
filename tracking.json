@@ -605,7 +605,8 @@
     "reviewed_at": "2026-06-05T19:15+08:00",
     "status": "open",
     "ground_truth": null,
-    "rounds": 1,
-    "notes": "R1: 3/3 \u26a0\ufe0f. Fixed grid row clips multi-line input + token semantic misuse."
+    "rounds": 2,
+    "notes": "R1: 3/3 \u26a0\ufe0f (fixed grid clips input). R2: \u2705 Ready. minmax fix correct. Follow-ups: getComputedStyle race, mobile sidebar overlap.",
+    "last_checked": "2026-06-05T19:40+08:00"
   }
 ]
