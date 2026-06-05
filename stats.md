@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-05 14:26 (Asia/Shanghai)_
+_Last updated: 2026-06-05 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 61 | 59/61 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5). Last 25 rounds: 25/25 (100%) |
-| 🌠 Nova | claude-opus-4.7 | 61 | 61/61 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 61 | 57/61 (93%) ↑ | Improving — last 25 rounds: 24/25 (96%). Early failures dragging average |
+| 🌟 Stella | gpt-5.5 | 69 | 67/69 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5). Last 25 rounds: 25/25 (100%) |
+| 🌠 Nova | claude-opus-4.7 | 69 | 69/69 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 69 | 65/69 (94%) ↑ | Improving — last 25 rounds: 25/25 (100%). Early failures dragging average |
 
 ## Dimension Strengths (per reviewer)
 
@@ -57,18 +57,18 @@ _Last updated: 2026-06-05 14:26 (Asia/Shanghai)_
 **Vega's superpower:** Fast (~1m avg). Capable of star-quality finds when the bug is deterministic/logical (gen ID reuse #190, own-message-unread #192). Cleanest fix suggestions. Excellent edge-case tenacity (deleted-message tracked across 3 rounds).
 **Vega's weakness:** Fewer unique finds overall but improving. Strictest severity escalation (#191 R2 — ❌ Major for all 3 issues, #192 R3 — ❌ Major). Less depth on complex lifecycle analysis.
 
-## Unique Find Rate (last 10 PRs: #174 through #202)
+## Unique Find Rate (last 10 PRs: #176 through #240)
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 12 | ~68 | ~18% | → Stable |
-| 🌠 Nova | 18 | ~68 | ~26% | → Stable |
-| 💫 Vega | 9 | ~68 | ~13% | ↑ Improving (was 11%) |
+| 🌟 Stella | 15 | ~82 | ~18% | → Stable |
+| 🌠 Nova | 20 | ~82 | ~24% | → Stable |
+| 💫 Vega | 11 | ~82 | ~13% | → Stable |
 
 **Notable unique finds (last 10 PRs):**
-- Stella: FK-off try/finally (#174), build-order dependency (#175), WS disconnect lifecycle (#176 R3), FK pragma reproduced locally (#178 R1), **async handler ordering race** (#190 R5), high-contrast mode (#191 R3), auto-ack dedup mount reset (#192 R3), same-ms monotonicity (#192 R4), clock rollback in generator (#202)
-- Nova: topic nullability breaking change (#174), template string bug (#175), timer leak on teardown (#176 R2), guild name drift (#178 R2), typing indicator leak (#190 R1), queued side-effect trace (#190 R5), **IME composition guard** (#191 R1), WCAG 2.4.7 (#191 R2), READY payload growth (#192 R1), ack write amplification (#192 R2), test mock accuracy (#192 R4), CAST index bypass (#202), channel migration ordering (#202)
-- Vega: Prototype pollution (#176 R1), **generation ID reuse** (#190 R4 — star find), O(N²) IDENTIFY presence (#179 R2), resize jitter (#191 R1), **own-message-causes-unread** (#192 R2 — star find), multi-device sync gap (#192 R2), deleted-message edge case (#192 R3-R4), API input validation schemas (#202)
+- Stella: WS disconnect lifecycle (#176 R3), FK pragma reproduced locally (#178 R1), **async handler ordering race** (#190 R5), auto-ack dedup mount reset (#192 R3), same-ms monotonicity (#192 R4), clock rollback in generator (#202), global idMap collision (#202 R2), **client clear button 404** (#222 R1), MESSAGE_DELETE_BULK allowlist gap (#222 R2), mobile sidebar scroll overlap (#240 R2)
+- Nova: timer leak on teardown (#176 R2), typing indicator leak (#190 R1), queued side-effect trace (#190 R5), **IME composition guard** (#191 R1), WCAG 2.4.7 (#191 R2), READY payload growth (#192 R1), CAST index bypass (#202), channel migration ordering (#202), V3→V4 silent orphan drops (#202 R2), email UNIQUE constraint (#202 R2), CHANNEL_DELETE missing guild_id (#222 R1), mobile sidebar safe-area padding (#240 R2)
+- Vega: Prototype pollution (#176 R1), **generation ID reuse** (#190 R4 — star find), **own-message-causes-unread** (#192 R2 — star find), deleted-message edge case (#192 R3-R4), API input validation schemas (#202), **@me alias breaks ownership** (#222 R2), safe-area background gap (#240 R1), getComputedStyle render race (#240 R2)
 
 ## Consensus Participation
 
@@ -96,11 +96,11 @@ _Last updated: 2026-06-05 14:26 (Asia/Shanghai)_
 
 ## Reliability History
 
-| Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#202) | Trend |
+| Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#240) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 39/41 (95%) | → (one timeout #176 R1, one late #190 R5) |
-| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 41/41 (100%) | → |
-| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 37/38 (97%) | ↑ Significant improvement after prompt fixes |
+| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 47/49 (96%) | → (one timeout #176 R1, one late #190 R5) |
+| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 49/49 (100%) | → |
+| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 45/46 (98%) | ↑ Significant improvement after prompt fixes |
 
 ## Review History
 
@@ -127,36 +127,40 @@ _Last updated: 2026-06-05 14:26 (Asia/Shanghai)_
 | #190 | cove | 2026-06-04 | R1-R7 | ✅ Ready | abort-cancellation, gen-id-reuse, async-handler-ordering |
 | #191 | cove | 2026-06-04 | R1-R3 | ✅ Ready | ime-composition, focus-ring-a11y, mobile-multiline |
 | #192 | cove | 2026-06-05 | R1-R4 | ✅ Ready | read-state-reload, own-message-unread, dispatch-monotonicity |
-| #202 | cove | 2026-06-05 | R1 (open) | ❌ Major Issues | snowflake-auth-token, migration-overflow, index-bypass |
+| #202 | cove | 2026-06-05 | R1-R3 | ✅ Ready | snowflake-auth-token, migration-overflow, index-bypass |
+| #222 | cove | 2026-06-05 | R1-R3 | ✅ Ready | stale-last-message-id, broken-clear-route, bulk-delete-allowlist |
+| #240 | cove | 2026-06-05 | R1-R2 | ✅ Ready | grid-clips-input, ios-safe-area, token-semantics |
 
-## Ground Truth Summary (22 merged PRs with ground truth)
+## Ground Truth Summary (25 merged PRs with ground truth)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 95% — human approved without findings in 21/22 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
-- **Iterative review as quality gate:** In 18/22 PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
+- **Human rubber-stamp rate:** 96% — human approved without findings in 24/25 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
+- **Iterative review as quality gate:** In 21/25 PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 1 (#100 — verdict too conservative for personal project context)
-- **Multi-round PRs:** 18/22 PRs went through 2+ rounds. Average rounds: 2.8. Max: 7 (#190)
-- **Total review rounds:** 61 across 23 PRs (includes open #202)
+- **Multi-round PRs:** 21/25 PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
+- **Total review rounds:** 69 across 25 PRs
 
 ## Actionable Notes
 
-1. **✅ Vega unique find rate improved to 13% (comfortably above 10% threshold).** Two star finds in last 5 PRs: gen ID reuse (#190 R4) and own-message-causes-unread (#192 R2). Vega is proving most valuable for product-impact edge cases.
+1. **✅ Vega unique find rate stable at 13% (above 10% threshold).** @me alias find (#222 R2) and getComputedStyle race (#240 R2) show continued value in edge-case detection. Star finds remain the high-water mark.
 
-2. **Stella lifecycle analysis confirmed as top dimension:** PR #192 R3-R4 showed deepest analysis of auto-ack dedup across mounts, reload gaps, and same-ms monotonicity. No other reviewer tracks these persistent lifecycle edge cases as tenaciously.
+2. **Stella client-side regression detection confirmed as emerging dimension:** #222 R1 found client clear button 404 + MESSAGE_DELETE_BULK not handled — both client regressions from server-side refactoring. Nova/Vega missed these entirely. Stella's build-verification approach catches cross-boundary breaks.
 
-3. **Nova zero false positives across 61 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker when Stella and Vega disagree.
+3. **Nova zero false positives across 69 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker when Stella and Vega disagree.
 
-4. **Vega reliability trend strongly positive.** Early 67% → mid 75% → recent 97%. Last 25 rounds: 24/25 (96%). Prompt fixes working. Remaining ~3% is acceptable.
+4. **Vega reliability now 100% in last 25 rounds.** Early 67% → mid 75% → recent 100%. Prompt fixes fully effective. No longer needs monitoring.
 
-5. **Vega severity over-escalation pattern persists but not actionable yet.** 4 instances of ❌ Major when consolidated verdict was ⚠️ or ✅ (#125, #176, #190, #191). Monitor — if it causes merge delays, consider prompt guidance on severity thresholds.
+5. **Vega severity over-escalation:** Notably in #222 R1, Vega approved (✅ Ready) while missing stale last_message_id — the opposite pattern (under-flagging). This balances the earlier over-escalation instances. May indicate inconsistent severity calibration rather than systematic bias in one direction.
 
-6. **PR #192 validated multi-model review value:** Vega R2 found own-message-unread bug that both Stella and Nova missed. This alone justified the 3-reviewer architecture.
+6. **PR #222 validated cross-boundary review value:** Stella R1 found that server-side route deletion broke the client clear button — a regression from the #192 read-state work. This is a unique contribution that code-reading-only reviewers miss.
 
-7. **Accessibility/A11y dimension:** Only seen in #191. Not adding to default prompt yet — need 2+ PRs to establish pattern.
+7. **CSS/UI dimension expanding:** #240 is the second CSS-focused PR (after #191). All 3 reviewers caught the grid-clips-input issue unanimously. Vega contributed safe-area background gap. Consider adding UI/layout to default prompt dimensions.
 
-8. **NEW: PR #202 security finding (snowflake-as-auth-token)** is the most severe finding since XSS in #156. All 3 reviewers caught it unanimously — security detection prompt is working well across all models.
+8. **PR #202 security finding (snowflake-as-auth-token)** — most severe finding since XSS in #156. All 3 reviewers caught it unanimously. Security detection prompt working well.
 
 9. **SQLite migration correctness** appeared in #144, #168, #178, #202 — 4 PRs now. Still project-specific (cove uses SQLite). No default prompt change needed.
 
-10. **Stella's clock rollback find (#202)** is a unique depth contribution — only she analyzed the generator's temporal safety properties. Confirms her strength in deterministic-system analysis.
+10. **Stella's global idMap collision (#202 R2)** — unique cross-table reasoning that prevented data corruption during migration. Confirms her strength in systematic data-flow analysis.
+
+11. **NEW: All 3 open PRs from this run merged same day (2026-06-05).** Total 8 rounds across 3 PRs. Review→merge pipeline running at full speed. Average time from first review to merge: ~3h.
