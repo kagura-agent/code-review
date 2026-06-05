@@ -28,3 +28,23 @@
 - **Stella**: Most thorough — found all 5 criticals including clock rollback. Strongest migration analysis.
 - **Nova**: Most comprehensive suggestions (8 items). Best at distinguishing blocking vs polish. Only ⚠️ not ❌.
 - **Vega**: Concise, hit the two biggest issues. Fastest reviewer.
+
+## Round 2 (2026-06-05)
+
+### R1 Resolution
+- C1 SECURITY: ✅ Fixed (3/3) — auth tokens back to randomUUID
+- C2 seq overflow: ✅ Fixed (2/3 verified) — timestamp increment on overflow
+- C3 CAST index: ❌ Not Fixed — expanded to all pagination paths
+- C4 legacy IDs: ✅ Fixed (migration now converts all non-snowflake IDs)
+- C5 clock rollback: ✅ Fixed — clamp to lastTimestamp
+
+### New Findings
+- N1 (Stella): Global idMap collision across tables
+- N2 (Stella+Nova): CAST index bypass now in all pagination
+- N3 (Nova): V3→V4 silent orphan row drops
+- N4 (Nova): email column lacks UNIQUE
+
+### Verdict: 3/3 ⚠️ Needs Changes (upgraded from R1's ❌)
+- Stella: Most thorough migration analysis, found global idMap collision
+- Nova: Most comprehensive, found silent drop + email uniqueness
+- Vega: Concise, focused on confirmed fixes
