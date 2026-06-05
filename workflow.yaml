@@ -30,6 +30,27 @@ nodes:
       These are language-specific checklists (TypeScript, Go, Python, Rust) that give
       reviewers targeted patterns to check beyond the generic standard.
       The combined output (base prompt + language rules) is what reviewers will use.
+    next: plan_review
+
+  plan_review:
+    task: |
+      Run the review plan script to categorize changed files by risk level:
+      ```
+      bash ~/.openclaw/workspace/code-review/plan-review.sh <owner/repo> <pr_number>
+      ```
+      If the PR has >5 files, the script outputs a risk-categorized file list:
+      - 🔴 High Risk (auth, API, middleware, DB) → deep review
+      - 🟡 Medium Risk (logic, components) → standard review
+      - 🟢 Low Risk (tests, docs, configs) → surface scan
+
+      For small PRs (≤5 files), skip planning — reviewers do full review.
+
+      Pass the plan output to reviewers in the next step so they allocate
+      attention proportionally. This prevents wasting effort on lock files
+      while rushing through auth middleware.
+
+      Source: Alibaba Open-Code-Review plan phase pattern — "planning which
+      files need deep inspection vs. surface review saves 40-60% of tool calls."
     next: spawn_reviewers
 
   spawn_reviewers:
@@ -38,7 +59,9 @@ nodes:
       - 🌟 Stella: model `default-llm-sg/gpt-5.5`
       - 🌠 Nova: model `default-llm-sg/claude-opus-4.7`
       - 💫 Vega: model `default-llm-sg/gemini-3.1-pro-preview`
-      Each gets the review standard + PR details. Do NOT pre-feed the diff.
+      Each gets the review standard + PR details + review plan (if generated).
+      Include the plan output so reviewers know which files are high/medium/low risk.
+      Do NOT pre-feed the diff.
       Let each reviewer pull via `gh pr view` and `gh pr diff` themselves.
       Each reviewer must `export https_proxy=http://127.0.0.1:1083` first.
       Reviewers must NOT post to GitHub — text output only.

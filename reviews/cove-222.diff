@@ -1,0 +1,681 @@
+diff --git a/packages/plugin/src/channel.ts b/packages/plugin/src/channel.ts
+index 6621889..5873366 100644
+--- a/packages/plugin/src/channel.ts
++++ b/packages/plugin/src/channel.ts
+@@ -243,13 +243,13 @@ const coveChannelPlugin: ChannelPlugin<CoveAccount> = {
+         const abortController = new AbortController();
+         pendingDispatches.set(channelId, abortController);
+ 
+-        // Fire-and-forget early typing cue via WebSocket (instant, no TLS overhead)
+-        gatewayClient.send({ op: 4, d: { channel_id: channelId } });
++        // Fire-and-forget early typing cue via REST endpoint
++        const restClient = getRestClient(account.baseUrl, account.token);
++        restClient.sendTyping(channelId).catch(() => {});
+ 
+         const typingCallbacks = createTypingCallbacks({
+           start: () => {
+-            gatewayClient.send({ op: 4, d: { channel_id: channelId } });
+-            return Promise.resolve();
++            return restClient.sendTyping(channelId);
+           },
+           keepaliveIntervalMs: 5000,
+           maxDurationMs: 60000,
+@@ -257,7 +257,6 @@ const coveChannelPlugin: ChannelPlugin<CoveAccount> = {
+         });
+ 
+         try {
+-          const restClient = getRestClient(account.baseUrl, account.token);
+           const { dispatchInboundDirectDmWithRuntime } = await loadDirectDm();
+ 
+           const targetAgent = account.agentId;
+diff --git a/packages/server/src/__tests__/api.test.ts b/packages/server/src/__tests__/api.test.ts
+index 1d034ec..a093a57 100644
+--- a/packages/server/src/__tests__/api.test.ts
++++ b/packages/server/src/__tests__/api.test.ts
+@@ -32,6 +32,12 @@ describe("Cove API — Discord-compatible", () => {
+     override channelUpdate(channel: Channel): void {
+       broadcastEvents.push({ t: "CHANNEL_UPDATE", d: channel });
+     }
++    override channelCreate(channel: Channel): void {
++      broadcastEvents.push({ t: "CHANNEL_CREATE", d: channel });
++    }
++    override channelDelete(guildId: string, channelId: string): void {
++      broadcastEvents.push({ t: "CHANNEL_DELETE", d: { id: channelId, guild_id: guildId } });
++    }
+     override typingStart(channelId: string, user: { id: string; username: string }, _guildId?: string): void {
+       broadcastEvents.push({ t: "TYPING_START", d: { channel_id: channelId, user_id: user.id, username: user.username, timestamp: Date.now() } });
+     }
+@@ -270,7 +276,7 @@ describe("Cove API — Discord-compatible", () => {
+ 
+       const delRes = await app.request(`${API_PREFIX}/channels/${generalId}/messages/${created.id}`, {
+         method: "DELETE",
+-        headers: { Authorization: `Bot ${adminToken}` },
++        headers: { Authorization: `Bot ${bot.token}` },
+       });
+       expect(delRes.status).toBe(204);
+ 
+@@ -311,7 +317,7 @@ describe("Cove API — Discord-compatible", () => {
+ 
+       const patchRes = await app.request(`${API_PREFIX}/channels/${generalId}/messages/${created.id}`, {
+         method: "PATCH",
+-        headers: authHeaders(),
++        headers: { "Content-Type": "application/json", Authorization: `Bot ${bot.token}` },
+         body: JSON.stringify({ content: "edited" }),
+       });
+       expect(patchRes.status).toBe(200);
+@@ -417,10 +423,12 @@ describe("Cove API — Discord-compatible", () => {
+ 
+   describe("READY payload read_state", () => {
+     it("includes last_message_id for channels with messages", () => {
+-      // Insert a message directly
++      // Insert a message directly and update channel's last_message_id
+       const now = Date.now();
+       db.prepare("INSERT INTO messages (id, channel_id, sender, content, timestamp, metadata, edited_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)")
+         .run("100001", generalId, "admin", "test message", now, null, null);
++      db.prepare("UPDATE channels SET last_message_id = ? WHERE id = ?")
++        .run("100001", generalId);
+ 
+       // Set a read state
+       const repos = createRepos(db);
+@@ -437,6 +445,8 @@ describe("Cove API — Discord-compatible", () => {
+       const now = Date.now();
+       db.prepare("INSERT INTO messages (id, channel_id, sender, content, timestamp, metadata, edited_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)")
+         .run("100002", generalId, "admin", "unread msg", now, null, null);
++      db.prepare("UPDATE channels SET last_message_id = ? WHERE id = ?")
++        .run("100002", generalId);
+ 
+       const repos = createRepos(db);
+       const readState = repos.readStates.getAllForUserWithLastMessage("admin");
+@@ -613,8 +623,9 @@ describe("Cove API — Discord-compatible", () => {
+         headers: { Authorization: `Bot ${adminToken}` },
+       });
+       expect(res.status).toBe(200);
+-      const data = await res.json();
+-      expect(data.deleted).toBe(true);
++      const data: Channel = await res.json();
++      expect(data.id).toBe(randomId);
++      expect(data.name).toBe("random");
+ 
+       // Verify it's gone
+       const getRes = await authGet(`${API_PREFIX}/channels/${randomId}`);
+@@ -704,25 +715,25 @@ describe("Cove API — Discord-compatible", () => {
+     });
+ 
+     it("PATCH updates user fields", async () => {
+-      await createBotUser("patchme", "Original");
++      const user = await createBotUser("patchme", "Original");
+ 
+       const res = await app.request(`${API_PREFIX}/users/patchme`, {
+         method: "PATCH",
+-        headers: authHeaders(),
++        headers: { "Content-Type": "application/json", Authorization: `Bot ${user.token}` },
+         body: JSON.stringify({ username: "Updated", bio: "New bio" }),
+       });
+       expect(res.status).toBe(200);
+-      const user: CoveAgent = await res.json();
+-      expect(user.username).toBe("Updated");
+-      expect(user.bio).toBe("New bio");
++      const updated: CoveAgent = await res.json();
++      expect(updated.username).toBe("Updated");
++      expect(updated.bio).toBe("New bio");
+     });
+ 
+     it("DELETE removes a user", async () => {
+-      await createBotUser("deleteme", "Delete");
++      const user = await createBotUser("deleteme", "Delete");
+ 
+       const res = await app.request(`${API_PREFIX}/users/deleteme`, {
+         method: "DELETE",
+-        headers: { Authorization: `Bot ${adminToken}` },
++        headers: { Authorization: `Bot ${user.token}` },
+       });
+       expect(res.status).toBe(204);
+ 
+@@ -815,15 +826,21 @@ describe("Cove API — Discord-compatible", () => {
+     });
+ 
+     it("deleting user cascades to guild membership", async () => {
+-      await app.request(`${API_PREFIX}/users/bot-a`, {
++      const botA = await app.request(`${API_PREFIX}/users`, {
++        method: "POST",
++        headers: authHeaders(),
++        body: JSON.stringify({ id: "bot-cascade", username: "Bot Cascade" }),
++      });
++      const botAData = await botA.json() as CoveAgent & { token: string };
++
++      await app.request(`${API_PREFIX}/users/bot-cascade`, {
+         method: "DELETE",
+-        headers: { Authorization: `Bot ${adminToken}` },
++        headers: { Authorization: `Bot ${botAData.token}` },
+       });
+ 
+       const listRes = await authGet(`${API_PREFIX}/guilds/${defaultGuildId}/members`);
+       const members: CoveGuildMember[] = await listRes.json();
+-      expect(members).toHaveLength(2);
+-      expect(members.find((m) => m.user.id === "bot-a")).toBeUndefined();
++      expect(members.find((m) => m.user.id === "bot-cascade")).toBeUndefined();
+     });
+   });
+ 
+@@ -1164,7 +1181,7 @@ describe("Cove API — Discord-compatible", () => {
+ 
+       const res = await app.request(`${API_PREFIX}/channels/${generalId}/messages/${msg.id}`, {
+         method: "PATCH",
+-        headers: authHeaders(),
++        headers: { "Content-Type": "application/json", Authorization: `Bot ${bot.token}` },
+         body: JSON.stringify({ content: "" }),
+       });
+       expect(res.status).toBe(400);
+diff --git a/packages/server/src/__tests__/migration.test.ts b/packages/server/src/__tests__/migration.test.ts
+index 9a07da5..da79b0e 100644
+--- a/packages/server/src/__tests__/migration.test.ts
++++ b/packages/server/src/__tests__/migration.test.ts
+@@ -11,10 +11,10 @@ function tmpDb(): string {
+ }
+ 
+ describe("versioned migration system", () => {
+-  it("fresh DB gets user_version = 4", () => {
++  it("fresh DB gets user_version = 5", () => {
+     const db = initDb();
+     const version = db.pragma("user_version", { simple: true });
+-    expect(version).toBe(4);
++    expect(version).toBe(5);
+     db.close();
+   });
+ 
+@@ -100,7 +100,7 @@ describe("versioned migration system", () => {
+ 
+       const db = initDb(tmpFile);
+       const version = db.pragma("user_version", { simple: true });
+-      expect(version).toBe(4);
++      expect(version).toBe(5);
+ 
+       const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='read_states'").all();
+       expect(tables).toHaveLength(1);
+@@ -171,7 +171,7 @@ describe("versioned migration system", () => {
+       // ID should now be a snowflake
+       expect(String(msg.id)).toMatch(/^\d+$/);
+       const version = db.pragma("user_version", { simple: true });
+-      expect(version).toBe(4);
++      expect(version).toBe(5);
+       db.close();
+     } finally {
+       try { fs.unlinkSync(tmpFile); } catch {}
+@@ -197,7 +197,7 @@ describe("scenes→channels migration guard", () => {
+       expect(rows[0].name).toBe("Scene1");
+ 
+       const version = db2.pragma("user_version", { simple: true });
+-      expect(version).toBe(4);
++      expect(version).toBe(5);
+       db2.close();
+     } finally {
+       try { fs.unlinkSync(tmpFile); } catch {}
+@@ -319,7 +319,7 @@ describe("island→discord schema migration", () => {
+       expect(rows[0].topic).toBe("Living room");
+ 
+       const version = db2.pragma("user_version", { simple: true });
+-      expect(version).toBe(4);
++      expect(version).toBe(5);
+ 
+       db2.close();
+     } finally {
+@@ -391,7 +391,7 @@ describe("V2→V3 migration (UUID→Snowflake)", () => {
+       const db = initDb(tmpFile);
+ 
+       // Version should be 3
+-      expect(db.pragma("user_version", { simple: true })).toBe(4);
++      expect(db.pragma("user_version", { simple: true })).toBe(5);
+ 
+       // Guild ID should be a snowflake (numeric string)
+       const guild = db.prepare("SELECT id, name FROM guilds WHERE name = 'TestGuild'").get() as { id: string; name: string };
+diff --git a/packages/server/src/app.ts b/packages/server/src/app.ts
+index fd6e739..809cfe2 100644
+--- a/packages/server/src/app.ts
++++ b/packages/server/src/app.ts
+@@ -48,6 +48,11 @@ export function createApp(
+ 
+   const gwUrl = config?.gatewayUrl ?? "ws://localhost:3000/gateway";
+   app.get(`${API_PREFIX}/gateway`, (c) => c.json({ url: gwUrl }));
++  app.get(`${API_PREFIX}/gateway/bot`, (c) => c.json({
++    url: gwUrl,
++    shards: 1,
++    session_start_limit: { total: 1000, remaining: 1000, reset_after: 0, max_concurrency: 1 },
++  }));
+ 
+   app.get(`${API_PREFIX}/guilds/:guildId/presences`, (c) => {
+     const guildId = c.req.param("guildId")!;
+diff --git a/packages/server/src/db/schema.ts b/packages/server/src/db/schema.ts
+index a295c45..0ef1d6b 100644
+--- a/packages/server/src/db/schema.ts
++++ b/packages/server/src/db/schema.ts
+@@ -1,7 +1,7 @@
+ import Database from "better-sqlite3";
+ import { generateSnowflake, snowflakeFromTimestamp } from "@cove/shared";
+ 
+-const LATEST_VERSION = 4;
++const LATEST_VERSION = 5;
+ 
+ type MigrationFn = (db: Database.Database) => void;
+ 
+@@ -10,6 +10,7 @@ const migrations: Record<number, MigrationFn> = {
+   2: migrateV1ToV2,
+   3: migrateV2ToV3,
+   4: migrateV3ToV4,
++  5: migrateV4ToV5,
+ };
+ 
+ function runMigrations(db: Database.Database): void {
+@@ -325,6 +326,18 @@ function migrateV3ToV4(db: Database.Database): void {
+   `);
+ }
+ 
++function migrateV4ToV5(db: Database.Database): void {
++  // #198: Add last_message_id column to channels table
++  addColumnIfMissing(db, "channels", "last_message_id", "TEXT");
++
++  // Backfill last_message_id from existing messages
++  db.exec(`
++    UPDATE channels SET last_message_id = (
++      SELECT m.id FROM messages m WHERE m.channel_id = channels.id ORDER BY m.id DESC LIMIT 1
++    )
++  `);
++}
++
+ function createAllTables(db: Database.Database): void {
+   db.exec(`
+     CREATE TABLE IF NOT EXISTS guilds (
+@@ -337,12 +350,13 @@ function createAllTables(db: Database.Database): void {
+     );
+ 
+     CREATE TABLE IF NOT EXISTS channels (
+-      id          TEXT PRIMARY KEY,
+-      guild_id    TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+-      name        TEXT NOT NULL,
+-      type        INTEGER NOT NULL DEFAULT 0,
+-      topic       TEXT,
+-      position    INTEGER NOT NULL DEFAULT 0
++      id               TEXT PRIMARY KEY,
++      guild_id         TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
++      name             TEXT NOT NULL,
++      type             INTEGER NOT NULL DEFAULT 0,
++      topic            TEXT,
++      position         INTEGER NOT NULL DEFAULT 0,
++      last_message_id  TEXT
+     );
+ 
+     CREATE TABLE IF NOT EXISTS users (
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index 95b4fe5..045297c 100644
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -43,5 +43,5 @@ const server = serve({ fetch: app.fetch, port: PORT }, (info) => {
+   console.log(`🏝️  Cove server running on http://localhost:${info.port}`);
+ });
+ 
+-setupGateway(server as any, repos.users, repos.guilds, dispatcher, repos.channels, repos.readStates);
++setupGateway(server as any, repos.users, repos.guilds, dispatcher, repos.readStates);
+ console.log("🏝️  Gateway WebSocket ready on /gateway");
+diff --git a/packages/server/src/repos/channels.ts b/packages/server/src/repos/channels.ts
+index dd550d3..370721e 100644
+--- a/packages/server/src/repos/channels.ts
++++ b/packages/server/src/repos/channels.ts
+@@ -8,6 +8,7 @@ interface ChannelRow {
+   type: number;
+   topic: string | null;
+   position: number;
++  last_message_id: string | null;
+ }
+ 
+ function toChannel(row: ChannelRow): Channel {
+@@ -18,6 +19,7 @@ function toChannel(row: ChannelRow): Channel {
+     guild_id: row.guild_id,
+     topic: row.topic,
+     position: row.position,
++    last_message_id: row.last_message_id,
+   };
+ }
+ 
+@@ -72,4 +74,8 @@ export class ChannelsRepo {
+   exists(id: string): boolean {
+     return !!this.db.prepare("SELECT id FROM channels WHERE id = ?").get(id);
+   }
++
++  updateLastMessageId(channelId: string, messageId: string): void {
++    this.db.prepare("UPDATE channels SET last_message_id = ? WHERE id = ?").run(messageId, channelId);
++  }
+ }
+diff --git a/packages/server/src/repos/readStates.ts b/packages/server/src/repos/readStates.ts
+index 6312048..76c39fc 100644
+--- a/packages/server/src/repos/readStates.ts
++++ b/packages/server/src/repos/readStates.ts
+@@ -28,7 +28,7 @@ export class ReadStatesRepo {
+     return this.db.prepare(`
+       SELECT c.id AS channel_id,
+         rs.last_read_message_id,
+-        (SELECT m.id FROM messages m WHERE m.channel_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_message_id
++        c.last_message_id
+       FROM channels c
+       JOIN guild_members gm ON gm.guild_id = c.guild_id AND gm.user_id = ?
+       LEFT JOIN read_states rs ON rs.channel_id = c.id AND rs.user_id = ?
+diff --git a/packages/server/src/routes/agents.ts b/packages/server/src/routes/agents.ts
+index 403600e..88262af 100644
+--- a/packages/server/src/routes/agents.ts
++++ b/packages/server/src/routes/agents.ts
+@@ -25,7 +25,7 @@ export function agentRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Hono<
+ 
+     const id = body.id?.trim() || username.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+     if (repos.users.exists(id)) {
+-      return c.json({ message: "User already exists", code: 10013 }, 409);
++      return c.json({ message: "User already exists" }, 409);
+     }
+ 
+     const user = repos.users.create({ id: body.id, username, avatar: body.avatar, bot: body.bot, bio: body.bio }, repos.guilds.getDefaultId());
+@@ -34,6 +34,13 @@ export function agentRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Hono<
+ 
+   app.post("/users/:id/token", auth, (c) => {
+     const id = c.req.param("id");
++    const actorId = c.get("botUser").id;
++
++    // Only the user themselves can regenerate their token
++    if (id !== actorId) {
++      return c.json({ message: "Missing Permissions", code: 50013 }, 403);
++    }
++
+     const token = repos.users.regenerateToken(id!);
+     if (!token) {
+       return c.json({ message: "Unknown User", code: 10013 }, 404);
+@@ -53,6 +60,13 @@ export function agentRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Hono<
+ 
+   app.patch("/users/:id", auth, async (c) => {
+     const id = c.req.param("id");
++    const actorId = c.get("botUser").id;
++
++    // Only the user themselves can update their profile
++    if (id !== actorId) {
++      return c.json({ message: "Missing Permissions", code: 50013 }, 403);
++    }
++
+     if (!repos.users.exists(id!)) {
+       return c.json({ message: "Unknown User", code: 10013 }, 404);
+     }
+@@ -73,6 +87,13 @@ export function agentRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Hono<
+ 
+   app.delete("/users/:id", auth, (c) => {
+     const id = c.req.param("id");
++    const actorId = c.get("botUser").id;
++
++    // Only the user themselves can delete their account
++    if (id !== actorId) {
++      return c.json({ message: "Missing Permissions", code: 50013 }, 403);
++    }
++
+     if (!repos.users.delete(id!)) {
+       return c.json({ message: "Unknown User", code: 10013 }, 404);
+     }
+@@ -140,7 +161,7 @@ export function agentRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Hono<
+     }
+ 
+     if (!repos.members.exists(guildId, userId)) {
+-      return c.json({ message: "Member not found" }, 404);
++      return c.json({ message: "Unknown Member", code: 10007 }, 404);
+     }
+ 
+     repos.members.remove(guildId, userId);
+diff --git a/packages/server/src/routes/auth.ts b/packages/server/src/routes/auth.ts
+index 3e87f04..ca23edf 100644
+--- a/packages/server/src/routes/auth.ts
++++ b/packages/server/src/routes/auth.ts
+@@ -28,7 +28,7 @@ export function authRoutes(db: Database.Database, config: OAuthConfig, guildsRep
+   app.get("/api/auth/callback", async (c) => {
+     const code = c.req.query("code");
+     if (!code) {
+-      return c.json({ message: "Missing authorization code" }, 400);
++      return c.json({ message: "Missing authorization code", code: 50035 }, 400);
+     }
+ 
+     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+@@ -44,7 +44,7 @@ export function authRoutes(db: Database.Database, config: OAuthConfig, guildsRep
+     });
+ 
+     if (!tokenRes.ok) {
+-      return c.json({ message: "Failed to exchange authorization code" }, 400);
++      return c.json({ message: "Failed to exchange authorization code", code: 50035 }, 400);
+     }
+ 
+     const tokenData = await tokenRes.json() as { access_token: string };
+@@ -54,7 +54,7 @@ export function authRoutes(db: Database.Database, config: OAuthConfig, guildsRep
+     });
+ 
+     if (!userRes.ok) {
+-      return c.json({ message: "Failed to fetch user info" }, 400);
++      return c.json({ message: "Failed to fetch user info", code: 50035 }, 400);
+     }
+ 
+     const googleUser = await userRes.json() as {
+diff --git a/packages/server/src/routes/channels.ts b/packages/server/src/routes/channels.ts
+index c0da266..c4936fb 100644
+--- a/packages/server/src/routes/channels.ts
++++ b/packages/server/src/routes/channels.ts
+@@ -60,6 +60,9 @@ export function channelRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Hon
+     const name = body.name.trim();
+ 
+     const channel = repos.channels.create(guildId, name, body.topic, body.type ?? 0);
++
++    dispatcher?.channelCreate(channel);
++
+     return c.json(channel, 201);
+   });
+ 
+@@ -120,7 +123,10 @@ export function channelRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Hon
+     if (!repos.channels.delete(id)) {
+       return c.json({ message: "Unknown Channel", code: 10003 }, 404);
+     }
+-    return c.json({ deleted: true });
++
++    dispatcher?.channelDelete(ch.guild_id, id);
++
++    return c.json(ch);
+   });
+ 
+   return app;
+diff --git a/packages/server/src/routes/messages.ts b/packages/server/src/routes/messages.ts
+index 37dff83..029a408 100644
+--- a/packages/server/src/routes/messages.ts
++++ b/packages/server/src/routes/messages.ts
+@@ -60,6 +60,9 @@ export function messagesRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Ho
+ 
+     const message = repos.messages.create(channelId, author, body.content);
+ 
++    // Update channel's last_message_id
++    repos.channels.updateLastMessageId(channelId, message.id);
++
+     // Update sender's read state so their own message doesn't show unread on reload
+     const acked = repos.readStates.set(userId, channelId, message.id);
+ 
+@@ -82,6 +85,16 @@ export function messagesRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Ho
+       return c.json({ message: "Unknown Channel", code: 10003 }, 404);
+     }
+ 
++    const existing = repos.messages.getById(channelId, msgId);
++    if (!existing) {
++      return c.json({ message: "Unknown Message", code: 10008 }, 404);
++    }
++
++    // Only the message author can edit their own message
++    if (existing.author.id !== userId) {
++      return c.json({ message: "Missing Permissions", code: 50013 }, 403);
++    }
++
+     const body = await parseJsonBody<{ content: string }>(c);
+     if (!body) return validationError(c, "Invalid JSON");
+ 
+@@ -107,6 +120,14 @@ export function messagesRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Ho
+       return c.json({ message: "Unknown Channel", code: 10003 }, 404);
+     }
+ 
++    const existing = repos.messages.getById(channelId, msgId);
++    if (!existing) {
++      return c.json({ message: "Unknown Message", code: 10008 }, 404);
++    }
++
++    // TODO: check MANAGE_MESSAGES permission once permission system is implemented (#113)
++    // For now, any guild member can delete any message in channels they have access to
++
+     if (!repos.messages.delete(channelId, msgId)) {
+       return c.json({ message: "Unknown Message", code: 10008 }, 404);
+     }
+@@ -116,15 +137,34 @@ export function messagesRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Ho
+     return c.body(null, 204);
+   });
+ 
+-  app.delete("/channels/:id/messages", (c) => {
++  app.post("/channels/:id/messages/bulk-delete", async (c) => {
+     const channelId = c.req.param("id");
+     const userId = c.get("botUser").id;
+     const ch = requireGuildMember(repos, channelId, userId);
+     if (!ch) {
+       return c.json({ message: "Unknown Channel", code: 10003 }, 404);
+     }
+-    const deleted = repos.messages.deleteAll(channelId!);
+-    return c.json({ deleted });
++
++    const body = await parseJsonBody<{ messages: string[] }>(c);
++    if (!body) return validationError(c, "Invalid JSON");
++    if (!Array.isArray(body.messages) || body.messages.length < 2) {
++      return validationError(c, "messages must contain between 2 and 100 items");
++    }
++    if (body.messages.length > 100) {
++      return validationError(c, "messages must contain between 2 and 100 items");
++    }
++
++    const deleted: string[] = [];
++    for (const msgId of body.messages) {
++      if (repos.messages.delete(channelId, msgId)) {
++        deleted.push(msgId);
++      }
++    }
++    if (deleted.length > 0) {
++      dispatcher?.messageDeleteBulk(channelId, deleted, ch.guild_id);
++    }
++
++    return c.body(null, 204);
+   });
+ 
+   app.put("/channels/:id/messages/:msgId/ack", (c) => {
+diff --git a/packages/server/src/routes/register.ts b/packages/server/src/routes/register.ts
+index 5313b21..af91d03 100644
+--- a/packages/server/src/routes/register.ts
++++ b/packages/server/src/routes/register.ts
+@@ -17,7 +17,7 @@ export function registerRoutes(db: Database.Database, guildsRepo: GuildsRepo): H
+     const { inviteCode, pendingToken } = body;
+ 
+     if (!inviteCode || !pendingToken) {
+-      return c.json({ message: "inviteCode and pendingToken are required" }, 400);
++      return c.json({ message: "inviteCode and pendingToken are required", code: 50035 }, 400);
+     }
+ 
+     const normalizedCode = inviteCode.trim().toUpperCase();
+@@ -26,7 +26,7 @@ export function registerRoutes(db: Database.Database, guildsRepo: GuildsRepo): H
+       "SELECT id, google_id, email, username, avatar FROM pending_registrations WHERE pending_token = ?"
+     ).get(pendingToken) as { id: string; google_id: string; email: string; username: string; avatar: string } | undefined;
+     if (!pending) {
+-      return c.json({ message: "Invalid pending token" }, 400);
++      return c.json({ message: "Invalid pending token", code: 50035 }, 400);
+     }
+ 
+     const userId = generateSnowflake();
+@@ -69,7 +69,7 @@ export function registerRoutes(db: Database.Database, guildsRepo: GuildsRepo): H
+     const result = register();
+ 
+     if (result === null) {
+-      return c.json({ message: "Invalid or already used invite code" }, 400);
++      return c.json({ message: "Invalid or already used invite code", code: 50035 }, 400);
+     }
+ 
+     return c.json({ token: result });
+diff --git a/packages/server/src/ws/dispatcher.ts b/packages/server/src/ws/dispatcher.ts
+index aba282a..7aaef75 100644
+--- a/packages/server/src/ws/dispatcher.ts
++++ b/packages/server/src/ws/dispatcher.ts
+@@ -77,10 +77,22 @@ export class GatewayDispatcher {
+     this.broadcastToGuild(guildId, "MESSAGE_DELETE", { id: messageId, channel_id: channelId });
+   }
+ 
++  messageDeleteBulk(channelId: string, messageIds: string[], guildId: string): void {
++    this.broadcastToGuild(guildId, "MESSAGE_DELETE_BULK", { ids: messageIds, channel_id: channelId, guild_id: guildId });
++  }
++
++  channelCreate(channel: Channel): void {
++    this.broadcastToGuild(channel.guild_id, "CHANNEL_CREATE", channel);
++  }
++
+   channelUpdate(channel: Channel): void {
+     this.broadcastToGuild(channel.guild_id, "CHANNEL_UPDATE", channel);
+   }
+ 
++  channelDelete(guildId: string, channelId: string): void {
++    this.broadcastToGuild(guildId, "CHANNEL_DELETE", { id: channelId });
++  }
++
+   typingStart(channelId: string, user: { id: string; username: string }, guildId: string): void {
+     this.broadcastToGuild(guildId, "TYPING_START", {
+       channel_id: channelId,
+diff --git a/packages/server/src/ws/index.ts b/packages/server/src/ws/index.ts
+index 9c4a216..9b4cd0c 100644
+--- a/packages/server/src/ws/index.ts
++++ b/packages/server/src/ws/index.ts
+@@ -2,7 +2,6 @@ import type { Server as HttpServer } from "node:http";
+ import { WebSocketServer } from "ws";
+ import type { UsersRepo } from "../repos/users.js";
+ import type { GuildsRepo } from "../repos/guilds.js";
+-import type { ChannelsRepo } from "../repos/channels.js";
+ import type { ReadStatesRepo } from "../repos/readStates.js";
+ import { GatewayOpcode, type GatewayPayload } from "@cove/shared";
+ import { GatewaySession } from "./session.js";
+@@ -11,7 +10,7 @@ import { GatewayDispatcher } from "./dispatcher.js";
+ const HEARTBEAT_INTERVAL = 41250;
+ const HEARTBEAT_TIMEOUT = HEARTBEAT_INTERVAL * 2;
+ 
+-export function setupGateway(server: HttpServer, users: UsersRepo, guilds: GuildsRepo, dispatcher: GatewayDispatcher, channels: ChannelsRepo, readStates: ReadStatesRepo): void {
++export function setupGateway(server: HttpServer, users: UsersRepo, guilds: GuildsRepo, dispatcher: GatewayDispatcher, readStates: ReadStatesRepo): void {
+   const wss = new WebSocketServer({ server, path: "/gateway" });
+ 
+   wss.on("connection", (ws) => {
+@@ -79,17 +78,6 @@ export function setupGateway(server: HttpServer, users: UsersRepo, guilds: Guild
+             break;
+           }
+ 
+-          case GatewayOpcode.REQUEST_TYPING: {
+-            if (!session.isIdentified || !session.user) break;
+-            const d = payload.d as { channel_id?: string } | null;
+-            if (!d?.channel_id) break;
+-            const channel = channels.getById(d.channel_id);
+-            if (!channel) break;
+-            if (!session.guildIds.has(channel.guild_id)) break;
+-            dispatcher.typingStart(d.channel_id, session.user, channel.guild_id);
+-            break;
+-          }
+-
+           default:
+             break;
+         }
+diff --git a/packages/shared/src/types.ts b/packages/shared/src/types.ts
+index 63209ed..51a4e78 100644
+--- a/packages/shared/src/types.ts
++++ b/packages/shared/src/types.ts
+@@ -26,6 +26,7 @@ export interface Channel {
+   guild_id: string;
+   topic: string | null;
+   position: number;
++  last_message_id: string | null;
+ }
+ 
+ /** Message object (Discord-compatible). */
+@@ -44,7 +45,6 @@ export enum GatewayOpcode {
+   DISPATCH = 0,
+   HEARTBEAT = 1,
+   IDENTIFY = 2,
+-  REQUEST_TYPING = 4,
+   RESUME = 6,
+   HELLO = 10,
+   HEARTBEAT_ACK = 11,

@@ -1,0 +1,26 @@
+title:	refactor: API protocol alignment and infrastructure fixes
+state:	OPEN
+author:	kagura-agent (Kagura)
+labels:	
+assignees:	
+reviewers:	daniyuu (Kagura) (Requested)
+projects:	
+milestone:	
+number:	222
+url:	https://github.com/kagura-agent/cove/pull/222
+additions:	172
+deletions:	64
+auto-merge:	disabled
+--
+Comprehensive API/protocol alignment with Discord conventions.
+
+Closes #214, #215, #216, #217, #218, #199, #198
+
+### Changes
+- Fix opcode 4 collision (#214)
+- Add ownership checks on mutations (#215)
+- Standardize error format (#216)
+- Fix channel-delete response + bulk-delete (#217)
+- Add GET /gateway/bot (#218)
+- Dispatch CHANNEL_CREATE/DELETE events (#199)
+- Add last_message_id to channels (#198)

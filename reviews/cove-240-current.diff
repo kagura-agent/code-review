@@ -1,0 +1,811 @@
+diff --git a/docs/coding-standards.md b/docs/coding-standards.md
+new file mode 100644
+index 0000000..262e8af
+--- /dev/null
++++ b/docs/coding-standards.md
+@@ -0,0 +1,137 @@
++# Cove Coding Standards
++
++This document defines the engineering standards for the Cove project. All PRs must comply. Code review should verify adherence.
++
++## 1. CSS & Layout
++
++### 1.1 Global box-sizing
++All elements use `border-box`. This is set globally in `index.css`:
++```css
++*, *::before, *::after { box-sizing: border-box; }
++```
++Never override to `content-box`.
++
++### 1.2 No hardcoded pixel values in components
++Components must reference CSS variables (design tokens) for all sizing, spacing, and typography. No raw numbers in `CSSProperties` objects.
++
++```tsx
++// ❌ Wrong
++style={{ padding: "8px 16px", fontSize: 14, height: 36 }}
++
++// ✅ Correct
++style={{ padding: "var(--space-sm) var(--space-lg)", fontSize: "var(--font-size-md)", height: "var(--control-height-md)" }}
++```
++
++**Exceptions:** `0`, `1px` borders, unitless `lineHeight`, and true one-off values (e.g., `maxHeight` for scroll limits) may stay as literals.
++
++### 1.3 Design tokens are the single source of truth
++All tokens are defined in `packages/client/src/index.css` under `:root`. If a new size/spacing/color is needed, add a token first, then reference it. Never introduce a magic number.
++
++**Available token categories:**
++- **Layout:** `--header-height`, `--footer-height`, `--sidebar-width`, `--member-list-width`
++- **Spacing:** `--space-xxs` through `--space-3xl` (4px base scale)
++- **Typography:** `--font-size-xs` through `--font-size-xl`
++- **Control sizing:** `--control-height-sm/md/lg`, `--icon-button-size-sm/md`
++- **Colors:** semantic tokens per theme (backgrounds, text, borders, accents, status)
++- **Radii:** `--input-radius`
++- **Avatars:** `--avatar-size`, `--avatar-size-sm`, `--avatar-size-xs`
++
++### 1.4 Layout with CSS Grid
++The app shell uses CSS Grid for structural layout:
++```
++grid-template-columns: sidebar | main-content
++grid-template-rows: body | footer
++```
++Sidebar and main panel share the footer grid row, guaranteeing alignment. Do not use manual pixel matching between panels.
++
++### 1.5 Components don't control their own outer spacing
++A component manages its interior. The parent decides margin, gap, and placement. This keeps components reusable without alignment drift.
++
++### 1.6 One token controls one dimension
++A dimension (e.g., footer height) is defined in exactly one place. All consumers reference that single variable. Never duplicate a value across components.
++
++## 2. TypeScript & Code Style
++
++### 2.1 Strict typing
++- No `any` types. Use `unknown` + type narrowing when needed.
++- All function parameters and return types should be inferable or explicit.
++
++### 2.2 Error responses follow Discord format
++```json
++{ "message": "Human-readable error", "code": 10003 }
++```
++Use Discord error codes where applicable (see `docs/discord-reference.md`). For custom errors without a Discord equivalent, omit the `code` field.
++
++### 2.3 IDs are Snowflakes
++All entity IDs (users, channels, messages, guilds, members) are Snowflake strings. Auth tokens use `crypto.randomUUID()` — never Snowflakes.
++
++### 2.4 Timestamps are integers
++Store timestamps as Unix milliseconds (integer) in SQLite. Convert to ISO 8601 strings only at the API response layer.
++
++## 3. Database
++
++### 3.1 Foreign key constraints
++All FK relationships must be declared with appropriate `ON DELETE` behavior (`CASCADE`, `SET NULL`). FK enforcement is enabled via `PRAGMA foreign_keys = ON`.
++
++### 3.2 Indexes for query paths
++Every query pattern used in routes/repos must have a supporting index. Add indexes in `createAllTables` and migration steps.
++
++### 3.3 Migrations
++- Migrations are numbered and sequential (V1→V2→V3...).
++- Each migration runs inside a transaction.
++- After migration, run `PRAGMA foreign_key_check` — hard error on violations.
++- Staging data issues: delete the DB and start fresh. Do not add auto-cleanup code to mask dirty data.
++
++## 4. API & Protocol
++
++### 4.1 Discord compatibility
++Align with Discord's API conventions where applicable:
++- Gateway opcodes must not collide with Discord's definitions
++- REST endpoints follow Discord URL patterns (`/channels/:id/messages`, etc.)
++- Gateway events use Discord event names (`MESSAGE_CREATE`, `CHANNEL_DELETE`, etc.)
++
++### 4.2 Ownership checks
++All mutation endpoints (PATCH, DELETE) must verify the actor has permission. At minimum, check that the actor owns the resource or is a guild member.
++
++### 4.3 `@me` alias
++User endpoints must resolve `@me` to the authenticated user's ID before any ownership check.
++
++## 5. CI & Verification
++
++### 5.1 Local verification must cover all CI steps
++Before pushing, run:
++```bash
++pnpm -r build
++pnpm -r exec tsc --noEmit
++npm test
++npx esbuild packages/server/dist/index.js \
++  --bundle --platform=node --format=esm \
++  --outfile=/dev/null \
++  --external:better-sqlite3 --external:ws \
++  --alias:@cove/shared=./packages/shared/src/index.ts
++```
++
++### 5.2 No manual staging deploys
++CI handles all staging deployments. Never SSH to VM1 to manually build/deploy — it overwrites CI-deployed versions and causes version mismatch.
++
++### 5.3 Staging data
++Staging is a development environment. When the DB has issues, delete it and start fresh. Do not write auto-cleanup code to work around dirty data.
++
++## 6. Code Review Checklist
++
++Reviewers should verify:
++
++- [ ] No hardcoded pixel values — all sizing/spacing/typography references CSS tokens
++- [ ] New CSS values use existing tokens or define new ones in `index.css`
++- [ ] Layout changes use Grid/Flexbox, not manual pixel calculation
++- [ ] Error responses use Discord-compatible format
++- [ ] Mutation endpoints have ownership/permission checks
++- [ ] New DB columns have proper FK constraints and NOT NULL where appropriate
++- [ ] Timestamps stored as integers, not ISO strings
++- [ ] IDs are Snowflakes (except auth tokens)
++- [ ] All CI steps pass locally before push
++- [ ] No `resolveId`-style workarounds — fix the root cause
++
++---
++
++_This document is maintained alongside the codebase. Update it when new standards are established._
+diff --git a/packages/client/src/App.tsx b/packages/client/src/App.tsx
+index 9cd3449..c91fc2e 100644
+--- a/packages/client/src/App.tsx
++++ b/packages/client/src/App.tsx
+@@ -7,6 +7,8 @@ import { useWebSocketStore } from "./stores/useWebSocketStore";
+ import { useThemeStore } from "./stores/useThemeStore";
+ import { Sidebar } from "./components/Sidebar";
+ import { ChatArea } from "./components/ChatArea";
++import { UserBar } from "./components/UserBar";
++import { MessageInput } from "./components/MessageInput";
+ import { MemberList } from "./components/MemberList";
+ import { SettingsPanel } from "./components/SettingsPanel";
+ import * as api from "./lib/api";
+@@ -32,15 +34,13 @@ function useVisualViewport() {
+   }, []);
+ }
+ 
+-const ACCENT_BRAND: Record<string, string> = {
+-  light: "#e07828", dark: "#f4a261", midnight: "#f4a261",
+-};
+-
+ function useAntdThemeConfig() {
+   const currentTheme = useThemeStore((s) => s.theme);
++  // Read --accent-brand from CSS so Antd stays in sync with our token system
++  const accentBrand = getComputedStyle(document.documentElement).getPropertyValue("--accent-brand").trim() || "#f4a261";
+   return {
+     algorithm: currentTheme === "light" ? theme.defaultAlgorithm : theme.darkAlgorithm,
+-    token: { colorPrimary: ACCENT_BRAND[currentTheme] || "#f4a261", colorBgContainer: "var(--bg-secondary)", colorBgElevated: "var(--bg-tertiary)" },
++    token: { colorPrimary: accentBrand, colorBgContainer: "var(--bg-secondary)", colorBgElevated: "var(--bg-tertiary)" },
+   };
+ }
+ 
+@@ -48,15 +48,18 @@ const styles = {
+   fullHeight: { height: "100%", background: "var(--bg-primary)" } as CSSProperties,
+   overlay: { position: "fixed", inset: 0, background: "var(--bg-overlay-strong)", zIndex: 20, opacity: 0, pointerEvents: "none" as const, transition: "opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1)" } as CSSProperties,
+   overlayVisible: { opacity: 1, pointerEvents: "auto" as const } as CSSProperties,
+-  layout: { display: "flex", height: "100%", overflow: "hidden" } as CSSProperties,
+-  chatColumn: { display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0, height: "100%", background: "var(--bg-primary)" } as CSSProperties,
+-  connStatus: { display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", fontSize: 12, color: "var(--text-muted)", background: "var(--bg-secondary)", borderBottom: "1px solid var(--border-subtle)" } as CSSProperties,
+-  loginPage: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 24 } as CSSProperties,
+-  loginTitle: { fontSize: 32, fontWeight: 700, color: "var(--accent-brand)" } as CSSProperties,
++  layout: { display: "grid", gridTemplateRows: "1fr minmax(var(--footer-height), auto)", height: "100%", overflow: "hidden" } as CSSProperties,
++  sidebarBody: { gridColumn: 1, gridRow: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", background: "var(--bg-secondary)" } as CSSProperties,
++  sidebarFooter: { gridColumn: 1, gridRow: 2 } as CSSProperties,
++  chatBody: { gridColumn: 2, gridRow: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden", background: "var(--bg-primary)" } as CSSProperties,
++  chatFooter: { gridColumn: 2, gridRow: 2, paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + var(--keyboard-offset, 0px))", background: "var(--bg-secondary)" } as CSSProperties,
++  connStatus: { display: "flex", alignItems: "center", gap: "var(--space-xs)", padding: "var(--space-xs) var(--space-md)", fontSize: "var(--font-size-sm)", color: "var(--text-muted)", background: "var(--bg-secondary)", borderBottom: "1px solid var(--border-subtle)" } as CSSProperties,
++  loginPage: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "var(--space-xxl)" } as CSSProperties,
++  loginTitle: { fontSize: "var(--font-size-xxl)", fontWeight: 700, color: "var(--accent-brand)" } as CSSProperties,
+ };
+ 
+ const connDot = (status: string): CSSProperties => ({
+-  width: 8, height: 8, borderRadius: "50%", display: "inline-block",
++  width: "var(--status-dot-size)", height: "var(--status-dot-size)", borderRadius: "50%", display: "inline-block",
+   background: status === "connecting" ? "var(--warning)" : "var(--danger)",
+ });
+ 
+@@ -132,7 +135,7 @@ export default function App() {
+   const themeConfig = useAntdThemeConfig();
+   useVisualViewport();
+   const { needsSetup, setUser } = useUserStore();
+-  const { setChannels, setActiveChannel } = useChannelStore();
++  const { activeChannelId, setChannels, setActiveChannel } = useChannelStore();
+   const connect = useWebSocketStore((s) => s.connect);
+   const wsStatus = useWebSocketStore((s) => s.status);
+   const [sidebarOpen, setSidebarOpen] = useState(false);
+@@ -223,10 +226,13 @@ export default function App() {
+         <div onClick={() => setSidebarOpen(false)} style={{...styles.overlay, ...(sidebarOpen ? styles.overlayVisible : {})}} className="mobile-sidebar-backdrop" />
+         <div onClick={() => setMembersOpen(false)} style={{...styles.overlay, ...(membersOpen ? styles.overlayVisible : {})}} className="mobile-members-backdrop" />
+ 
+-        <div style={styles.layout} className={`${sidebarOpen ? "sidebar-open" : ""} ${membersOpen ? "members-open" : ""}`}>
+-          <Sidebar onClose={() => setSidebarOpen(false)} loading={channelsLoading} onSettingsOpen={() => setSettingsOpen(true)} />
++        <div style={{ ...styles.layout, gridTemplateColumns: membersOpen ? "var(--sidebar-width) 1fr var(--member-list-width)" : "var(--sidebar-width) 1fr" }} className={`app-layout ${sidebarOpen ? "sidebar-open" : ""} ${membersOpen ? "members-open" : ""}`}>
++          <Sidebar onClose={() => setSidebarOpen(false)} loading={channelsLoading} style={styles.sidebarBody} />
++          <div style={styles.sidebarFooter} className="sidebar-footer-cell">
++            <UserBar onCloseSidebar={() => setSidebarOpen(false)} onSettingsOpen={() => setSettingsOpen(true)} />
++          </div>
+ 
+-          <div style={styles.chatColumn}>
++          <div style={styles.chatBody} className="chat-body-cell">
+             {wsStatus !== "connected" && (
+               <div style={styles.connStatus}>
+                 <span style={connDot(wsStatus)} />
+@@ -235,6 +241,9 @@ export default function App() {
+             )}
+             <ChatArea onMenuClick={() => setSidebarOpen(!sidebarOpen)} onMembersClick={() => setMembersOpen(!membersOpen)} membersOpen={membersOpen} />
+           </div>
++          <div style={styles.chatFooter} className="chat-footer-cell">
++            {activeChannelId && <MessageInput channelId={activeChannelId} />}
++          </div>
+ 
+           {membersOpen && <MemberList />}
+         </div>
+diff --git a/packages/client/src/components/BotCreateForm.tsx b/packages/client/src/components/BotCreateForm.tsx
+index 3bd120d..9d97b65 100644
+--- a/packages/client/src/components/BotCreateForm.tsx
++++ b/packages/client/src/components/BotCreateForm.tsx
+@@ -25,12 +25,12 @@ export function BotCreateForm() {
+   return (
+     <>
+       <form onSubmit={handleSubmit}>
+-        <div style={{ marginBottom: 12 }}>
+-          <label style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 8 }}>Bot Name</label>
++        <div style={{ marginBottom: "var(--space-md)" }}>
++          <label style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, display: "block", marginBottom: "var(--space-sm)" }}>Bot Name</label>
+           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="My Bot" />
+         </div>
+-        <div style={{ marginBottom: 12 }}>
+-          <label style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 8 }}>Bio</label>
++        <div style={{ marginBottom: "var(--space-md)" }}>
++          <label style={{ fontSize: "var(--font-size-sm)", fontWeight: 500, display: "block", marginBottom: "var(--space-sm)" }}>Bio</label>
+           <Input.TextArea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="What does this bot do?" rows={1} style={{ resize: "none" }} />
+         </div>
+         <Button type="primary" htmlType="submit" loading={loading} disabled={!name.trim()} block>
+diff --git a/packages/client/src/components/BotManagement.tsx b/packages/client/src/components/BotManagement.tsx
+index bdfde82..054ab3a 100644
+--- a/packages/client/src/components/BotManagement.tsx
++++ b/packages/client/src/components/BotManagement.tsx
+@@ -14,7 +14,7 @@ export function BotManagement() {
+ 
+   if (loading) {
+     return (
+-      <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
++      <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-xxl)" }}>
+         <Spin tip="Loading bots…" />
+       </div>
+     );
+@@ -34,13 +34,13 @@ export function BotManagement() {
+               ]}
+             >
+               <List.Item.Meta
+-                avatar={<span style={{ fontSize: 24 }}>🤖</span>}
++                avatar={<span style={{ fontSize: "var(--icon-size-lg)" }}>🤖</span>}
+                 title={bot.username}
+                 description={bot.bio}
+               />
+             </List.Item>
+           )}
+-          style={{ marginBottom: 16 }}
++          style={{ marginBottom: "var(--space-lg)" }}
+         />
+       )}
+       <BotCreateForm />
+diff --git a/packages/client/src/components/ChatArea.tsx b/packages/client/src/components/ChatArea.tsx
+index a56cd2f..aef7db0 100644
+--- a/packages/client/src/components/ChatArea.tsx
++++ b/packages/client/src/components/ChatArea.tsx
+@@ -3,13 +3,12 @@ import { useMessageStore } from "../stores/useMessageStore";
+ import { Typography, Button, Popconfirm } from "antd";
+ import { MenuOutlined, DeleteOutlined, TeamOutlined } from "@ant-design/icons";
+ import { MessageList } from "./MessageList";
+-import { MessageInput } from "./MessageInput";
+ import * as api from "../lib/api";
+ import type { CSSProperties } from "react";
+ import { ChatMarkdown } from "./ChatMarkdown";
+ 
+ const styles = {
+-  empty: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", gap: 12, opacity: 0.6 } as CSSProperties,
++  empty: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", gap: "var(--space-md)", opacity: 0.6 } as CSSProperties,
+   wrapper: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, overflow: "hidden" } as CSSProperties,
+   header: { display: "flex", alignItems: "center", gap: "var(--content-gap)", padding: "0 var(--content-pad)", paddingTop: "env(safe-area-inset-top, 0px)", background: "var(--bg-secondary)", borderBottom: "1px solid var(--border-subtle)", height: "var(--header-height)", flexShrink: 0 } as CSSProperties,
+   menuBtn: { color: "var(--text-normal)" } as CSSProperties,
+@@ -34,8 +33,8 @@ export function ChatArea({ onMenuClick, onMembersClick, membersOpen }: { onMenuC
+   if (!channel) {
+     return (
+       <div style={styles.empty}>
+-        <span style={{ fontSize: 48 }}>🌴</span>
+-        <p style={{ fontSize: 15 }}>Select a channel from the sidebar</p>
++        <span style={{ fontSize: "var(--icon-emoji-size)" }}>🌴</span>
++        <p style={{ fontSize: "var(--font-size-lg)" }}>Select a channel from the sidebar</p>
+       </div>
+     );
+   }
+@@ -45,9 +44,9 @@ export function ChatArea({ onMenuClick, onMembersClick, membersOpen }: { onMenuC
+       <div style={styles.header}>
+         {onMenuClick && <Button type="text" icon={<MenuOutlined />} onClick={onMenuClick} className="mobile-only" style={styles.menuBtn} />}
+         <span style={{ fontSize: "var(--font-size-xl)", display: "flex", alignItems: "center", justifyContent: "center", width: "var(--avatar-size)", flexShrink: 0, lineHeight: 1 }}>#</span>
+-        <div style={{ flex: 1 }}>
+-          <Typography.Title level={5} style={{ margin: 0, color: "var(--header-primary)" }}>{channel.name}</Typography.Title>
+-          <Typography.Text type="secondary" style={{ fontSize: "var(--font-size-sm)" }}>{channel.topic ? <ChatMarkdown content={channel.topic} /> : "A cozy channel"}</Typography.Text>
++        <div style={{ flex: 1, minWidth: 0 }}>
++          <Typography.Title level={5} style={{ margin: 0, color: "var(--header-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{channel.name}</Typography.Title>
++          <Typography.Text type="secondary" style={{ fontSize: "var(--font-size-sm)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{channel.topic ? <ChatMarkdown content={channel.topic} /> : "A cozy channel"}</Typography.Text>
+         </div>
+         <Popconfirm title="Clear all messages in this channel?" onConfirm={handleClear} okText="Clear" cancelText="Cancel" okButtonProps={{ danger: true }}>
+           <Button type="text" icon={<DeleteOutlined />} style={styles.clearBtn} />
+@@ -55,7 +54,6 @@ export function ChatArea({ onMenuClick, onMembersClick, membersOpen }: { onMenuC
+         {onMembersClick && <Button type="text" icon={<TeamOutlined />} onClick={onMembersClick} style={membersOpen ? styles.membersBtnActive : styles.membersBtn} />}
+       </div>
+       <MessageList channelId={channel.id} />
+-      <MessageInput channelId={channel.id} />
+     </div>
+   );
+ }
+diff --git a/packages/client/src/components/ChatMarkdown.tsx b/packages/client/src/components/ChatMarkdown.tsx
+index dc99d17..c6a23a8 100644
+--- a/packages/client/src/components/ChatMarkdown.tsx
++++ b/packages/client/src/components/ChatMarkdown.tsx
+@@ -23,7 +23,7 @@ function renderTokens(tokens: Token[], key = ""): ReactNode[] {
+         return <del key={k}>{renderTokens(token.children, `${k}-`)}</del>;
+       case "code":
+         return (
+-          <code key={k} style={{ background: "var(--bg-code)", padding: "1px 4px", borderRadius: 3, fontSize: "0.85em" }}>
++          <code key={k} style={{ background: "var(--bg-code)", padding: "1px var(--space-xs)", borderRadius: "var(--space-xxs)", fontSize: "0.85em" }}>
+             {token.text}
+           </code>
+         );
+@@ -82,7 +82,7 @@ function renderTokens(tokens: Token[], key = ""): ReactNode[] {
+         );
+       case "spoiler":
+         return (
+-          <span key={k} className="spoiler" style={{ background: "var(--bg-code)", borderRadius: 3, padding: "0 2px", cursor: "pointer" }}>
++          <span key={k} className="spoiler" style={{ background: "var(--bg-code)", borderRadius: "var(--space-xxs)", padding: "0 var(--space-xxs)", cursor: "pointer" }}>
+             {renderTokens(token.children, `${k}-`)}
+           </span>
+         );
+diff --git a/packages/client/src/components/MemberList.tsx b/packages/client/src/components/MemberList.tsx
+index 859638d..0c51cbe 100644
+--- a/packages/client/src/components/MemberList.tsx
++++ b/packages/client/src/components/MemberList.tsx
+@@ -8,14 +8,14 @@ import { usePresenceStore } from "../stores/usePresenceStore";
+ import { StatusDot } from "./StatusDot";
+ 
+ const styles = {
+-  root: { width: "var(--member-list-width)", minWidth: "var(--member-list-width)", height: "100%", background: "var(--bg-secondary)", borderLeft: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", overflowY: "auto", paddingTop: "var(--header-height)" } as CSSProperties,
+-  header: { padding: "var(--space-lg) var(--space-lg) var(--space-xs)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--text-muted)" } as CSSProperties,
+-  member: { display: "flex", alignItems: "center", gap: "var(--space-sm)", padding: "var(--space-sm) var(--space-lg)", borderRadius: 4, cursor: "default", transition: "background 0.15s" } as CSSProperties,
++  root: { gridColumn: 3, gridRow: "1 / -1", width: "var(--member-list-width)", minWidth: "var(--member-list-width)", background: "var(--bg-secondary)", borderLeft: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", overflowY: "auto", paddingTop: "var(--header-height)" } as CSSProperties,
++  header: { padding: "var(--space-lg) var(--space-lg) var(--space-xs)", fontSize: "var(--font-size-xs)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--text-muted)" } as CSSProperties,
++  member: { display: "flex", alignItems: "center", gap: "var(--space-sm)", padding: "var(--space-sm) var(--space-lg)", borderRadius: "var(--space-xs)", cursor: "default", transition: "background 0.15s" } as CSSProperties,
+   memberHover: { background: "var(--member-hover)" } as CSSProperties,
+   avatar: { flexShrink: 0 } as CSSProperties,
+   avatarWrapper: { position: "relative", flexShrink: 0 } as CSSProperties,
+   username: { fontSize: "var(--font-size-md)", color: "var(--text-normal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: 1 } as CSSProperties,
+-  badge: { fontSize: "var(--font-size-xs)", fontWeight: 600, padding: "1px 5px", borderRadius: 3, background: "var(--accent)", color: "var(--text-on-accent)", marginLeft: "var(--space-xs)", flexShrink: 0, lineHeight: "14px", display: "inline-block" } as CSSProperties,
++  badge: { fontSize: "var(--font-size-xs)", fontWeight: 600, padding: "1px var(--space-xs)", borderRadius: "var(--space-xxs)", background: "var(--accent)", color: "var(--text-on-accent)", marginLeft: "var(--space-xs)", flexShrink: 0, lineHeight: "var(--font-size-md)", display: "inline-block" } as CSSProperties,
+   loading: { display: "flex", justifyContent: "center", padding: "var(--space-xxl)" } as CSSProperties,
+ };
+ 
+diff --git a/packages/client/src/components/MessageInput.tsx b/packages/client/src/components/MessageInput.tsx
+index 891d86d..325b659 100644
+--- a/packages/client/src/components/MessageInput.tsx
++++ b/packages/client/src/components/MessageInput.tsx
+@@ -11,16 +11,16 @@ const isTouchDevice =
+ 
+ const wrapperStyle: CSSProperties = {
+   display: "flex", alignItems: "flex-end", gap: "var(--space-sm)",
+-  padding: "var(--space-sm) var(--content-pad)", background: "var(--bg-secondary)",
++  padding: "0 var(--content-pad)", background: "var(--bg-secondary)",
+   borderTop: "1px solid var(--border-subtle)",
+-  flexShrink: 0,
+-  paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + var(--keyboard-offset, 0px) + var(--space-sm))",
++  minHeight: "100%", boxSizing: "border-box",
+ };
+ const textareaStyle: CSSProperties = {
+   borderRadius: "var(--input-radius)", background: "var(--bg-input)", border: "none",
+-  flex: 1, resize: "none", minHeight: 40, maxHeight: 200, overflowY: "auto",
+-  padding: "8px 11px", fontSize: 14, lineHeight: "1.5", color: "inherit",
+-  fontFamily: "inherit",
++  flex: 1, resize: "none", minHeight: "var(--control-height-md)", maxHeight: 200, overflowY: "auto",
++  padding: "var(--space-sm) var(--space-md)", fontSize: "var(--font-size-md)", lineHeight: "1.5", color: "inherit",
++  fontFamily: "inherit", boxSizing: "border-box",
++  margin: "var(--space-sm) 0",
+ };
+ 
+ export function MessageInput({ channelId }: { channelId: string }) {
+@@ -92,7 +92,12 @@ export function MessageInput({ channelId }: { channelId: string }) {
+         shape="circle"
+         icon={<SendOutlined />}
+         onClick={handleSubmit}
+-        style={{ color: content.trim() ? "var(--accent)" : "var(--text-muted)" }}
++        style={{
++          color: content.trim() ? "var(--accent)" : "var(--text-muted)",
++          width: "var(--icon-button-size-md)", height: "var(--icon-button-size-md)", minWidth: "var(--icon-button-size-md)",
++          display: "flex", alignItems: "center", justifyContent: "center",
++          margin: "var(--space-sm) 0", flexShrink: 0,
++        }}
+       />
+     </div>
+   );
+diff --git a/packages/client/src/components/MessageItem.tsx b/packages/client/src/components/MessageItem.tsx
+index 786cdd9..77d5af6 100644
+--- a/packages/client/src/components/MessageItem.tsx
++++ b/packages/client/src/components/MessageItem.tsx
+@@ -29,20 +29,17 @@ function avatarColor(name: string): string {
+   return pickAvatarColor(name);
+ }
+ 
+-function roleColor(isBot: boolean): string {
+-  return isBot ? "var(--text-bot)" : "var(--text-user)";
+-}
+ 
+ const botBadgeStyle: CSSProperties = {
+   fontSize: "var(--font-size-xs)",
+   fontWeight: 600,
+   color: "var(--text-on-accent)",
+   background: "var(--accent)",
+-  borderRadius: 3,
+-  padding: "1px 5px",
+-  marginLeft: 6,
++  borderRadius: "var(--space-xxs)",
++  padding: "1px var(--space-xs)",
++  marginLeft: "var(--space-xs)",
+   verticalAlign: "middle",
+-  lineHeight: "14px",
++  lineHeight: "var(--font-size-md)",
+   display: "inline-block",
+ };
+ 
+@@ -87,7 +84,7 @@ export function MessageItem({ message, isGroupStart }: MessageItemProps) {
+             display: "flex",
+             alignItems: "center",
+             justifyContent: "center",
+-            fontSize: 18,
++            fontSize: "var(--font-size-lg)",
+             fontWeight: 600,
+             color: textColor,
+             flexShrink: 0,
+@@ -100,12 +97,12 @@ export function MessageItem({ message, isGroupStart }: MessageItemProps) {
+         {/* Content */}
+         <div style={{ flex: 1, minWidth: 0 }}>
+           {/* Header: username + badge + timestamp */}
+-          <div style={{ display: "flex", alignItems: "baseline", lineHeight: "22px" }}>
++          <div style={{ display: "flex", alignItems: "baseline", lineHeight: 1.375 }}>
+             <span
+               style={{
+                 fontSize: "var(--font-size-lg)",
+                 fontWeight: 500,
+-                color: roleColor(isBot),
++                color: "var(--header-primary)",
+                 cursor: "pointer",
+               }}
+             >
+diff --git a/packages/client/src/components/MessageList.tsx b/packages/client/src/components/MessageList.tsx
+index cff4316..0f08ffd 100644
+--- a/packages/client/src/components/MessageList.tsx
++++ b/packages/client/src/components/MessageList.tsx
+@@ -11,7 +11,7 @@ const centerStyle: CSSProperties = { flex: 1, display: "flex", alignItems: "cent
+ const listStyle: CSSProperties = { flex: 1, overflowY: "auto", paddingTop: "var(--space-sm)", paddingBottom: 0, paddingLeft: 0, paddingRight: 0, display: "flex", flexDirection: "column", WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" };
+ const typingBarStyle: CSSProperties = {
+   padding: "var(--space-xs) var(--content-pad)", fontSize: "var(--font-size-sm)", color: "var(--text-muted)",
+-  minHeight: 24, display: "flex", alignItems: "center", gap: "var(--space-xs)",
++  minHeight: "var(--space-xxl)", display: "flex", alignItems: "center", gap: "var(--space-xs)",
+ };
+ 
+ const NEAR_BOTTOM_THRESHOLD = 100;
+@@ -29,10 +29,10 @@ function TypingDots() {
+   return (
+     <>
+       <style>{dotKeyframes}</style>
+-      <span style={{ display: "inline-flex", gap: 2, marginRight: 4 }}>
++      <span style={{ display: "inline-flex", gap: "var(--space-xxs)", marginRight: "var(--space-xs)" }}>
+         {[0, 1, 2].map((i) => (
+           <span key={i} style={{
+-            width: 6, height: 6, borderRadius: "50%", background: "currentColor",
++            width: "var(--space-xs)", height: "var(--space-xs)", borderRadius: "50%", background: "currentColor",
+             display: "inline-block", animation: `typingDot 1.4s infinite ease-in-out`,
+             animationDelay: `${i * 0.2}s`,
+           }} />
+@@ -120,7 +120,7 @@ export function MessageList({ channelId }: { channelId: string }) {
+   if (messages.length === 0) {
+     return (
+       <div style={centerStyle}>
+-        <Empty image="🌊" imageStyle={{ fontSize: 48, lineHeight: "56px" }} description="No messages yet — be the first!" />
++        <Empty image="🌊" imageStyle={{ fontSize: 48, lineHeight: "56px" /* decorative one-off */ }} description="No messages yet — be the first!" />
+       </div>
+     );
+   }
+diff --git a/packages/client/src/components/SettingsPanel.tsx b/packages/client/src/components/SettingsPanel.tsx
+index eebc50c..dd84fbb 100644
+--- a/packages/client/src/components/SettingsPanel.tsx
++++ b/packages/client/src/components/SettingsPanel.tsx
+@@ -27,35 +27,35 @@ function ThemeSwatch({ preset, isActive, onSelect }: {
+ }) {
+   const previewStyle: CSSProperties = {
+     display: "flex",
+-    height: 80,
++    height: 80, /* decorative preview — intentionally literal */
+     background: preset.preview.bg,
+   };
+ 
+   const sidebarStyle: CSSProperties = {
+-    width: 36,
++    width: 36, /* decorative preview — intentionally literal */
+     background: preset.preview.sidebar,
+     borderRight: `1px solid ${preset.preview.borderColor}`,
+   };
+ 
+   const contentStyle: CSSProperties = {
+     flex: 1,
+-    padding: 8,
++    padding: "var(--space-sm)",
+     display: "flex",
+     flexDirection: "column",
+-    gap: 4,
++    gap: "var(--space-xs)",
+     justifyContent: "center",
+   };
+ 
+   const lineStyle = (width: string): CSSProperties => ({
+-    height: 4,
+-    borderRadius: 2,
++    height: "var(--space-xs)",
++    borderRadius: "var(--space-xxs)",
+     width,
+     background: preset.preview.lineColor,
+   });
+ 
+   const accentLineStyle: CSSProperties = {
+-    height: 4,
+-    borderRadius: 2,
++    height: "var(--space-xs)",
++    borderRadius: "var(--space-xxs)",
+     width: "60%",
+     background: preset.preview.accent,
+     opacity: 0.7,
+@@ -63,8 +63,8 @@ function ThemeSwatch({ preset, isActive, onSelect }: {
+ 
+   const labelStyle: CSSProperties = {
+     textAlign: "center",
+-    padding: "8px 0",
+-    fontSize: 13,
++    padding: "var(--space-sm) 0",
++    fontSize: "var(--font-size-sm)",
+     fontWeight: isActive ? 600 : 400,
+     color: preset.preview.labelColor,
+     background: preset.preview.sidebar,
+@@ -190,7 +190,7 @@ export function SettingsPanel({ open, onOpenChange }: { open: boolean; onOpenCha
+         <div className="settings-sidebar">
+           <div className="settings-profile-area" style={profileAreaStyle}>
+             <div style={avatarStyle}>{avatarLetter}</div>
+-          <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-normal)" }}>{username}</div>
++          <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 600, color: "var(--text-normal)" }}>{username}</div>
+           </div>
+           <div className="settings-divider" style={dividerStyle} />
+           <div className="settings-category-header" style={categoryHeaderStyle}>USER SETTINGS</div>
+@@ -218,16 +218,16 @@ export function SettingsPanel({ open, onOpenChange }: { open: boolean; onOpenCha
+             {SECTION_COMPONENTS[activeSection]()}
+             {/* Mobile-only sign out at bottom of content */}
+             <div className="settings-mobile-sign-out">
+-              <div style={{ ...dividerStyle, margin: "24px 0 16px" }} />
++              <div style={{ ...dividerStyle, margin: "var(--space-xxl) 0 var(--space-lg)" }} />
+               <button
+                 onClick={() => { logout(); close(); }}
+                 style={{
+                   background: "transparent",
+                   border: "none",
+                   color: "var(--danger)",
+-                  fontSize: 15,
++                  fontSize: "var(--font-size-lg)",
+                   cursor: "pointer",
+-                  padding: "8px 0",
++                  padding: "var(--space-sm) 0",
+                 }}
+               >
+                 Sign Out
+@@ -250,8 +250,8 @@ const profileAreaStyle: CSSProperties = {
+ };
+ 
+ const avatarStyle: CSSProperties = {
+-  width: 36,
+-  height: 36,
++  width: "var(--icon-button-size-md)",
++  height: "var(--icon-button-size-md)",
+   borderRadius: "50%",
+   background: "var(--accent)",
+   color: "var(--text-on-accent)",
+@@ -269,7 +269,7 @@ const categoryHeaderStyle: CSSProperties = {
+   textTransform: "uppercase",
+   letterSpacing: "0.02em",
+   color: "var(--text-muted)",
+-  padding: "6px var(--space-sm)",
++  padding: "var(--space-xs) var(--space-sm)",
+   marginBottom: "var(--space-xxs)",
+ };
+ 
+@@ -280,6 +280,6 @@ const dividerStyle: CSSProperties = {
+ };
+ 
+ const contentInnerStyle: CSSProperties = {
+-  maxWidth: 660,
++  maxWidth: "var(--settings-content-max-width)",
+   width: "100%",
+ };
+diff --git a/packages/client/src/components/Sidebar.tsx b/packages/client/src/components/Sidebar.tsx
+index d0d9bdc..2451dc5 100644
+--- a/packages/client/src/components/Sidebar.tsx
++++ b/packages/client/src/components/Sidebar.tsx
+@@ -2,22 +2,21 @@ import { useChannelStore } from "../stores/useChannelStore";
+ import { useReadStateStore } from "../stores/useReadStateStore";
+ import { Button, Input, Popconfirm, Spin } from "antd";
+ import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+-import { UserBar } from "./UserBar";
+ import * as api from "../lib/api";
+ import { useState } from "react";
+ import type { CSSProperties } from "react";
+ 
+ const styles = {
+-  root: { display: "flex", flexDirection: "column", height: "100%", width: "var(--sidebar-width)", minWidth: "var(--sidebar-width)", background: "var(--bg-secondary)", borderRight: "none" } as CSSProperties,
++  root: { display: "flex", flexDirection: "column", background: "var(--bg-secondary)", borderRight: "none", minHeight: 0, overflow: "hidden" } as CSSProperties,
+   header: { display: "flex", alignItems: "center", gap: "var(--space-sm)", padding: "var(--space-md) var(--space-lg)", borderBottom: "1px solid var(--border-subtle)", height: "var(--header-height)", flexShrink: 0 } as CSSProperties,
+   title: { fontSize: "var(--font-size-lg)", fontWeight: 700, margin: 0, color: "var(--header-primary)" } as CSSProperties,
+   list: { flex: 1, overflowY: "auto", padding: "0 var(--space-sm)" } as CSSProperties,
+   loading: { display: "flex", justifyContent: "center", padding: "var(--space-xxl)" } as CSSProperties,
+-  categoryHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px var(--space-sm) var(--space-xs)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--text-muted)", cursor: "default" } as CSSProperties,
+-  channelItem: { display: "flex", alignItems: "center", gap: "var(--space-sm)", padding: "6px var(--space-sm)", borderRadius: 4, cursor: "pointer", transition: "background 0.15s", fontSize: "var(--font-size-md)", color: "var(--interactive-normal)" } as CSSProperties,
++  categoryHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "var(--space-lg) var(--space-sm) var(--space-xs)", fontSize: "var(--font-size-xs)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--text-muted)", cursor: "default" } as CSSProperties,
++  channelItem: { display: "flex", alignItems: "center", gap: "var(--space-sm)", padding: "var(--space-xs) var(--space-sm)", borderRadius: "var(--space-xs)", cursor: "pointer", transition: "background 0.15s", fontSize: "var(--font-size-md)", color: "var(--interactive-normal)" } as CSSProperties,
+   channelActive: { background: "var(--bg-modifier-active)", color: "var(--interactive-active)" } as CSSProperties,
+   channelHover: { background: "var(--bg-modifier-hover)", color: "var(--interactive-hover)" } as CSSProperties,
+-  hash: { fontSize: 18, fontWeight: 600, opacity: 0.5, width: "var(--space-xl)", textAlign: "center", flexShrink: 0 } as CSSProperties,
++  hash: { fontSize: "var(--font-size-lg)", fontWeight: 600, opacity: 0.5, width: "var(--space-xl)", textAlign: "center", flexShrink: 0 } as CSSProperties,
+   channelName: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 } as CSSProperties,
+   deleteBtn: { opacity: 0, fontSize: "var(--font-size-sm)", transition: "opacity 0.15s" } as CSSProperties,
+   addBtn: { margin: "var(--space-xs) var(--space-sm) var(--space-sm)", opacity: 0.5, fontSize: "var(--font-size-sm)" } as CSSProperties,
+@@ -50,7 +49,7 @@ function ChannelItem({ name, isActive, isUnread, onSelect, onDelete }: {
+   );
+ }
+ 
+-export function Sidebar({ onClose, loading, onSettingsOpen }: { onClose?: () => void; loading?: boolean; onSettingsOpen?: () => void }) {
++export function Sidebar({ onClose, loading, style }: { onClose?: () => void; loading?: boolean; style?: CSSProperties }) {
+   const { channels, activeChannelId, setActiveChannel, removeChannel, addChannel } = useChannelStore();
+   const { unreadChannels } = useReadStateStore();
+   const [adding, setAdding] = useState(false);
+@@ -80,7 +79,7 @@ export function Sidebar({ onClose, loading, onSettingsOpen }: { onClose?: () =>
+   }
+ 
+   return (
+-    <div style={styles.root} className="sidebar-panel">
++    <div style={{ ...styles.root, ...style }} className="sidebar-panel">
+       <div style={styles.header}>
+         <span style={{ fontSize: "var(--font-size-xl)" }}>🏝️</span>
+         <h1 style={styles.title}>Cove</h1>
+@@ -117,8 +116,6 @@ export function Sidebar({ onClose, loading, onSettingsOpen }: { onClose?: () =>
+           </>
+         )}
+       </div>
+-
+-      <UserBar onCloseSidebar={onClose} onSettingsOpen={onSettingsOpen} />
+     </div>
+   );
+ }
+diff --git a/packages/client/src/components/StatusDot.tsx b/packages/client/src/components/StatusDot.tsx
+index 7124b76..1747086 100644
+--- a/packages/client/src/components/StatusDot.tsx
++++ b/packages/client/src/components/StatusDot.tsx
+@@ -7,7 +7,7 @@ interface StatusDotProps {
+ 
+ export function StatusDot({ online, borderColor = "var(--bg-secondary)" }: StatusDotProps) {
+   const style: CSSProperties = {
+-    width: 10, height: 10, borderRadius: "50%",
++    width: "var(--status-dot-size)", height: "var(--status-dot-size)", borderRadius: "50%",
+     background: online ? "var(--status-online)" : "var(--status-offline)",
+     border: `2px solid ${borderColor}`,
+     position: "absolute", bottom: -1, right: -1,
+diff --git a/packages/client/src/components/TokenDisplay.tsx b/packages/client/src/components/TokenDisplay.tsx
+index 9e29081..bf22313 100644
+--- a/packages/client/src/components/TokenDisplay.tsx
++++ b/packages/client/src/components/TokenDisplay.tsx
+@@ -9,14 +9,14 @@ export function TokenDisplay({ token, onClose }: { token: string; onClose: () =>
+ 
+   return (
+     <Modal open onCancel={onClose} title="Bot Token Created" footer={null} centered>
+-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
+-        <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Copy this token now. You won't be able to see it again.</p>
++      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)", marginTop: "var(--space-sm)" }}>
++        <p style={{ fontSize: "var(--font-size-sm)", color: "var(--text-muted)" }}>Copy this token now. You won't be able to see it again.</p>
+         <Input.Search
+           value={token}
+           readOnly
+           enterButton={<CopyOutlined />}
+           onSearch={handleCopy}
+-          style={{ fontFamily: "monospace", fontSize: 12 }}
++          style={{ fontFamily: "monospace", fontSize: "var(--font-size-sm)" }}
+         />
+         <Alert type="error" message="Warning: This token provides full access to the bot account. Keep it secret." showIcon />
+       </div>
+diff --git a/packages/client/src/components/UserBar.tsx b/packages/client/src/components/UserBar.tsx
+index 2074803..8a8d1ef 100644
+--- a/packages/client/src/components/UserBar.tsx
++++ b/packages/client/src/components/UserBar.tsx
+@@ -9,10 +9,10 @@ import { StatusDot } from "./StatusDot";
+ const barStyle: CSSProperties = {
+   display: "flex", alignItems: "center", gap: "var(--space-sm)", padding: "0 var(--space-sm)",
+   borderTop: "1px solid var(--border-subtle)", background: "var(--bg-overlay)",
+-  height: "var(--footer-height)", flexShrink: 0,
++  height: "100%", boxSizing: "border-box",
+ };
+ const avatarStyle: CSSProperties = { color: "var(--text-on-accent)", fontWeight: 700, flexShrink: 0 };
+-const nameStyle: CSSProperties = { flex: 1, fontSize: 13, fontWeight: 500, color: "var(--text-normal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
++const nameStyle: CSSProperties = { flex: 1, fontSize: "var(--font-size-sm)", fontWeight: 500, color: "var(--text-normal)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
+ const settingsBtnStyle: CSSProperties = { color: "var(--interactive-normal)", fontSize: "var(--font-size-md)" };
+ 
+ export function UserBar({ onCloseSidebar, onSettingsOpen }: { onCloseSidebar?: () => void; onSettingsOpen?: () => void }) {
+diff --git a/packages/client/src/index.css b/packages/client/src/index.css
+index a0bc5a5..0da8f22 100644
+--- a/packages/client/src/index.css
++++ b/packages/client/src/index.css
+@@ -38,9 +38,25 @@
+   --font-size-md: 14px;
+   --font-size-lg: 16px;
+   --font-size-xl: 20px;
++  --font-size-xxl: 32px;
++
++  /* ── Settings ────────────────────────────────────────── */
++  --settings-content-max-width: 660px;
+ 
+   /* ── Input ────────────────────────────────────────────── */
+   --input-radius: 8px;
++
++  /* ── Control Sizing ─────────────────────────────────── */
++  --control-height-sm: 28px;
++  --control-height-md: 36px;
++  --control-height-lg: 44px;
++  --icon-button-size-sm: 28px;
++  --icon-button-size-md: 36px;
++
++  /* ── Component-specific Sizing ──────────────────────────── */
++  --status-dot-size: 10px;
++  --icon-emoji-size: 48px;
++  --icon-size-lg: 24px;
+ }
+ 
+ [data-theme="midnight"], :root {
+@@ -450,6 +466,11 @@ textarea:focus-visible {
+   .mobile-only { display: inline-flex !important; }
+   .mobile-sidebar-backdrop,
+   .mobile-members-backdrop { display: block; }
++
++  /* Grid collapses to single column on mobile */
++  .app-layout {
++    grid-template-columns: 1fr !important;
++  }
+   .sidebar-panel {
+     position: fixed !important;
+     z-index: 30 !important;
+@@ -464,6 +485,31 @@ textarea:focus-visible {
+   .sidebar-open .sidebar-panel {
+     transform: translateX(0);
+   }
++
++  /* Sidebar footer (UserBar) on mobile — fixed with sidebar */
++  .sidebar-footer-cell {
++    position: fixed !important;
++    z-index: 30 !important;
++    left: 0;
++    bottom: 0;
++    width: var(--sidebar-width) !important;
++    height: var(--footer-height) !important;
++    transform: translateX(-100%);
++    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
++    will-change: transform;
++  }
++  .sidebar-open .sidebar-footer-cell {
++    transform: translateX(0);
++  }
++
++  /* Chat body and footer take full width on mobile */
++  .chat-body-cell {
++    grid-column: 1 !important;
++  }
++  .chat-footer-cell {
++    grid-column: 1 !important;
++  }
++
+   .member-list {
+     position: fixed !important;
+     z-index: 30 !important;

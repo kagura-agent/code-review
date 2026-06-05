@@ -1,0 +1,779 @@
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index ac042ea..ee8b447 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -140,6 +140,40 @@ UI ←→ Cove Backend ←→ OpenClaw Gateway
+ 
+ The agent layer stays untouched. Cron, delivery, allowlist — all reused from OpenClaw. Cove only adds the UI and the channel bridge.
+ 
++## Deployment
++
++### Staging — Automatic via CI
++
++**Do NOT manually deploy to staging.** The `deploy-staging.yml` workflow handles everything:
++
++- **On PR open/push**: CI builds client + server → deploys to VM1 staging (port 3501)
++- **On PR close**: CI tears down the staging service
++- **On push to main**: CI deploys the latest main to staging
++
++Staging URL: `https://staging.cove.kagura-agent.com`
++
++To test your changes:
++1. Push to your PR branch
++2. Wait for CI deploy to complete (check PR comments for preview URL)
++3. Hard-refresh the staging URL (`Ctrl+Shift+R`)
++
++⚠️ Manual SSH deploys will overwrite CI-deployed versions and cause confusion. Don't do it.
++
++### Generating Invite Codes (Staging)
++
++SSH to VM1, then run:
++
++```bash
++cd /home/azureuser/cove-staging && node -e "
++const db=require('better-sqlite3')('./cove-staging.db');
++const crypto=require('crypto');
++const code=crypto.randomBytes(4).toString('hex').toUpperCase();
++const id=crypto.randomUUID();
++db.prepare('INSERT INTO invite_codes (id, code, created_at) VALUES (?, ?, ?)').run(id, code, new Date().toISOString());
++console.log(code);
++"
++```
++
+ ## Need Help?
+ 
+ Open an issue with your question — we're happy to help.
+diff --git a/packages/client/src/components/MessageList.tsx b/packages/client/src/components/MessageList.tsx
+index 4121967..cff4316 100644
+--- a/packages/client/src/components/MessageList.tsx
++++ b/packages/client/src/components/MessageList.tsx
+@@ -1,6 +1,7 @@
+ import { useEffect, useRef, useMemo, useCallback } from "react";
+ import { useMessageStore } from "../stores/useMessageStore";
+ import { useTypingStore } from "../stores/useTypingStore";
++import { useReadStateStore } from "../stores/useReadStateStore";
+ import { MessageItem } from "./MessageItem";
+ import { Spin, Empty } from "antd";
+ import * as api from "../lib/api";
+@@ -15,6 +16,9 @@ const typingBarStyle: CSSProperties = {
+ 
+ const NEAR_BOTTOM_THRESHOLD = 100;
+ 
++/** Persists across mounts so revisiting a channel with no new messages skips the ack call. */
++const lastAckedIds = new Map<string, string>();
++
+ const dotKeyframes = `
+ @keyframes typingDot {
+   0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+@@ -66,6 +70,16 @@ export function MessageList({ channelId }: { channelId: string }) {
+         setMessages(channelId, reversed);
+         prevCountRef.current = reversed.length;
+         requestAnimationFrame(() => scrollToBottom("instant"));
++
++        // Auto-ack: now that messages are loaded, ack the last one (skip if already acked)
++        if (reversed.length > 0) {
++          const lastMsg = reversed[reversed.length - 1];
++          if (lastMsg.id !== lastAckedIds.get(channelId)) {
++            lastAckedIds.set(channelId, lastMsg.id);
++            useReadStateStore.getState().clearUnread(channelId);
++            api.ackMessage(channelId, lastMsg.id).catch(() => {});
++          }
++        }
+       }
+     }).catch((err) => console.error("loadMessages:", err));
+     return () => { cancelled = true; };
+diff --git a/packages/client/src/components/Sidebar.tsx b/packages/client/src/components/Sidebar.tsx
+index f71783e..d0d9bdc 100644
+--- a/packages/client/src/components/Sidebar.tsx
++++ b/packages/client/src/components/Sidebar.tsx
+@@ -1,4 +1,5 @@
+ import { useChannelStore } from "../stores/useChannelStore";
++import { useReadStateStore } from "../stores/useReadStateStore";
+ import { Button, Input, Popconfirm, Spin } from "antd";
+ import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+ import { UserBar } from "./UserBar";
+@@ -22,8 +23,8 @@ const styles = {
+   addBtn: { margin: "var(--space-xs) var(--space-sm) var(--space-sm)", opacity: 0.5, fontSize: "var(--font-size-sm)" } as CSSProperties,
+ };
+ 
+-function ChannelItem({ name, isActive, onSelect, onDelete }: {
+-  name: string; isActive: boolean; onSelect: () => void; onDelete: () => void;
++function ChannelItem({ name, isActive, isUnread, onSelect, onDelete }: {
++  name: string; isActive: boolean; isUnread: boolean; onSelect: () => void; onDelete: () => void;
+ }) {
+   const [hovered, setHovered] = useState(false);
+ 
+@@ -35,7 +36,7 @@ function ChannelItem({ name, isActive, onSelect, onDelete }: {
+       onMouseLeave={() => setHovered(false)}
+     >
+       <span style={styles.hash}>#</span>
+-      <span style={styles.channelName}>{name}</span>
++      <span style={{ ...styles.channelName, ...(isUnread && !isActive ? { color: "var(--interactive-active)", fontWeight: 600 } : {}) }}>{name}</span>
+       <Popconfirm title={`Delete #${name}?`} description="All messages will be lost." onConfirm={(e) => { e?.stopPropagation(); onDelete(); }} onCancel={(e) => e?.stopPropagation()} okText="Delete" cancelText="Cancel" okButtonProps={{ danger: true }}>
+         <Button
+           type="text"
+@@ -51,6 +52,7 @@ function ChannelItem({ name, isActive, onSelect, onDelete }: {
+ 
+ export function Sidebar({ onClose, loading, onSettingsOpen }: { onClose?: () => void; loading?: boolean; onSettingsOpen?: () => void }) {
+   const { channels, activeChannelId, setActiveChannel, removeChannel, addChannel } = useChannelStore();
++  const { unreadChannels } = useReadStateStore();
+   const [adding, setAdding] = useState(false);
+   const [newName, setNewName] = useState("");
+ 
+@@ -98,6 +100,7 @@ export function Sidebar({ onClose, loading, onSettingsOpen }: { onClose?: () =>
+                 key={ch.id}
+                 name={ch.name}
+                 isActive={ch.id === activeChannelId}
++                isUnread={!!unreadChannels[ch.id]}
+                 onSelect={() => handleSelectChannel(ch.id)}
+                 onDelete={() => handleDeleteChannel(ch.id)}
+               />
+diff --git a/packages/client/src/lib/api.ts b/packages/client/src/lib/api.ts
+index 37fd0f9..ac630e0 100644
+--- a/packages/client/src/lib/api.ts
++++ b/packages/client/src/lib/api.ts
+@@ -59,6 +59,9 @@ export function deleteBot(id: string) {
+ export function sendTyping(channelId: string) {
+   return api<void>(`${API_PREFIX}/channels/${channelId}/typing`, { method: "POST" });
+ }
++export function ackMessage(channelId: string, messageId: string) {
++  return api<void>(`${API_PREFIX}/channels/${channelId}/messages/${messageId}/ack`, { method: "PUT" });
++}
+ export function fetchMe() {
+   return api<{ id: string; username: string; avatar: string | null; bot: boolean }>("/api/auth/me");
+ }
+diff --git a/packages/client/src/lib/gateway-dispatcher.ts b/packages/client/src/lib/gateway-dispatcher.ts
+index aca7840..18c0254 100644
+--- a/packages/client/src/lib/gateway-dispatcher.ts
++++ b/packages/client/src/lib/gateway-dispatcher.ts
+@@ -6,10 +6,11 @@ export interface GatewayEventMap {
+   MESSAGE_DELETE: { id: string; channel_id: string };
+   TYPING_START: { channel_id: string; user_id: string; username?: string };
+   PRESENCE_UPDATE: { user: { id: string }; status: "online" | "offline" };
+-  READY: { presences?: Array<{ user: { id: string }; status: string }> };
++  READY: { presences?: Array<{ user: { id: string }; status: string }>; read_state?: Array<{ channel_id: string; last_read_message_id: string | null; last_message_id: string | null }> };
+   CHANNEL_CREATE: Channel;
+   CHANNEL_UPDATE: Channel;
+   CHANNEL_DELETE: { id: string };
++  MESSAGE_ACK: { channel_id: string; message_id: string };
+ }
+ 
+ type Handler<T> = (data: T) => void;
+diff --git a/packages/client/src/lib/gateway-subscriptions.ts b/packages/client/src/lib/gateway-subscriptions.ts
+index 0799ec5..688d759 100644
+--- a/packages/client/src/lib/gateway-subscriptions.ts
++++ b/packages/client/src/lib/gateway-subscriptions.ts
+@@ -3,8 +3,10 @@ import type { GatewayEventMap } from "./gateway-dispatcher";
+ import { useMessageStore } from "../stores/useMessageStore";
+ import { useChannelStore } from "../stores/useChannelStore";
+ import { usePresenceStore } from "../stores/usePresenceStore";
++import { useReadStateStore } from "../stores/useReadStateStore";
+ import { useUserStore } from "../stores/useUserStore";
+ import { useTypingStore, typingTimeoutIds } from "../stores/useTypingStore";
++import * as api from "./api";
+ 
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+ let handlers: Array<{ event: keyof GatewayEventMap; handler: (data: any) => void }> = [];
+@@ -20,6 +22,18 @@ export function setupGatewaySubscriptions(): void {
+   subscribe("MESSAGE_CREATE", (msg) => {
+     useMessageStore.getState().addMessage(msg.channel_id, msg);
+     useTypingStore.getState().clearTyping(msg.channel_id, msg.author.id);
++
++    // Mark channel unread if the message is from someone else and not the active channel
++    const selfId = useUserStore.getState().id;
++    const activeChannelId = useChannelStore.getState().activeChannelId;
++    if (msg.author.id !== selfId && msg.channel_id !== activeChannelId) {
++      useReadStateStore.getState().setUnread(msg.channel_id);
++    }
++
++    // Auto-ack incoming messages in the active channel from other users
++    if (msg.author.id !== selfId && msg.channel_id === activeChannelId) {
++      api.ackMessage(msg.channel_id, msg.id).catch(() => {});
++    }
+   });
+ 
+   subscribe("MESSAGE_UPDATE", (msg) => {
+@@ -67,6 +81,13 @@ export function setupGatewaySubscriptions(): void {
+         data.presences.filter((p) => p.status === "online").map((p) => p.user.id),
+       );
+     }
++    if (data.read_state) {
++      useReadStateStore.getState().initReadStates(data.read_state);
++    }
++  });
++
++  subscribe("MESSAGE_ACK", (data) => {
++    useReadStateStore.getState().markRead(data.channel_id, data.message_id);
+   });
+ 
+   subscribe("CHANNEL_CREATE", (channel) => {
+diff --git a/packages/client/src/stores/useReadStateStore.ts b/packages/client/src/stores/useReadStateStore.ts
+new file mode 100644
+index 0000000..c08d05a
+--- /dev/null
++++ b/packages/client/src/stores/useReadStateStore.ts
+@@ -0,0 +1,41 @@
++import { create } from "zustand";
++
++interface ReadStateState {
++  readStates: Record<string, string>; // channelId → lastReadMessageId
++  unreadChannels: Record<string, boolean>;
++  initReadStates: (states: Array<{ channel_id: string; last_read_message_id: string | null; last_message_id: string | null }>) => void;
++  markRead: (channelId: string, messageId: string) => void;
++  setUnread: (channelId: string) => void;
++  clearUnread: (channelId: string) => void;
++  getLastReadId: (channelId: string) => string | undefined;
++}
++
++export const useReadStateStore = create<ReadStateState>((set, get) => ({
++  readStates: {},
++  unreadChannels: {},
++  initReadStates: (states) => {
++    const rs: Record<string, string> = {};
++    const unread: Record<string, boolean> = {};
++    for (const s of states) {
++      if (s.last_read_message_id) {
++        rs[s.channel_id] = s.last_read_message_id;
++      }
++      // Channel is unread if it has messages and either no read cursor or cursor != latest message
++      if (s.last_message_id && s.last_read_message_id !== s.last_message_id) {
++        unread[s.channel_id] = true;
++      }
++    }
++    set({ readStates: rs, unreadChannels: unread });
++  },
++  markRead: (channelId, messageId) => set((s) => ({
++    readStates: { ...s.readStates, [channelId]: messageId },
++    unreadChannels: { ...s.unreadChannels, [channelId]: false },
++  })),
++  setUnread: (channelId) => set((s) => ({
++    unreadChannels: { ...s.unreadChannels, [channelId]: true },
++  })),
++  clearUnread: (channelId) => set((s) => ({
++    unreadChannels: { ...s.unreadChannels, [channelId]: false },
++  })),
++  getLastReadId: (channelId) => get().readStates[channelId],
++}));
+diff --git a/packages/client/src/stores/useWebSocketStore.ts b/packages/client/src/stores/useWebSocketStore.ts
+index 9d9ec2a..5cec77a 100644
+--- a/packages/client/src/stores/useWebSocketStore.ts
++++ b/packages/client/src/stores/useWebSocketStore.ts
+@@ -93,4 +93,5 @@ const gatewayEvents = new Set([
+   "CHANNEL_CREATE",
+   "CHANNEL_UPDATE",
+   "CHANNEL_DELETE",
++  "MESSAGE_ACK",
+ ]);
+diff --git a/packages/server/src/__tests__/api.test.ts b/packages/server/src/__tests__/api.test.ts
+index 2cb9aa6..588605f 100644
+--- a/packages/server/src/__tests__/api.test.ts
++++ b/packages/server/src/__tests__/api.test.ts
+@@ -33,6 +33,9 @@ describe("Cove API — Discord-compatible", () => {
+     override typingStart(channelId: string, user: { id: string; username: string }, _guildId?: string): void {
+       broadcastEvents.push({ t: "TYPING_START", d: { channel_id: channelId, user_id: user.id, username: user.username, timestamp: Date.now() } });
+     }
++    override messageAck(userId: string, channelId: string, messageId: string): void {
++      broadcastEvents.push({ t: "MESSAGE_ACK", d: { user_id: userId, channel_id: channelId, message_id: messageId } });
++    }
+   }
+ 
+   beforeEach(() => {
+@@ -201,10 +204,15 @@ describe("Cove API — Discord-compatible", () => {
+         body: JSON.stringify({ content: "test broadcast" }),
+       });
+ 
+-      expect(broadcastEvents).toHaveLength(1);
++      expect(broadcastEvents).toHaveLength(2);
+       const event = broadcastEvents[0] as { t: string; d: Message };
+       expect(event.t).toBe("MESSAGE_CREATE");
+       expect(event.d.content).toBe("test broadcast");
++      const ackEvent = broadcastEvents[1] as { t: string; d: { user_id: string; channel_id: string; message_id: string } };
++      expect(ackEvent.t).toBe("MESSAGE_ACK");
++      expect(ackEvent.d.channel_id).toBe("general");
++      expect(ackEvent.d.message_id).toBe(event.d.id);
++      expect(ackEvent.d.user_id).toBe(bot.id);
+     });
+ 
+     it("returns 404 for unknown channel", async () => {
+@@ -346,6 +354,103 @@ describe("Cove API — Discord-compatible", () => {
+     });
+   });
+ 
++  // ─── Message Ack ──────────────────────────────────────────────────────
++
++  describe(`PUT ${API_PREFIX}/channels/:id/messages/:msgId/ack`, () => {
++    it("acks a message — persists read state and dispatches MESSAGE_ACK", async () => {
++      const bot = await createBotUser("kagura", "Kagura");
++      const createRes = await app.request(`${API_PREFIX}/channels/general/messages`, {
++        method: "POST",
++        headers: { "Content-Type": "application/json", Authorization: `Bot ${bot.token}` },
++        body: JSON.stringify({ content: "hello" }),
++      });
++      const msg: Message = await createRes.json();
++      broadcastEvents.length = 0;
++
++      const ackRes = await app.request(`${API_PREFIX}/channels/general/messages/${msg.id}/ack`, {
++        method: "PUT",
++        headers: { Authorization: `Bot ${bot.token}` },
++      });
++      expect(ackRes.status).toBe(204);
++
++      // Verify read state persisted
++      const repos = createRepos(db);
++      const rs = repos.readStates.get("kagura", "general");
++      expect(rs).toBeDefined();
++      expect(rs!.last_read_message_id).toBe(msg.id);
++
++      // Verify MESSAGE_ACK dispatched
++      expect(broadcastEvents).toHaveLength(1);
++      const event = broadcastEvents[0] as { t: string; d: { user_id: string; channel_id: string; message_id: string } };
++      expect(event.t).toBe("MESSAGE_ACK");
++      expect(event.d.channel_id).toBe("general");
++      expect(event.d.message_id).toBe(msg.id);
++    });
++
++    it("returns 404 for non-member channel", async () => {
++      const now = Date.now();
++      const outsiderToken = "outsider-ack-token";
++      db.prepare("INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
++        .run("outsider-ack", "Outsider", null, 1, null, outsiderToken, now, now);
++
++      const res = await app.request(`${API_PREFIX}/channels/general/messages/some-msg/ack`, {
++        method: "PUT",
++        headers: { Authorization: `Bot ${outsiderToken}` },
++      });
++      expect(res.status).toBe(404);
++    });
++
++    it("returns 404 for nonexistent message", async () => {
++      const res = await app.request(`${API_PREFIX}/channels/general/messages/nonexistent/ack`, {
++        method: "PUT",
++        headers: { Authorization: `Bot ${adminToken}` },
++      });
++      expect(res.status).toBe(404);
++    });
++  });
++
++  // ─── READY payload read_state ─────────────────────────────────────────
++
++  describe("READY payload read_state", () => {
++    it("includes last_message_id for channels with messages", () => {
++      // Insert a message directly
++      const now = Date.now();
++      db.prepare("INSERT INTO messages (id, channel_id, sender, content, timestamp, metadata, edited_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)")
++        .run("msg-rs-1", "general", "admin", "test message", now, null, null);
++
++      // Set a read state
++      const repos = createRepos(db);
++      repos.readStates.set("admin", "general", "msg-rs-1");
++
++      const readState = repos.readStates.getAllForUserWithLastMessage("admin");
++      const general = readState.find((rs) => rs.channel_id === "general");
++      expect(general).toBeDefined();
++      expect(general!.last_read_message_id).toBe("msg-rs-1");
++      expect(general!.last_message_id).toBe("msg-rs-1");
++    });
++
++    it("includes channels with no read_state (unread)", () => {
++      const now = Date.now();
++      db.prepare("INSERT INTO messages (id, channel_id, sender, content, timestamp, metadata, edited_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)")
++        .run("msg-rs-2", "general", "admin", "unread msg", now, null, null);
++
++      const repos = createRepos(db);
++      const readState = repos.readStates.getAllForUserWithLastMessage("admin");
++      const general = readState.find((rs) => rs.channel_id === "general");
++      expect(general).toBeDefined();
++      expect(general!.last_read_message_id).toBeNull();
++      expect(general!.last_message_id).toBe("msg-rs-2");
++    });
++
++    it("returns null last_message_id for empty channels", () => {
++      const repos = createRepos(db);
++      const readState = repos.readStates.getAllForUserWithLastMessage("admin");
++      const general = readState.find((rs) => rs.channel_id === "general");
++      expect(general).toBeDefined();
++      expect(general!.last_message_id).toBeNull();
++    });
++  });
++
+   // ─── Pagination ────────────────────────────────────────────────────────
+ 
+   describe(`GET ${API_PREFIX}/channels/:id/messages — pagination`, () => {
+@@ -830,6 +935,14 @@ describe("Cove API — Discord-compatible", () => {
+       });
+       expect(res.status).toBe(404);
+     });
++
++    it("non-member cannot ack message", async () => {
++      const res = await app.request(`${API_PREFIX}/channels/general/messages/msg123/ack`, {
++        method: "PUT",
++        headers: { Authorization: `Bot ${outsiderToken}` },
++      });
++      expect(res.status).toBe(404);
++    });
+   });
+ 
+   // ─── Gateway discovery ────────────────────────────────────────────────
+diff --git a/packages/server/src/__tests__/migration.test.ts b/packages/server/src/__tests__/migration.test.ts
+index 762ef1b..ec4da18 100644
+--- a/packages/server/src/__tests__/migration.test.ts
++++ b/packages/server/src/__tests__/migration.test.ts
+@@ -10,10 +10,10 @@ function tmpDb(): string {
+ }
+ 
+ describe("versioned migration system", () => {
+-  it("fresh DB gets user_version = 1", () => {
++  it("fresh DB gets user_version = 2", () => {
+     const db = initDb();
+     const version = db.pragma("user_version", { simple: true });
+-    expect(version).toBe(1);
++    expect(version).toBe(2);
+     db.close();
+   });
+ 
+@@ -51,6 +51,7 @@ describe("versioned migration system", () => {
+     expect(names).toContain("messages");
+     expect(names).toContain("invite_codes");
+     expect(names).toContain("pending_registrations");
++    expect(names).toContain("read_states");
+     db.close();
+   });
+ 
+@@ -76,6 +77,45 @@ describe("versioned migration system", () => {
+     }
+   });
+ 
++  it("V1→V2 migration creates read_states table", () => {
++    const tmpFile = tmpDb();
++    try {
++      // Create a V1 database manually
++      const setup = new Database(tmpFile);
++      setup.pragma("journal_mode = WAL");
++      setup.pragma("foreign_keys = OFF");
++      setup.exec(`
++        CREATE TABLE guilds (id TEXT PRIMARY KEY, name TEXT NOT NULL, icon TEXT, owner_id TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
++        CREATE TABLE channels (id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, name TEXT NOT NULL, type INTEGER NOT NULL DEFAULT 0, topic TEXT, position INTEGER NOT NULL DEFAULT 0);
++        CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL, avatar TEXT, bot INTEGER NOT NULL DEFAULT 1, bio TEXT, token TEXT UNIQUE, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
++        CREATE TABLE guild_members (guild_id TEXT NOT NULL, user_id TEXT, nick TEXT, roles TEXT DEFAULT '[]', joined_at INTEGER NOT NULL, PRIMARY KEY (guild_id, user_id));
++        CREATE TABLE messages (id TEXT PRIMARY KEY, channel_id TEXT, sender TEXT, content TEXT, timestamp INTEGER, metadata TEXT, edited_timestamp INTEGER, sender_name TEXT);
++        CREATE TABLE invite_codes (id TEXT PRIMARY KEY, code TEXT UNIQUE NOT NULL, created_at INTEGER NOT NULL, used_at INTEGER, used_by TEXT);
++        CREATE TABLE pending_registrations (id TEXT PRIMARY KEY, pending_token TEXT UNIQUE NOT NULL, google_id TEXT, email TEXT, username TEXT, avatar TEXT, created_at INTEGER);
++      `);
++      setup.exec("INSERT INTO guilds (id, name, created_at, updated_at) VALUES ('g1', 'Cove', 1000, 1000)");
++      setup.pragma("user_version = 1");
++      setup.close();
++
++      const db = initDb(tmpFile);
++      const version = db.pragma("user_version", { simple: true });
++      expect(version).toBe(2);
++
++      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='read_states'").all();
++      expect(tables).toHaveLength(1);
++
++      // Verify the table works
++      db.prepare("INSERT INTO read_states (user_id, channel_id, last_read_message_id) VALUES (?, ?, ?)").run("u1", "ch1", "msg1");
++      const row = db.prepare("SELECT * FROM read_states WHERE user_id = 'u1'").get() as Record<string, unknown>;
++      expect(row).toBeDefined();
++      expect(row.last_read_message_id).toBe("msg1");
++
++      db.close();
++    } finally {
++      try { fs.unlinkSync(tmpFile); } catch {}
++    }
++  });
++
+   it("legacy DB with FK-bearing messages migrates successfully", () => {
+     const tmpFile = tmpDb();
+     try {
+@@ -116,7 +156,7 @@ describe("versioned migration system", () => {
+       expect(msg).toBeDefined();
+       expect(msg.content).toBe("hello");
+       const version = db.pragma("user_version", { simple: true });
+-      expect(version).toBe(1);
++      expect(version).toBe(2);
+       db.close();
+     } finally {
+       try { fs.unlinkSync(tmpFile); } catch {}
+@@ -140,7 +180,7 @@ describe("scenes→channels migration guard", () => {
+       expect(rows[0].name).toBe("Scene1");
+ 
+       const version = db2.pragma("user_version", { simple: true });
+-      expect(version).toBe(1);
++      expect(version).toBe(2);
+       db2.close();
+     } finally {
+       try { fs.unlinkSync(tmpFile); } catch {}
+@@ -258,7 +298,7 @@ describe("island→discord schema migration", () => {
+       expect(rows[0].topic).toBe("Living room");
+ 
+       const version = db2.pragma("user_version", { simple: true });
+-      expect(version).toBe(1);
++      expect(version).toBe(2);
+ 
+       db2.close();
+     } finally {
+diff --git a/packages/server/src/db/schema.ts b/packages/server/src/db/schema.ts
+index c86a1b1..98af4a4 100644
+--- a/packages/server/src/db/schema.ts
++++ b/packages/server/src/db/schema.ts
+@@ -1,12 +1,13 @@
+ import Database from "better-sqlite3";
+ import { randomUUID } from "node:crypto";
+ 
+-const LATEST_VERSION = 1;
++const LATEST_VERSION = 2;
+ 
+ type MigrationFn = (db: Database.Database) => void;
+ 
+ const migrations: Record<number, MigrationFn> = {
+   1: migrateV0ToV1,
++  2: migrateV1ToV2,
+ };
+ 
+ function runMigrations(db: Database.Database): void {
+@@ -53,6 +54,17 @@ function migrateV0ToV1(db: Database.Database): void {
+   migrateLegacyToV1(db);
+ }
+ 
++function migrateV1ToV2(db: Database.Database): void {
++  db.exec(`
++    CREATE TABLE IF NOT EXISTS read_states (
++      user_id              TEXT NOT NULL,
++      channel_id           TEXT NOT NULL,
++      last_read_message_id TEXT,
++      PRIMARY KEY (user_id, channel_id)
++    )
++  `);
++}
++
+ function createAllTables(db: Database.Database): void {
+   db.exec(`
+     CREATE TABLE IF NOT EXISTS guilds (
+@@ -121,6 +133,13 @@ function createAllTables(db: Database.Database): void {
+       avatar        TEXT,
+       created_at    INTEGER
+     );
++
++    CREATE TABLE IF NOT EXISTS read_states (
++      user_id              TEXT NOT NULL,
++      channel_id           TEXT NOT NULL,
++      last_read_message_id TEXT,
++      PRIMARY KEY (user_id, channel_id)
++    );
+   `);
+ }
+ 
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index 844e1e6..e7a63a4 100644
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -35,5 +35,5 @@ const server = serve({ fetch: app.fetch, port: PORT }, (info) => {
+   console.log(`🏝️  Cove server running on http://localhost:${info.port}`);
+ });
+ 
+-setupGateway(server as any, repos.users, repos.guilds, dispatcher, repos.channels);
++setupGateway(server as any, repos.users, repos.guilds, dispatcher, repos.channels, repos.readStates);
+ console.log("🏝️  Gateway WebSocket ready on /gateway");
+diff --git a/packages/server/src/repos/index.ts b/packages/server/src/repos/index.ts
+index 4c8fe4f..7805bda 100644
+--- a/packages/server/src/repos/index.ts
++++ b/packages/server/src/repos/index.ts
+@@ -4,8 +4,9 @@ import { ChannelsRepo } from "./channels.js";
+ import { UsersRepo } from "./users.js";
+ import { MembersRepo } from "./members.js";
+ import { GuildsRepo } from "./guilds.js";
++import { ReadStatesRepo } from "./readStates.js";
+ 
+-export { MessagesRepo, ChannelsRepo, UsersRepo, MembersRepo, GuildsRepo };
++export { MessagesRepo, ChannelsRepo, UsersRepo, MembersRepo, GuildsRepo, ReadStatesRepo };
+ 
+ export interface Repos {
+   messages: MessagesRepo;
+@@ -13,6 +14,7 @@ export interface Repos {
+   users: UsersRepo;
+   members: MembersRepo;
+   guilds: GuildsRepo;
++  readStates: ReadStatesRepo;
+ }
+ 
+ export function createRepos(db: Database.Database): Repos {
+@@ -22,5 +24,6 @@ export function createRepos(db: Database.Database): Repos {
+     users: new UsersRepo(db),
+     members: new MembersRepo(db),
+     guilds: new GuildsRepo(db),
++    readStates: new ReadStatesRepo(db),
+   };
+ }
+diff --git a/packages/server/src/repos/readStates.ts b/packages/server/src/repos/readStates.ts
+new file mode 100644
+index 0000000..3feae9d
+--- /dev/null
++++ b/packages/server/src/repos/readStates.ts
+@@ -0,0 +1,38 @@
++import type Database from "better-sqlite3";
++
++export class ReadStatesRepo {
++  constructor(private db: Database.Database) {}
++
++  get(userId: string, channelId: string): { last_read_message_id: string | null } | undefined {
++    const row = this.db.prepare(
++      "SELECT last_read_message_id FROM read_states WHERE user_id = ? AND channel_id = ?"
++    ).get(userId, channelId) as { last_read_message_id: string | null } | undefined;
++    return row;
++  }
++
++  /** Returns true when the cursor actually advanced, false when skipped by monotonicity guard. */
++  set(userId: string, channelId: string, messageId: string): boolean {
++    // Only advance the cursor forward — a delayed ack must not overwrite a newer one.
++    // Compare by message timestamp since IDs are UUIDs (not sequential).
++    const result = this.db.prepare(`
++      INSERT INTO read_states (user_id, channel_id, last_read_message_id) VALUES (?, ?, ?)
++      ON CONFLICT(user_id, channel_id) DO UPDATE SET last_read_message_id = excluded.last_read_message_id
++      WHERE (SELECT timestamp FROM messages WHERE id = excluded.last_read_message_id)
++            >= COALESCE((SELECT timestamp FROM messages WHERE id = read_states.last_read_message_id), 0)
++    `).run(userId, channelId, messageId);
++    return result.changes > 0;
++  }
++
++  getAllForUserWithLastMessage(userId: string): Array<{ channel_id: string; last_read_message_id: string | null; last_message_id: string | null }> {
++    // Return every channel the user belongs to, with their read cursor and the latest message ID.
++    // Channels with no read_state row will have last_read_message_id = null (unread).
++    return this.db.prepare(`
++      SELECT c.id AS channel_id,
++        rs.last_read_message_id,
++        (SELECT m.id FROM messages m WHERE m.channel_id = c.id ORDER BY m.timestamp DESC LIMIT 1) AS last_message_id
++      FROM channels c
++      JOIN guild_members gm ON gm.guild_id = c.guild_id AND gm.user_id = ?
++      LEFT JOIN read_states rs ON rs.channel_id = c.id AND rs.user_id = ?
++    `).all(userId, userId) as Array<{ channel_id: string; last_read_message_id: string | null; last_message_id: string | null }>;
++  }
++}
+diff --git a/packages/server/src/routes/messages.ts b/packages/server/src/routes/messages.ts
+index 92c9c0c..37dff83 100644
+--- a/packages/server/src/routes/messages.ts
++++ b/packages/server/src/routes/messages.ts
+@@ -60,8 +60,16 @@ export function messagesRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Ho
+ 
+     const message = repos.messages.create(channelId, author, body.content);
+ 
++    // Update sender's read state so their own message doesn't show unread on reload
++    const acked = repos.readStates.set(userId, channelId, message.id);
++
+     dispatcher?.messageCreate(message);
+ 
++    // Notify sender's other sessions so unread badges clear everywhere
++    if (acked) {
++      dispatcher?.messageAck(userId, channelId, message.id);
++    }
++
+     return c.json(message, 201);
+   });
+ 
+@@ -119,6 +127,25 @@ export function messagesRoutes(repos: Repos, dispatcher?: GatewayDispatcher): Ho
+     return c.json({ deleted });
+   });
+ 
++  app.put("/channels/:id/messages/:msgId/ack", (c) => {
++    const channelId = c.req.param("id");
++    const messageId = c.req.param("msgId");
++    const userId = c.get("botUser").id;
++    const ch = requireGuildMember(repos, channelId, userId);
++    if (!ch) {
++      return c.json({ message: "Unknown Channel", code: 10003 }, 404);
++    }
++
++    if (!repos.messages.getById(channelId, messageId)) {
++      return c.json({ message: "Unknown Message", code: 10008 }, 404);
++    }
++
++    repos.readStates.set(userId, channelId, messageId) &&
++      dispatcher?.messageAck(userId, channelId, messageId);
++
++    return c.body(null, 204);
++  });
++
+   app.post("/channels/:id/typing", (c) => {
+     const channelId = c.req.param("id");
+     const author = c.get("botUser");
+diff --git a/packages/server/src/ws/dispatcher.ts b/packages/server/src/ws/dispatcher.ts
+index 70a25e3..aba282a 100644
+--- a/packages/server/src/ws/dispatcher.ts
++++ b/packages/server/src/ws/dispatcher.ts
+@@ -90,6 +90,10 @@ export class GatewayDispatcher {
+     });
+   }
+ 
++  messageAck(userId: string, channelId: string, messageId: string): void {
++    this.sendToUser(userId, "MESSAGE_ACK", { channel_id: channelId, message_id: messageId });
++  }
++
+   private presenceUpdate(userId: string, status: "online" | "offline"): void {
+     this.broadcastToGuildMembers(userId, "PRESENCE_UPDATE", {
+       user: { id: userId },
+diff --git a/packages/server/src/ws/index.ts b/packages/server/src/ws/index.ts
+index 610af49..9c4a216 100644
+--- a/packages/server/src/ws/index.ts
++++ b/packages/server/src/ws/index.ts
+@@ -3,6 +3,7 @@ import { WebSocketServer } from "ws";
+ import type { UsersRepo } from "../repos/users.js";
+ import type { GuildsRepo } from "../repos/guilds.js";
+ import type { ChannelsRepo } from "../repos/channels.js";
++import type { ReadStatesRepo } from "../repos/readStates.js";
+ import { GatewayOpcode, type GatewayPayload } from "@cove/shared";
+ import { GatewaySession } from "./session.js";
+ import { GatewayDispatcher } from "./dispatcher.js";
+@@ -10,7 +11,7 @@ import { GatewayDispatcher } from "./dispatcher.js";
+ const HEARTBEAT_INTERVAL = 41250;
+ const HEARTBEAT_TIMEOUT = HEARTBEAT_INTERVAL * 2;
+ 
+-export function setupGateway(server: HttpServer, users: UsersRepo, guilds: GuildsRepo, dispatcher: GatewayDispatcher, channels: ChannelsRepo): void {
++export function setupGateway(server: HttpServer, users: UsersRepo, guilds: GuildsRepo, dispatcher: GatewayDispatcher, channels: ChannelsRepo, readStates: ReadStatesRepo): void {
+   const wss = new WebSocketServer({ server, path: "/gateway" });
+ 
+   wss.on("connection", (ws) => {
+@@ -62,7 +63,7 @@ export function setupGateway(server: HttpServer, users: UsersRepo, guilds: Guild
+ 
+             const user = { id: row.id, username: row.username, bot: row.bot };
+ 
+-            session.identify(user, dispatcher, guilds);
++            session.identify(user, dispatcher, guilds, readStates);
+             dispatcher.addSession(session);
+             break;
+           }
+diff --git a/packages/server/src/ws/session.ts b/packages/server/src/ws/session.ts
+index 08a0717..d6bf632 100644
+--- a/packages/server/src/ws/session.ts
++++ b/packages/server/src/ws/session.ts
+@@ -3,6 +3,7 @@ import { WebSocket } from "ws";
+ import { GatewayOpcode, type GatewayPayload } from "@cove/shared";
+ import type { GatewayDispatcher } from "./dispatcher.js";
+ import type { GuildsRepo } from "../repos/guilds.js";
++import type { ReadStatesRepo } from "../repos/readStates.js";
+ 
+ export class GatewaySession {
+   readonly id: string;
+@@ -35,7 +36,7 @@ export class GatewaySession {
+     this.ws.send(JSON.stringify(payload));
+   }
+ 
+-  identify(user: { id: string; username: string; bot: boolean }, dispatcher: GatewayDispatcher, guildsRepo: GuildsRepo): void {
++  identify(user: { id: string; username: string; bot: boolean }, dispatcher: GatewayDispatcher, guildsRepo: GuildsRepo, readStatesRepo: ReadStatesRepo): void {
+     this.user = user;
+     this.identified = true;
+ 
+@@ -45,6 +46,7 @@ export class GatewaySession {
+     }
+ 
+     const presences = dispatcher.getSharedGuildPresences(this.guildIds);
++    const readState = readStatesRepo.getAllForUserWithLastMessage(user.id);
+ 
+     this.seq++;
+     this.ws.send(JSON.stringify({
+@@ -57,6 +59,7 @@ export class GatewaySession {
+         guilds,
+         session_id: this.id,
+         presences,
++        read_state: readState,
+       },
+     }));
+   }
