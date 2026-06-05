@@ -20,7 +20,16 @@ nodes:
       Load review standard from `~/.openclaw/workspace/code-review/prompts/`:
       1. Check `prompts/<repo>.prompt.md` (project-specific)
       2. Fallback to `prompts/default.prompt.md`
-      Read the file content — this is what reviewers will use.
+      Read the file content — this is the base review standard.
+
+      Then inject language-specific rules:
+      ```
+      bash ~/.openclaw/workspace/code-review/rule-inject.sh <owner/repo> <pr_number>
+      ```
+      If the script outputs rules, append them to the review standard.
+      These are language-specific checklists (TypeScript, Go, Python, Rust) that give
+      reviewers targeted patterns to check beyond the generic standard.
+      The combined output (base prompt + language rules) is what reviewers will use.
     next: spawn_reviewers
 
   spawn_reviewers:
