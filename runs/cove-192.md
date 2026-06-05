@@ -59,3 +59,21 @@
 - **Vega**: R2 star — found the self-message unread bug that both other reviewers missed. Proves value of multi-model review.
 - **Nova**: Consistent depth champion. N2 race analysis shows strong concurrent-systems reasoning.
 - **Stella**: Solid but missed N1. Good viewport observation (N5).
+
+## Round 3 (2026-06-05)
+
+### R2 Resolution
+- N1 own-message unread: ✅ Fixed (3/3)
+- N2 ack monotonicity: DB fixed, dispatch still unconditional (2/3 flag)
+- N3 multi-device sync: DB fixed, no MESSAGE_ACK dispatch (Vega flags)
+- N4 auto-ack dedup: ref resets on remount, doesn't truly dedup (Stella flags)
+
+### Verdict: 1/3 ✅, 1/3 ⚠️, 1/3 ❌ → Consolidated ⚠️
+- Nova: most balanced — acknowledges dispatch gap but views as non-blocking polish
+- Stella: escalation-rule strict — catches dedup ref reset logic flaw
+- Vega: strictest — escalates both dispatch issues to blocking
+
+### Reviewer Assessment
+- **Vega**: Consistent edge-case finder across all 3 rounds (N1 in R2, dispatch gap in R3)
+- **Nova**: Best at distinguishing blocking vs polish. 7 new items found but correctly triaged
+- **Stella**: Strong on lifecycle analysis. Caught ref-reset flaw others downplayed
