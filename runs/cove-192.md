@@ -38,3 +38,24 @@
 - Stella's completion event didn't trigger a wake (had to check via subagents list) — minor process issue
 - Total wall-clock ~5min for all 3 reviews — acceptable
 - Review plan correctly flagged all high-risk files
+
+## Round 2 (2026-06-05)
+
+### R1 Resolution: All 5 Criticals Fixed ✅
+
+### New Findings
+- N1 (Vega): Own messages cause unread on reload — functional flaw
+- N2 (Stella+Nova): Ack cursor monotonicity race
+- N3 (Vega): Multi-device self-message sync
+- N4 (Nova): Ack write amplification on mount
+- N5 (Stella): Active-channel ack ignores viewport
+
+### Verdict: 2/3 ✅ Ready, 1/3 ⚠️ Needs Changes → Consolidated ⚠️
+- Vega caught a genuine new bug (N1) that Stella and Nova missed
+- Nova most thorough again — file-by-file, multiple cleanup items
+- Stella strongest on product-impact reasoning
+
+### Reviewer Assessment Update
+- **Vega**: R2 star — found the self-message unread bug that both other reviewers missed. Proves value of multi-model review.
+- **Nova**: Consistent depth champion. N2 race analysis shows strong concurrent-systems reasoning.
+- **Stella**: Solid but missed N1. Good viewport observation (N5).
