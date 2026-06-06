@@ -1,6 +1,6 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-05 20:26 (Asia/Shanghai)_
+_Last updated: 2026-06-06 08:28 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -163,4 +163,6 @@ _Last updated: 2026-06-05 20:26 (Asia/Shanghai)_
 
 10. **Stella's global idMap collision (#202 R2)** — unique cross-table reasoning that prevented data corruption during migration. Confirms her strength in systematic data-flow analysis.
 
-11. **NEW: All 3 open PRs from this run merged same day (2026-06-05).** Total 8 rounds across 3 PRs. Review→merge pipeline running at full speed. Average time from first review to merge: ~3h.
+11. **All 3 open PRs from 2026-06-05 merged same day.** Total 8 rounds across 3 PRs. Review→merge pipeline running at full speed. Average time from first review to merge: ~3h.
+
+12. **PR #248 (OAuth token leak — BFF pattern) opened 2026-06-05T23:54Z, not yet reviewed.** Security-focused PR (closes #227). Will need review in next code-review run.
