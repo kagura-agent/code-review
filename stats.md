@@ -6,9 +6,9 @@ _Last updated: 2026-06-06 20:26 (Asia/Shanghai)_
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 73 | 71/73 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5). Last 29 rounds: 29/29 (100%) |
-| 🌠 Nova | claude-opus-4.7 | 73 | 73/73 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 73 | 69/73 (95%) ↑ | Improving — last 29 rounds: 29/29 (100%). Early failures dragging average |
+| 🌟 Stella | gpt-5.5 | 78 | 76/78 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5). Last 34 rounds: 34/34 (100%) |
+| 🌠 Nova | claude-opus-4.7 | 78 | 78/78 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 78 | 74/78 (95%) ↑ | Improving — last 34 rounds: 34/34 (100%). Early failures dragging average |
 
 ## Dimension Strengths (per reviewer)
 
@@ -42,7 +42,7 @@ _Last updated: 2026-06-06 20:26 (Asia/Shanghai)_
 | Code Hygiene | ⭐⭐ | Dead code detection (getAllForUser #192 R2, ReadStateRow alias #192 R2), test mock accuracy (#192 R4) |
 | Auth Route Analysis | ⭐⭐⭐ | PUBLIC_PATHS signup break (#248 R1 — unique find), resolveUser duplication escalation (#248 R2-R3), cookie attribute assertions (#248 R3), CORS credentials concern (#248 R3) |
 
-**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security, accessibility, and async lifecycle analysis. Zero false positives across 73 rounds.
+**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security, accessibility, and async lifecycle analysis. Zero false positives across 78 rounds.
 **Nova's weakness:** None significant. Occasionally verbose but content is consistently high quality.
 
 ### 💫 Vega (Gemini 3.1 Pro)
@@ -101,9 +101,9 @@ _Last updated: 2026-06-06 20:26 (Asia/Shanghai)_
 
 | Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#240) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 51/53 (96%) | → (one timeout #176 R1, one late #190 R5) |
-| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 53/53 (100%) | → |
-| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 49/50 (98%) | ↑ Significant improvement after prompt fixes |
+| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 56/58 (97%) | → (one timeout #176 R1, one late #190 R5) |
+| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 58/58 (100%) | → |
+| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 54/55 (98%) | ↑ Significant improvement after prompt fixes |
 
 ## Review History
 
@@ -134,16 +134,21 @@ _Last updated: 2026-06-06 20:26 (Asia/Shanghai)_
 | #222 | cove | 2026-06-05 | R1-R3 | ✅ Ready | stale-last-message-id, broken-clear-route, bulk-delete-allowlist |
 | #240 | cove | 2026-06-05 | R1-R2 | ✅ Ready | grid-clips-input, ios-safe-area, token-semantics |
 | #248 | cove | 2026-06-06 | R1-R4 | ✅ Ready | bff-cookie-security, public-paths-break, parsecookies-dos, localstorage-xss |
+| #249 | cove | 2026-06-06 | R1-R2 | ✅ Ready | guildless-user-stuck, oauth-auto-join |
+| #250 | cove | 2026-06-06 | R1 | ✅ Ready | pure-refactor (schema split) |
+| #251 | cove | 2026-06-06 | R1 | ✅ Ready | wire-format-defaults |
+| #252 | cove | 2026-06-06 | R1-R2 | ✅ Ready | presence-mutation-bug, gateway-events |
+| #254 | cove | 2026-06-06 | R1-R2 | ✅ Ready | hardcoded-guild-removal |
 
-## Ground Truth Summary (26 merged PRs with ground truth)
+## Ground Truth Summary (31 merged PRs with ground truth)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 96% — human approved without findings in 25/26 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
-- **Iterative review as quality gate:** In 22/26 PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
+- **Human rubber-stamp rate:** 97% — human approved without findings in 30/31 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
+- **Iterative review as quality gate:** In 27/31 PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 1 (#100 — verdict too conservative for personal project context)
-- **Multi-round PRs:** 22/26 PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
-- **Total review rounds:** 73 across 26 PRs
+- **Multi-round PRs:** 24/31 PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190)
+- **Total review rounds:** 78 across 31 PRs
 
 ## Actionable Notes
 

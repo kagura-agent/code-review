@@ -689,5 +689,126 @@
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 4
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 249,
+    "reviewed_at": "2026-06-06T03:34+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "effective_dimensions": [
+        "guildless-user-stuck",
+        "oauth-auto-join-inconsistency"
+      ],
+      "calibration": "R1 caught guildless user stuck path (Stella+Nova). R2 confirmed fix. Human approved without comments."
+    },
+    "verdict": "ready",
+    "reviewers": 2,
+    "rounds": 2,
+    "notes": "R1: guildless user stuck (2/2). R2: 2/2 ready. Merged 2026-06-06T04:30Z.",
+    "last_checked": "2026-06-06T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 250,
+    "reviewed_at": "2026-06-06T05:21+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Pure refactor, 3/3 confirmed zero logic changes. Human approved quickly."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "Clean refactor. 3/3 ready. Merged 2026-06-06T05:27Z.",
+    "last_checked": "2026-06-06T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 251,
+    "reviewed_at": "2026-06-06T05:52+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Small wire-format padding. Nova-only review + diff verification. Human approved quickly."
+    },
+    "verdict": "ready",
+    "reviewers": 1,
+    "rounds": 1,
+    "notes": "Nova-only review. Wire format defaults. Merged 2026-06-06T06:13Z.",
+    "last_checked": "2026-06-06T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 252,
+    "reviewed_at": "2026-06-06T06:38+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "effective_dimensions": [
+        "presence-mutation-on-member-event",
+        "client-cascade-cleanup"
+      ],
+      "calibration": "R1 caught incorrect global presence mutation on member events (Stella+Nova). R2 confirmed fix. Human approved without comments."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 2,
+    "notes": "R1: GUILD_MEMBER presence mutation bug (Stella+Nova). R2: 3/3 ready. Merged 2026-06-06T07:05Z.",
+    "last_checked": "2026-06-06T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 254,
+    "reviewed_at": "2026-06-06T10:13+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "ready",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Tiny PR. Vega-only initial review + diff verification. Multiple rounds for null propagation clarity. Human approved without comments."
+    },
+    "verdict": "ready",
+    "reviewers": 1,
+    "rounds": 2,
+    "notes": "Vega-only + Kagura verification. Null propagation noted. Merged 2026-06-06T10:57Z.",
+    "last_checked": "2026-06-06T20:26+08:00"
   }
 ]
