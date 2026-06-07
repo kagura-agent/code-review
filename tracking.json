@@ -816,12 +816,35 @@
     "repo": "cove",
     "pr": 255,
     "reviewed_at": "2026-06-06T13:47+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "needs_changes",
     "reviewers": 3,
-    "rounds": 3,
-    "notes": "R1: 3/3 needs_changes (RESUMED aborts dispatches, REST retry incomplete, Retry-After NaN). R2: 204 JSON parsing regression (Vega unique). R3: POST retry escalated to blocker (3/3). Still open.",
-    "last_checked": "2026-06-07T08:26+08:00"
+    "rounds": 6,
+    "notes": "R1-R6: RESUMED abort, REST retry, 204 parsing, POST idempotency, try/catch control flow. R5 caught R4 false-ready. 15 unit tests added. Merged 2026-06-07T02:09Z.",
+    "last_checked": "2026-06-07T14:27+08:00",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "needs_changes",
+      "our_verdict_r4": "ready",
+      "our_verdict_r5": "major_issues",
+      "our_verdict_r6": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "resumed-abort-semantics",
+        "rest-retry-idempotency",
+        "204-json-parsing",
+        "post-duplicate-prevention",
+        "try-catch-control-flow",
+        "unit-test-coverage"
+      ],
+      "noise": [],
+      "calibration": "6-round mega-review. R1: 5 criticals (RESUMED abort, REST retry). R2: 204 JSON parsing (Vega star). R3: POST retry escalated. R4: appeared fixed but R5 caught try/catch control flow bug making isIdempotent non-functional. R6: fix confirmed + 15 unit tests. Human approved without comments — iterative review was the quality gate."
+    }
   },
   {
     "owner": "kagura-agent",
@@ -830,11 +853,107 @@
     "round": 3,
     "mode": "comment",
     "reviewed_at": "2026-06-07T07:55+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "needs_changes",
     "reviewers": 3,
     "ground_truth": null,
     "notes": "R3: 3/3 needs_changes. POST retry escalated 🟡→🔴. sendTyping budget escalated. 204 fix confirmed. Stella dispatch.ts fallback paths finding.",
-    "last_checked": "2026-06-07T08:26+08:00"
+    "last_checked": "2026-06-07T14:27+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 255,
+    "round": 4,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T08:45+08:00",
+    "status": "merged",
+    "verdict": "ready",
+    "reviewers": 3,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "notes": "R4 confirmed POST/PATCH retry fix. 3/3 ready. But R5 found try/catch control flow bug."
+    },
+    "last_checked": "2026-06-07T14:27+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 255,
+    "round": 5,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T09:25+08:00",
+    "status": "merged",
+    "verdict": "major_issues",
+    "reviewers": 3,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "major_issues",
+      "notes": "R5: 3/3 caught isIdempotent gate non-functional due to try/catch control flow. Critical find."
+    },
+    "last_checked": "2026-06-07T14:27+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 255,
+    "round": 6,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T10:10+08:00",
+    "status": "merged",
+    "verdict": "ready",
+    "reviewers": 3,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "6-round marathon. R5 caught try/catch control flow bug that R4 missed — isIdempotent gate was non-functional. R6 confirmed fix + 15 unit tests. Human approved without comments."
+    },
+    "last_checked": "2026-06-07T14:27+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 261,
+    "round": 1,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T10:50+08:00",
+    "status": "open",
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "ground_truth": null
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 261,
+    "round": 2,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T11:45+08:00",
+    "status": "open",
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "ground_truth": null
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 261,
+    "round": 3,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T12:30+08:00",
+    "status": "open",
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "ground_truth": null
   }
 ]
