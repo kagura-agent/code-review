@@ -819,8 +819,22 @@
     "status": "open",
     "verdict": "needs_changes",
     "reviewers": 3,
-    "rounds": 2,
-    "notes": "R1: 3/3 needs_changes (RESUMED aborts dispatches, REST retry incomplete, Retry-After NaN). R2: 204 JSON parsing regression (Vega unique). Stella pending R2.",
-    "last_checked": "2026-06-07T02:29+08:00"
+    "rounds": 3,
+    "notes": "R1: 3/3 needs_changes (RESUMED aborts dispatches, REST retry incomplete, Retry-After NaN). R2: 204 JSON parsing regression (Vega unique). R3: POST retry escalated to blocker (3/3). Still open.",
+    "last_checked": "2026-06-07T08:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 255,
+    "round": 3,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T07:55+08:00",
+    "status": "open",
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "ground_truth": null,
+    "notes": "R3: 3/3 needs_changes. POST retry escalated 🟡→🔴. sendTyping budget escalated. 204 fix confirmed. Stella dispatch.ts fallback paths finding.",
+    "last_checked": "2026-06-07T08:26+08:00"
   }
 ]

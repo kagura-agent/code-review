@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-07 02:29 (Asia/Shanghai)_
+_Last updated: 2026-06-07 08:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 89 | 86/89 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 pending (#255 R2). Last 34+ rounds: clean |
-| 🌠 Nova | claude-opus-4.7 | 92 | 92/92 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 89 | 85/89 (96%) ↑ | Improving — last 40+ rounds: 100%. Early failures dragging average |
+| 🌟 Stella | gpt-5.5 | 90 | 87/90 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2). Last 35+ rounds ex-R2: clean |
+| 🌠 Nova | claude-opus-4.7 | 93 | 93/93 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 90 | 86/90 (96%) ↑ | Improving — last 41+ rounds: 100%. Early failures dragging average |
 
 ## Dimension Strengths (per reviewer)
 
@@ -72,7 +72,7 @@ _Last updated: 2026-06-07 02:29 (Asia/Shanghai)_
 | 💫 Vega | 14 | ~95 | ~15% | ↑ Improving |
 
 **Notable unique finds (last 10 PRs: #192-#255):**
-- Stella: auto-ack dedup mount reset (#192 R3), same-ms monotonicity (#192 R4), clock rollback in generator (#202), global idMap collision (#202 R2), **client clear button 404** (#222 R1), MESSAGE_DELETE_BULK allowlist gap (#222 R2), mobile sidebar scroll overlap (#240 R2), logout doesn't close WS (#248 R3), local dev NODE_ENV gap (#248 R3), presence mutation on GUILD_MEMBER (#252 R1), **RESUMED aborts dispatches** (#255 R1), channel refetch discarded (#255 R1)
+- Stella: auto-ack dedup mount reset (#192 R3), same-ms monotonicity (#192 R4), clock rollback in generator (#202), global idMap collision (#202 R2), **client clear button 404** (#222 R1), MESSAGE_DELETE_BULK allowlist gap (#222 R2), mobile sidebar scroll overlap (#240 R2), logout doesn't close WS (#248 R3), local dev NODE_ENV gap (#248 R3), presence mutation on GUILD_MEMBER (#252 R1), **RESUMED aborts dispatches** (#255 R1), channel refetch discarded (#255 R1), **dispatch.ts fallback paths use sendMessage** (#255 R3)
 - Nova: CAST index bypass (#202), channel migration ordering (#202), V3→V4 silent orphan drops (#202 R2), email UNIQUE constraint (#202 R2), CHANNEL_DELETE missing guild_id (#222 R1), mobile sidebar safe-area padding (#240 R2), **PUBLIC_PATHS signup break** (#248 R1), cookie attribute test assertions (#248 R3), CORS credentials concern (#248 R3), guildless user stuck (#249 R1), **Retry-After NaN/unbounded** (#255 R1), **POST retry duplicates** (#255 R2), sendTyping retry budget (#255 R2), INVALID_SESSION socket guard (#255 R1)
 - Vega: **own-message-causes-unread** (#192 R2 — star find), deleted-message edge case (#192 R3-R4), API input validation schemas (#202), **@me alias breaks ownership** (#222 R2), safe-area background gap (#240 R1), getComputedStyle render race (#240 R2), **parseCookies URIError DoS** (#248 R1), **localStorage XSS remnant** (#248 R2), null propagation clarity (#254 R2), **204 JSON parsing retry storm** (#255 R2)
 
@@ -80,7 +80,7 @@ _Last updated: 2026-06-07 02:29 (Asia/Shanghai)_
 
 | Reviewer | Part of 2/3+ consensus | Solo dissent (correct) | Solo dissent (noise) |
 |----------|----------------------|----------------------|---------------------|
-| 🌟 Stella | 85% | 6 (WS scoping, presences, build-order, WS disconnect #176 R3, auto-ack dedup #192 R4, RESUMED abort semantics #255 R1) | 1 (WS scoping over-scope #168) |
+| 🌟 Stella | 86% | 7 (WS scoping, presences, build-order, WS disconnect #176 R3, auto-ack dedup #192 R4, RESUMED abort semantics #255 R1, dispatch.ts fallback paths #255 R3) | 1 (WS scoping over-scope #168) |
 | 🌠 Nova | 93% | 3 (ready when others flag, PUBLIC_PATHS #248 R1 — correct, POST retry idempotency #255 R2) | 0 |
 | 💫 Vega | 85% | 6 (#125 R1, gen ID reuse #190 R4, own-message-unread #192 R2, parseCookies DoS #248 R1, localStorage XSS #248 R2, **204 JSON parsing #255 R2**) | 0 |
 
@@ -104,9 +104,9 @@ _Last updated: 2026-06-07 02:29 (Asia/Shanghai)_
 
 | Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#255) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 66/69 (96%) | → (timeout #176 R1, late #190 R5, pending #255 R2) |
-| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 72/72 (100%) | → |
-| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 65/65 (100%) | ↑ Significant improvement after prompt fixes |
+| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 67/70 (96%) | → (timeout #176 R1, late #190 R5, miss #255 R2) |
+| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 73/73 (100%) | → |
+| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 66/66 (100%) | ↑ Significant improvement after prompt fixes |
 
 ## Review History
 
@@ -142,7 +142,7 @@ _Last updated: 2026-06-07 02:29 (Asia/Shanghai)_
 | #251 | cove | 2026-06-06 | R1 | ✅ Ready | wire-format-defaults |
 | #252 | cove | 2026-06-06 | R1-R2 | ✅ Ready | presence-mutation-bug, gateway-events |
 | #254 | cove | 2026-06-06 | R1-R2 | ✅ Ready | hardcoded-guild-removal |
-| **#255** | **cove** | **2026-06-06** | **R1-R2 (open)** | **⚠️ Needs Fix** | **resumed-abort, rest-retry, 204-json-parsing** |
+| **#255** | **cove** | **2026-06-06** | **R1-R3 (open)** | **⚠️ Needs Fix** | **resumed-abort, rest-retry, 204-json-parsing, post-idempotency** |
 
 ## Ground Truth Summary (30 merged PRs + 1 open)
 
@@ -152,7 +152,7 @@ _Last updated: 2026-06-07 02:29 (Asia/Shanghai)_
 - **Iterative review as quality gate:** In 27/30 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 1 (#100 — verdict too conservative for personal project context)
 - **Multi-round PRs:** 24/31 PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190)
-- **Total review rounds:** 81 across 31 PRs (30 merged + 1 open)
+- **Total review rounds:** 82 across 31 PRs (30 merged + 1 open)
 
 ## Actionable Notes
 
@@ -166,7 +166,7 @@ _Last updated: 2026-06-07 02:29 (Asia/Shanghai)_
 
 5. **Stella's protocol-level reasoning.** #255 R1: identified that RESUMED emitting `reconnect` defeats the purpose of RESUME — a brief network flap kills in-flight dispatches. This is architectural insight, not just code reading. Added "Protocol/Gateway" dimension.
 
-6. **Stella pending in #255 R2.** First time since #190 R5 that Stella missed a round in the recent period. May be timing issue (large PR). Not a reliability concern yet — monitor.
+6. **Stella missed #255 R2 but returned strong in R3.** Caught dispatch.ts fallback paths also using sendMessage — additional scope for the POST retry fix. Not a reliability concern.
 
 7. **PR #255 is the largest mega-refactor reviewed:** 613+/395-, 6 files, 5 issues closed. All 3 reviewers produced high-quality analysis in R1. Multi-reviewer approach especially valuable for this scope.
 
@@ -180,4 +180,8 @@ _Last updated: 2026-06-07 02:29 (Asia/Shanghai)_
 
 12. **Ground truth pattern: human rubber-stamps ~97% of the time.** Our iterative review IS the quality gate. This validates the service but also means we have limited external validation signal. Consider requesting more detailed human reviews for high-stakes PRs.
 
-13. **#255 open — next tracking run should check R3 status and whether 204 fix landed.**
+13. **#255 still open after R3.** 204 fix confirmed ✅. POST retry idempotency (M1) escalated to 🔴 by all 3 reviewers. sendTyping budget (M2) escalated to 🟠. Next tracking should check R4 or merge status.
+
+14. **Escalation protocol working correctly.** POST retry was 🟡 in R2, escalated to 🔴 in R3 per the "unaddressed for 2+ rounds" rule. All 3 reviewers independently escalated — high-confidence signal.
+
+15. **Stella's dispatch.ts fallback insight (#255 R3)** — caught that `dispatch.ts:89-90, 248-249` also use `sendMessage`, widening the impact of M1. This is the kind of cross-file analysis that justifies multi-reviewer + multi-round.
