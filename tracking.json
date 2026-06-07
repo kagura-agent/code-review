@@ -927,10 +927,11 @@
     "round": 1,
     "mode": "comment",
     "reviewed_at": "2026-06-07T10:50+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "needs_changes",
     "reviewers": 3,
-    "ground_truth": null
+    "ground_truth": null,
+    "last_checked": "2026-06-07T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -939,10 +940,11 @@
     "round": 2,
     "mode": "comment",
     "reviewed_at": "2026-06-07T11:45+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "needs_changes",
     "reviewers": 3,
-    "ground_truth": null
+    "ground_truth": null,
+    "last_checked": "2026-06-07T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -951,8 +953,87 @@
     "round": 3,
     "mode": "comment",
     "reviewed_at": "2026-06-07T12:30+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "needs_changes",
+    "reviewers": 3,
+    "ground_truth": null,
+    "last_checked": "2026-06-07T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 261,
+    "round": 4,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T15:40+08:00",
+    "status": "merged",
+    "verdict": "ready",
+    "reviewers": 3,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "4-round review. R1-R3 caught real bugs (retry duplication, WS fallback, token bucket debt, nonce ordering). Human approved R4 without comments."
+    },
+    "last_checked": "2026-06-07T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 263,
+    "round": 1,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T18:15+08:00",
+    "status": "merged",
+    "verdict": "ready",
+    "reviewers": 3,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Small perf PR. R1: broadcastToGuilds loop optimization (Nova+Vega). R2: fix confirmed, 3/3 Ready. Human approved quickly."
+    },
+    "last_checked": "2026-06-07T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 263,
+    "round": 2,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T18:35+08:00",
+    "status": "merged",
+    "verdict": "ready",
+    "reviewers": 3,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "R2: 3/3 unanimous Ready. broadcastToGuilds fixed. Human approved without comments."
+    },
+    "last_checked": "2026-06-07T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 264,
+    "round": 1,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T19:30+08:00",
+    "status": "open",
+    "verdict": "major_issues",
     "reviewers": 3,
     "ground_truth": null
   }
