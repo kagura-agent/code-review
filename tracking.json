@@ -1035,6 +1035,33 @@
     "status": "open",
     "verdict": "major_issues",
     "reviewers": 3,
-    "ground_truth": null
+    "ground_truth": null,
+    "last_checked": "2026-06-08T02:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 264,
+    "round": 2,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T20:10+08:00",
+    "status": "open",
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "ground_truth": null,
+    "last_checked": "2026-06-08T02:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 264,
+    "round": 3,
+    "mode": "comment",
+    "reviewed_at": "2026-06-07T20:50+08:00",
+    "status": "open",
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "ground_truth": null,
+    "last_checked": "2026-06-08T02:26+08:00"
   }
 ]
