@@ -1,22 +1,25 @@
 # cove#264 — Session TTL with lazy + periodic cleanup
 
 ## Timeline
-- R1: Initial review (2026-06-07)
-- R2: Re-review — core issues found (cookie sync, sliding refresh, OAuth token reuse)
-- R3: Re-review — R1/R2 core issues fixed, 4 🟡 remaining (threshold math, index, logging, cookie reissue)
-- R4: Re-review (2026-06-08) — R3 issues ALL unaddressed, escalated to 🔴
+- R1: Initial review — core issues (data loss risk, missing config)
+- R2: Re-review — cookie sync, sliding refresh, OAuth token reuse
+- R3: Re-review — R1/R2 core fixed, 4 🟡 remaining
+- R4: Re-review — R3 issues ALL unaddressed, escalated to 🔴. +2 new findings
+- R5: Re-review (2026-06-08) — **All 7 R4 issues fixed!** Near-approve.
 
-## R4 Findings Summary
-- **Consensus (3/3):** All 4 R3 issues unaddressed
-- **New (Stella+Nova):** OAuth token + expires_at non-atomic update
-- **New (Nova):** v6 backfill hardcoded 7d, default-bot footgun, findByToken race
-- **Verdict:** ❌ Needs Changes
+## R5 Findings Summary
+- **Consensus:** All 7 R4 items addressed ✅
+- **New (Stella+Vega):** stale expires_at return after sliding refresh (🟡)
+- **New (Stella):** WebSocket sessions outlive expired tokens (follow-up)
+- **New (Nova):** v6 backfill policy, test gaps (follow-up)
+- **Verdict:** ✅ Approve with minor fix
 
-## Reviewer Performance (R4)
-- 🌟 Stella: Found OAuth non-atomic issue (unique). Thorough on all 4 escalated items. 
-- 🌠 Nova: Most comprehensive — 4 R3 items + 6 new findings (2 🟡 + 4 🟢). Best calibration (cookie reissue kept at 🟡 vs others' 🔴).
-- 💫 Vega: Concise, accurate on R3 items. Fewer new findings this round.
+## Reviewer Performance (R5)
+- 🌟 Stella: Strongest this round — found WS session lifetime issue (unique, high impact). Ran tests locally.
+- 🌠 Nova: Best calibration — correctly identified all fixes, flagged backfill policy nuance. Clean approve.
+- 💫 Vega: Found stale expires_at independently. Concise, accurate.
 
-## Observations
-- Author appears to have not pushed fixes for R3 feedback — diff unchanged from R3.
-- No prompt evolution needed this round — review standard already covers all found issues.
+## Cross-round Notes
+- 5 rounds total. R4 was a false alarm (code hadn't been pushed). Real progress R1→R3→R5.
+- All three reviewers converged on stale expires_at — good signal.
+- Stella's WS finding is genuinely novel and shows value of fresh-eyes review.

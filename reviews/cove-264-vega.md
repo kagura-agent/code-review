@@ -1,35 +1,53 @@
-# Code Review: kagura-agent/cove#264 (Round 4)
+# Cove PR #264 (Round 5) Code Review
+**Reviewer:** 💫 Vega
 
-**Reviewer:** 💫 Vega  
-**Verdict:** 🛑 Needs Changes (Escalated)
+## 📋 R4 Issues Verification
 
-## R3 Issues Verification (ESCALATED)
+### 🔴 Escalated from R3:
+1. **Sliding refresh threshold breaks for short TTLs**
+   - **Status:** ✅ Fixed. Updated to `Math.max(SESSION_TTL_MS / 2, SESSION_TTL_MS - 86400000)`.
+2. **No `expires_at` index**
+   - **Status:** ✅ Fixed. Added `idx_users_expires_at` in the v6 migration for partial indexing.
+3. **Cleanup has no logging**
+   - **Status:** ✅ Fixed. Added try/catch and logging when tokens are cleared in `index.ts`.
+4. **Cookie not reissued on sliding refresh**
+   - **Status:** ✅ Fixed. `resolveUser` now returns a `refreshed` boolean flag, and both `requireAuth` and `/api/auth/me` properly reissue the `cove-session` cookie with the extended maxAge.
 
-It appears that **none of the issues flagged in Round 3 have been addressed in this iteration.** As per the escalation rule, the severity of these unaddressed issues has been escalated. This PR cannot be merged until these are fixed.
+### 🔴 New in R4:
+5. **OAuth token + expires_at non-atomic**
+   - **Status:** ✅ Fixed. Login now issues a single atomic `UPDATE` query.
 
-1. ❌ **Unaddressed & Escalated: Sliding session threshold fails for short TTLs**
-   - **Location:** `packages/server/src/auth.ts`
-   - **Issue:** The sliding threshold calculation `SESSION_TTL_MS - 24 * 60 * 60 * 1000` is still present. If `SESSION_TTL_MS` is configured to something short (e.g., 1 hour), the threshold becomes negative. `remainingMs` will always be greater than this negative value, meaning sessions will *never* refresh. 
-   - **Fix Required:** Change the threshold to use a ratio or minimum bound. e.g., `Math.max(SESSION_TTL_MS / 2, SESSION_TTL_MS - 86400000)`.
+### 🟡 New in R4:
+6. **v6 backfill hardcodes 7 days**
+   - **Status:** ✅ Fixed. The migration properly parses the `SESSION_TTL_MS` environment variable.
+7. **Default bot footgun**
+   - **Status:** ✅ Fixed. Safely uses `opts.bot === true` check.
 
-2. ❌ **Unaddressed & Escalated: Missing `expires_at` index**
-   - **Location:** `packages/server/src/db/schema.ts` & `v6-session-ttl.ts`
-   - **Issue:** `cleanupExpired()` runs `UPDATE users SET ... WHERE expires_at < ?`. Without an index on `expires_at`, this requires a full table scan of the `users` table every hour, which will cause db locks and performance degradation as the user base grows.
-   - **Fix Required:** Add `CREATE INDEX idx_users_expires_at ON users(expires_at);` in both the schema and migration.
+---
 
-3. ❌ **Unaddressed & Escalated: Cleanup logging missing**
-   - **Location:** `packages/server/src/index.ts`
-   - **Issue:** The hourly cleanup job `repos.users.cleanupExpired()` returns the number of deleted sessions, but this is completely swallowed. We have zero visibility into whether the background job is working or how many sessions it's cleaning up.
-   - **Fix Required:** Add logging: `const count = repos.users.cleanupExpired(); if (count > 0) console.log(...);`
+## 🔴 New Issue in R5 (Needs Changes)
 
-4. ❌ **Unaddressed & Escalated: Cookie maxAge not updated on sliding refresh**
-   - **Location:** `packages/server/src/auth.ts`
-   - **Issue:** While the backend database updates `expires_at` during a sliding refresh, the client's HTTP cookie maxAge is never updated. The browser will delete the cookie when the original maxAge expires, effectively ignoring the server-side TTL extension.
-   - **Fix Required:** The sliding refresh logic must also issue a `setCookie` with the new maxAge. This might require moving the sliding refresh logic out of `resolveUser` (which doesn't have the Hono context) or passing the context to it.
+### 1. `resolveUser` returns stale `expires_at` on sliding refresh
+In `src/auth.ts`, when the sliding refresh triggers, you correctly update the database via `users.refreshTTL(user.id)`. However, you forget to update the in-memory `user.expires_at` variable before returning the `AuthUser` object.
 
-## Additional Observations
+**Impact:** The `/api/auth/me` endpoint returns the *old, un-refreshed* expiration date in the JSON response. If the frontend relies on this `expires_at` payload to manage client-side state or auto-logout timers, the client will prematurely log the user out even though the backend extended the session.
 
-- **OAuth Re-login inefficiency:** In `routes/auth.ts`, for an existing user, we do an `UPDATE` for the token/profile, and then immediately call `usersRepo.refreshTTL(existing.id)` which runs a second `UPDATE` to set `expires_at`. These should be combined into a single database query.
-- **Migration Edge Cases:** In `v6-session-ttl.ts`, the migration script correctly handles existing users but does so without an index, which is fine for a one-off migration but reinforces the need for an index for runtime operations.
+**Fix:** Update the in-memory property when `refreshed = true`.
+```typescript
+  if (user.expires_at !== null && !user.bot) {
+    const remainingMs = user.expires_at - Date.now();
+    const refreshThreshold = Math.max(SESSION_TTL_MS / 2, SESSION_TTL_MS - 86_400_000);
+    if (remainingMs < refreshThreshold) {
+      users.refreshTTL(user.id);
+      refreshed = true;
+      user.expires_at = Date.now() + SESSION_TTL_MS; // <-- Add this to prevent stale API responses
+    }
+  }
+```
 
-Please fix all the R3 issues. Refusing to address previous feedback causes unnecessary review cycles.
+---
+
+## 🎯 Verdict
+**Needs Changes**
+
+The R4 issues were completely addressed and the implementation is vastly more robust. The sole remaining issue is a data staleness bug that breaks frontend timer assumptions. Fix the `expires_at` return value in `resolveUser` and this is ready to merge! 🚀
