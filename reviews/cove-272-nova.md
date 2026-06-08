@@ -1,153 +1,166 @@
-# 🌠 Nova — Review of cove#272: Emoji Reactions
+# 🌠 Nova — R2 Re-Review: cove#272 "feat: emoji reactions"
 
-**Verdict:** **Needs Changes** (a couple of correctness/UX bugs + missing tests; nothing catastrophic but real if merged).
-
-Scope reviewed: full PR diff (23 files, +530/-20), plus context reads of `routes/helpers.ts`, `routes/messages.ts`, `ws/dispatcher.ts`, `app.ts`, prior migrations.
-
----
-
-## Blocking issues
-
-### B1. Self-echo double-counts reactions in the client (correctness)
-**File:** `packages/client/src/lib/gateway-subscriptions.ts` + `stores/useMessageStore.ts`
-
-There is no optimistic update — the UI mutation only happens when the `MESSAGE_REACTION_ADD` event echoes back from the server. The reducer is **not idempotent**:
-
-```ts
-reactions[idx] = { ...reactions[idx], count: reactions[idx].count + 1, ... }
-```
-
-Two real ways this breaks:
-
-1. **Reconnect / duplicate dispatch.** If the gateway redelivers the same event (currently the server has no dedup or seq), count goes to 2 with only 1 user reacting. Once it diverges, only a hard refetch fixes it.
-2. **REST + WS both increment.** Today only WS increments. The moment any future optimistic-update PR lands (very likely — clicking the pill currently has ~RTT latency before UI changes), this reducer is the wrong shape: it cannot tell whether it has already counted a given (user, emoji) tuple.
-
-Fix: model the reducer as a set-membership change, not an increment. Either track `users: string[]` on the reaction (preferred — Discord does this in `MESSAGE_REACTION_ADD` consumers), or guard with a per-(messageId,user,emoji) seen set, or have the server-emitted event carry a `count` instead of "+1".
-
-Same problem mirrored in `removeReaction`.
-
-### B2. No input validation on `:emoji` path param (security / DoS)
-**File:** `packages/server/src/routes/reactions.ts`
-
-`emoji` is `decodeURIComponent(c.req.param("emoji"))` and goes straight into the DB as the PK. No length cap, no shape check. A client can:
-
-- Insert multi-megabyte rows (`emoji` is `TEXT` with no `CHECK`) — fills disk, bloats the per-message reaction index.
-- Insert arbitrary control chars / NULs / newlines — leaks back to every other client through the gateway.
-- Create unbounded distinct "emoji" values per message → the `GROUP BY emoji` aggregation grows linearly.
-
-Add a server-side limit before the DB call. Suggested: max ~64 bytes, must be either a Unicode emoji sequence or a `name:id` ref (current schema only supports the former; see N3). At minimum:
-
-```ts
-if (!emoji || emoji.length > 64) return c.json({ message: "Invalid emoji" }, 400);
-```
-
-The route-level rate limit helps but doesn't address payload shape.
-
-### B3. Double URL-decoding on the server (correctness, latent)
-**File:** `packages/server/src/routes/reactions.ts`
-
-Hono's `c.req.param()` already URL-decodes path params. Calling `decodeURIComponent(c.req.param("emoji"))` decodes a second time. For pure emoji codepoints this is a no-op (no `%` survives), but the moment anyone sends an emoji whose representation contains `%` (custom names, future custom emoji `name:id`, or a literal `%` accidentally encoded as `%25`), the server gets a different string than the client signed up for, and silently mis-stores it.
-
-Fix: drop the `decodeURIComponent` wrapper. Match the client's `encodeURIComponent` on the wire and trust Hono's decode.
-
-### B4. Missing tests (testing standard)
-The whole feature ships with **zero** tests for:
-- `ReactionsRepo` (add/remove idempotency, getForMessage/getForMessages aggregation, `me` flag correctness, empty-list short-circuit).
-- `routes/reactions.ts` (auth/membership enforcement, 404 paths, dispatcher fire-on-success-only).
-- `dispatcher.reactionAdd/Remove` (guild scoping).
-
-The only test diff is updating `LATEST_VERSION` constants from 6→7 in `migration.test.ts`. That's a migration smoke change, not coverage of the new code. Given this PR touches auth-sensitive routes and a new repo, at least repo + route happy/error paths are needed before merge.
+**Reviewer:** Nova (code reviewer persona)
+**Round:** 2
+**Verdict:** Request changes — 2 must-fix unaddressed (1 escalated), 3 should-fix unaddressed.
 
 ---
 
-## High-signal issues (should fix before or right after merge)
+## R1 Issue Status
 
-### H1. `r.emoji.name` as a React `key` is fragile
-**File:** `MessageItem.tsx`
+### 🔴 Must Fix
 
-The PR enforces uniqueness only via DB `GROUP BY emoji` on read. If two reactions race into the local store with the same `emoji.name` (e.g. before B1 is fixed, or if a future custom-emoji code path stores `id` alongside `name`), React will warn and may diff incorrectly. Compose the key as `${r.emoji.id ?? "u"}-${r.emoji.name}`.
+#### 1. Emoji path param validation — ✅ Fixed
+`packages/server/src/routes/reactions.ts` adds `if (!emoji || emoji.length > 64) return 400` on PUT/DELETE/GET. Test `invalid emoji (too long) returns 400` covers it.
 
-### H2. Plugin `SentMessageTracker` is process-local and lost on restart
-**File:** `packages/plugin/src/channel.ts`
+> Minor follow-up (non-blocking): length check operates on the URL-decoded UTF-8 string. A 64-char limit allows ~64 single-codepoint emoji; for ZWJ sequences this is fine. No structural emoji format validation (e.g. reject `<script>`-style payloads), but since the value is only ever stored and echoed back through JSON, it's acceptable.
 
-With `reactionNotifications: "own"` (the default), reactions to any bot message older than the current process get silently dropped — no system event. After a Cove or plugin restart, the bot stops being notified about reactions to its own historical messages with no log/warning beyond "tracked=false mode=own". Either:
+#### 2. Double URL decode — ✅ Fixed
+`routes/reactions.ts` uses `c.req.param("emoji")` directly. No extra `decodeURIComponent`. Hono's single decode is correct. Client `encodeURIComponent` in `lib/api.ts` round-trips cleanly.
 
-- Persist sent-message IDs (small SQLite/file), or
-- Resolve "own message" by fetching the message author via REST when the tracker misses, and cache the result.
-
-Document the limitation in the channel section docs at minimum.
-
-### H3. `SentMessageTracker` LRU eviction has a subtle bug
-**File:** `packages/plugin/src/channel.ts`
-
+#### 3. Client non-idempotent count math — ❌ **Partially addressed → ESCALATED to 🔴 still must-fix**
+`useMessageStore.addReaction/removeReaction` adds idempotency **only for `me === true`**:
 ```ts
-if (this.ids.size >= this.maxSize) {
-  const first = this.ids.values().next().value;
-  if (first) this.ids.delete(first);
+if (me && reactions[idx].me) return m;          // self-add guard
+reactions[idx] = { ...r, count: r.count + 1, me: me ? true : r.me };
+```
+For other users (`me === false`), every duplicate `MESSAGE_REACTION_ADD` still increments `count`. Failure modes:
+- WS reconnect that replays buffered events → drift on **other users'** reactions (the original concern).
+- Backend retransmits / multi-tab same identity not normalized.
+- No reconciliation when `messages.list` re-runs (the route now returns absolute `reactions[]`, but the store has no merge that resets count from the authoritative payload after reconnect).
+
+**Recommended fix (still):** either
+- (a) server-side: emit absolute `count` and `me` in the WS payload, client does last-writer-wins replace; or
+- (b) client-side: track per-emoji `Set<userId>` (set-membership) instead of integer counter — naturally idempotent.
+
+The current half-fix gives a false sense of safety (self path is sound, others are not). Severity stays 🔴 because count drift is user-visible and re-renders incorrectly.
+
+#### 4. Zero tests — ✅ Fixed
+`packages/server/src/__tests__/reactions.test.ts` (180 lines) covers:
+- Repo: idempotent add, remove-when-absent, remove-after-add, `getForMessage` aggregation w/ multi-user, batch `getForMessages`, CASCADE on message delete.
+- Routes: PUT 204, idempotent PUT, DELETE 204, GET users, invalid emoji 400, message-not-in-channel 404.
+
+Good coverage. Gaps (not blocking): no test for client store `addReaction`/`removeReaction` idempotency (would have caught issue #3), no test for `SentMessageTracker` LRU eviction (issue #7).
+
+---
+
+### 🟡 Should Fix
+
+#### 5. SentMessageTracker lost on restart — ✅ Fixed
+`channel.ts` adds REST fallback: when `sentMessages.has(messageId)` is false in `"own"` mode, calls `restClient.getMessage(...)` and checks `msg.author.id === botUser.id`. On hit, caches via `sentMessages.add()`. Pragmatic fix; cost is one extra GET per unknown message reaction — acceptable for low-rate reaction events.
+
+> Minor: failure path silently `return`s on REST error — a transient 5xx will swallow a legitimate own-message reaction notification. Logging the error (debug level at least) would help diagnose.
+
+#### 6. `getUsersForReaction` unbounded + N+1 — ❌ Unaddressed → **ESCALATED to 🔴**
+`routes/reactions.ts` GET handler:
+```ts
+const userIds = repos.reactions.getUsersForReaction(messageId, emoji);  // unbounded
+const users = userIds.map((uid) => { const user = repos.users.getById(uid); ... });  // N+1
+```
+- No `?limit` / `?after` query parsing (Discord's spec supports `limit` 1–100, `after` cursor).
+- One DB roundtrip per user. On a popular reaction (hundreds of reactors) this is a DoS vector — single HTTP request triggers N synchronous SQLite calls on the request thread.
+
+Escalation rationale: with the route now landed and tested, this is a live perf footgun. R1 flagged it; not addressed at all.
+
+**Recommended fix:**
+- Add `limit` (default 25, max 100) and `after` cursor in `repos.reactions.getUsersForReaction`.
+- Replace per-user `getById` loop with a single `SELECT ... FROM users WHERE id IN (...)` (or JOIN inside the reaction query).
+
+#### 7. LRU eviction bug — ❌ Unaddressed
+`SentMessageTracker.add`:
+```ts
+add(id) {
+  if (this.ids.size >= this.maxSize) {
+    const first = this.ids.values().next().value;
+    if (first) this.ids.delete(first);
+  }
+  this.ids.add(id);
 }
-this.ids.add(id);
 ```
+If `id` is already present, `Set.add` is a no-op, but we have already evicted the oldest entry — a no-op call shrinks the cache by 1. Also not LRU semantically (insertion order, not access order); a re-`add` of an existing id does not refresh its recency.
 
-If `id` is **already** present, the `Set.add` is a no-op, but we still evicted the oldest unnecessarily. Reorder:
-
+**Recommended fix:**
 ```ts
-if (this.ids.has(id)) { /* refresh: delete + re-add for true LRU */ this.ids.delete(id); }
-else if (this.ids.size >= this.maxSize) { ... evict ... }
-this.ids.add(id);
+add(id) {
+  if (this.ids.has(id)) {
+    this.ids.delete(id);   // refresh recency
+  } else if (this.ids.size >= this.maxSize) {
+    const first = this.ids.values().next().value;
+    if (first) this.ids.delete(first);
+  }
+  this.ids.add(id);
+}
 ```
+Add a unit test covering both the early-return-on-duplicate path and recency refresh.
 
-Minor, but the comment claims "LRU-style" and this isn't even FIFO when collisions happen.
+#### 8. React key uses `emoji.name` only — ❌ Unaddressed
+`MessageItem.tsx`:
+```tsx
+{message.reactions?.map((r) => (
+  <button key={r.emoji.name} ...>
+```
+For Unicode emoji this is unique in practice, but the schema explicitly carries `emoji.id` (custom emoji), where two different custom emojis can share `name`. Once custom emoji land, React will warn / mis-diff. Cheap fix:
+```tsx
+key={r.emoji.id ?? r.emoji.name}
+```
+or `${r.emoji.id ?? ''}:${r.emoji.name}`.
 
-### H4. CSS positioning assumes `.discord-msg-row` is positioned
-**File:** `packages/client/src/index.css`
+---
 
-`.message-actions` uses `position: absolute; top: -16px; right: 16px;` but the diff doesn't show `.discord-msg-row` having `position: relative` (and the previous file isn't in the patch). If it's `static`, the toolbar anchors to the wrong ancestor. Either verify the parent has `position: relative`, or add it defensively in the same block.
+## Fresh Findings (new code)
 
-Also: `top: -16px` will collide with the previous message's content during fast scroll / dense channels. Worth a quick visual smoke check on grouped messages.
-
-### H5. `getUsersForReaction` returns unbounded list (API design)
-**File:** `routes/reactions.ts` + `repos/reactions.ts`
-
-`GET /channels/:c/messages/:m/reactions/:emoji` returns every user who reacted, no `limit`/`after` query. Discord's real endpoint takes `?limit=&after=` and caps at 100. A message with 1k reactions returns a 1k-user JSON response and N user lookups (`repos.users.getById` in a loop — that's an N-query inside the route, not the repo). Add a `limit` param (default 25, max 100) and an `after` cursor; also collapse the per-user lookup into a single `IN (?,?,...)` query in `UsersRepo`.
-
-### H6. `reactionNotifications` cast as `any`
-**File:** `packages/plugin/src/channel.ts`
-
+### 🟡 N1. `MessageList` auto-scroll dep on `lastMessageReactions`
+`MessageList.tsx` adds:
 ```ts
-const reactionNotifications: "off" | "own" | "all" =
-  (channelSection as any).reactionNotifications ?? "own";
+const lastMessageReactions = messages?.[messages.length - 1]?.reactions;
+useEffect(() => { ... scrollToBottom() ... }, [lastMessageReactions, scrollToBottom]);
 ```
+`reactions` is recreated as a fresh array reference on every store update (the reducer always spreads `[...m.reactions]`), so this effect fires on **every** reaction event — including reactions on **older** messages, not just the last one. The early-return checks `if (!lastMessageReactions)` (truthy empty arrays still pass), so any reaction anywhere causes a re-scroll.
 
-This silently accepts any string from config. Validate (`if (!["off","own","all"].includes(x)) warn+default`) — otherwise a typo like `"on"` becomes the "off" branch only by accident.
+**Fix:** depend on a stable signal (e.g. JSON length, or `messages?.[messages.length-1]?.reactions?.length`), and only trigger when reactions on the **last visible** message change.
 
----
+### 🟡 N2. Inline styles for `ReactionPills`
+Heavy use of inline style objects (object literal allocated per render per pill). For a long channel with many reactions this is GC-noisy. The CSS for `.message-actions` was added — adopt the same approach for `.reaction-pill` / `.reaction-pill--mine`.
 
-## Nits / suggestions
+### 🟢 N3. `enqueueSystemEvent` dynamic import inside hot path
+`channel.ts` does `await import("openclaw/plugin-sdk/system-event-runtime")` on every reaction add. Move the import to module top-level (or cache the resolved module on first call). Minor — Node will cache, but it's still an `await` per event.
 
-- **N1.** `repos/reactions.ts` — `getForMessage` aggregates with `GROUP BY emoji` but `getForMessages` does `GROUP BY message_id, emoji ORDER BY message_id, MIN(created_at)`. Reactions inside one message are ordered by oldest-first, but across messages SQLite is free to interleave; the eventual per-message arrays should still be `MIN(created_at)` ordered — they are, fine. Just confirm with a test.
-- **N2.** `ReactionsRepo` doesn't expose a `clearForMessage` — relies on FK CASCADE. That's fine, but `messages` delete tests should assert reactions are gone.
-- **N3.** Schema stores only `emoji TEXT`. Custom emoji (`{id, name}`) is plumbed through the `Reaction` type as `{ id: string | null }` but `id` is always `null` end-to-end. Either drop `id` from the type for now to avoid implying support, or write a "custom emoji not yet supported" comment on the schema.
-- **N4.** `useMessageStore.removeReaction`: when `count <= 1` you `splice(idx, 1)` — good. But you never check whether `me` was actually that one user; subsequent state shows `me: false` correctly only because the row vanished. Fine, just brittle once B1 is addressed.
-- **N5.** `gateway-client.ts` — emitted shape uses `as` cast directly on `payload.d`. Add a tiny runtime check (`if (!payload.d?.emoji?.name) return;`) so a malformed server frame can't crash the listener chain.
-- **N6.** `routes/reactions.ts` — when `repos.reactions.add` returns `false` (duplicate), you return `204` with no dispatch. That matches Discord semantics. Good — keep it that way. Worth a comment explaining intent.
-- **N7.** `MessageActions` renders for every message every render — fine at current message counts, but it'd be nice to memoize once the hover toolbar grows beyond 4 quick emojis.
-- **N8.** Migration file doesn't add `ON CONFLICT` behavior to the PK (relies on `INSERT OR IGNORE` at the repo). That's consistent with the rest of the codebase, no change needed.
-- **N9.** Consider logging the failure path in `plugin/channel.ts` when `getUser` / `getChannel` fall back to IDs — the silent `catch {}` swallows real auth/network issues.
+### 🟢 N4. `getMessage` REST fallback fires per reaction event
+Every reaction on an untracked message issues a REST GET. On a noisy channel this multiplies request load. Two cheap mitigations:
+- Negative-cache: also remember messages confirmed **not** the bot's, so repeated reactions on the same other-user message don't re-fetch.
+- Or: when `messageCreate` fires for non-bot messages, optionally cache as "not own" to short-circuit.
 
----
+### 🟢 N5. Type drift on `Reaction` schema
+`packages/shared/src/types.ts` defines `emoji: { id: string | null; name: string }` but `gateway-client.ts` types the gateway payload's emoji as just `{ name: string }`. Either widen the gateway type to match, or add a `?? null` when constructing the dispatcher event. Currently the server's `dispatcher.reactionAdd` always sets `id: null`, so it's consistent in practice — just a typing inconsistency to clean up.
 
-## What's done well 👍
-- N+1 avoided cleanly via `getForMessages(ids, currentUserId)` — single grouped query.
-- Auth path reuses `requireGuildMember` consistently across PUT/DELETE/GET — no new auth surface to audit.
-- Dispatcher emits only on actual state change (`if (added)` / `if (removed)`), avoiding redundant fanout.
-- `INSERT OR IGNORE` makes concurrent identical adds safe at the DB layer.
-- `FOREIGN KEY ... ON DELETE CASCADE` correctly cleans reactions when message/user is deleted.
-- `enqueueSystemEvent` import is dynamic but cached after first call — no per-event hot path penalty.
-- Light, minimal client store changes; the WS subscription wiring is consistent with existing patterns.
+### 🟢 N6. `requireGuildMember` access check on reactions
+The route correctly uses `requireGuildMember` so only guild members can add/remove/list reactions. Good. Worth a follow-up test asserting 404/403 for non-member tokens (current tests use admin only).
 
 ---
 
-## Summary
-The architecture is sound and the schema is right. Blocking items are: (B1) non-idempotent count math will visibly drift on any reconnect or future optimistic update, (B2) unvalidated emoji path-param is a real DoS/integrity hole, (B3) double URL-decoding is a latent bug, and (B4) no tests for a new auth-sensitive route + repo + dispatcher path. Fix those four, address H1–H6 in the same or a follow-up PR, and this is ready.
+## Summary Table
 
-— 🌠 Nova
+| # | Issue | R1 sev | Status | R2 sev |
+|---|-------|--------|--------|--------|
+| 1 | Emoji length validation | 🔴 | ✅ Fixed | — |
+| 2 | Double URL decode | 🔴 | ✅ Fixed | — |
+| 3 | Client count idempotency (others) | 🔴 | ❌ Partial | 🔴 |
+| 4 | Tests | 🔴 | ✅ Fixed | — |
+| 5 | SentMessageTracker restart | 🟡 | ✅ Fixed (REST fallback) | — |
+| 6 | `getUsersForReaction` pagination + N+1 | 🟡 | ❌ Unaddressed | 🔴 (escalated) |
+| 7 | LRU eviction bug | 🟡 | ❌ Unaddressed | 🟡 |
+| 8 | React key collision risk | 🟡 | ❌ Unaddressed | 🟡 |
+| N1 | Last-message scroll effect over-fires | — | new | 🟡 |
+| N2 | Inline styles in hot list | — | new | 🟡 |
+| N3 | Dynamic import per reaction | — | new | 🟢 |
+| N4 | REST fallback amplification | — | new | 🟢 |
+| N5 | Gateway emoji type drift | — | new | 🟢 |
+| N6 | Non-member access tests missing | — | new | 🟢 |
+
+---
+
+## Recommendation
+
+**Do not merge as-is.** Two 🔴 remain (#3 client count drift for non-self reactions; #6 unbounded N+1 list endpoint). Fixing #6 (single SQL + limit/cursor) is small and high-value. Fixing #3 properly likely means changing the WS payload to absolute counts or moving client to set-membership — pick one and ship.
+
+The repo + route layer is solid: schema, migration, idempotent INSERT OR IGNORE, CASCADE, batch fetch all look right and are now well-tested.

@@ -1,87 +1,93 @@
-# Consolidated Review R1 — cove#272: emoji reactions
+# Consolidated Review R2 — cove#272: emoji reactions
 
 **Reviewers:** 🌟 Stella (GPT-5.5) · 🌠 Nova (Claude Opus 4.7) · 💫 Vega (Gemini 3.1 Pro)
-**Round:** 1
+**Round:** 2
+
+## R1 Issue Resolution
+
+| # | Issue | Status |
+|---|-------|--------|
+| 🔴 | Emoji 长度验证 | ✅ Fixed |
+| 🔴 | Double URL decode | ✅ Fixed |
+| 🔴 | Client count 非幂等 | ⚠️ 部分修复 — 只 guard 了 self，other users 仍 drift |
+| 🔴 | 零测试 | ✅ Fixed — 新增 180 行 repo/route 测试 |
+| 🟡 | SentMessageTracker 重启丢失 | ✅ Fixed — REST fallback |
+| 🟡 | getUsersForReaction 无分页 + N+1 | ❌ 未修 → escalated 🔴 |
+| 🟡 | LRU eviction bug | ❌ 未修 |
+| 🟡 | React key collision | ❌ 未修 |
 
 ## Reviewer Verdicts
 
-- 🌟 Stella: **⚠️ Needs Changes** — SentMessageTracker 不可靠
-- 🌠 Nova: **⚠️ Needs Changes** — 4 blocking (count math / emoji 验证 / double decode / 零测试)
-- 💫 Vega: **✅ Approve with minor** — emoji 长度限制
+- 🌟 Stella: **⚠️ Needs Changes** — count drift + N+1 + LRU + key
+- 🌠 Nova: **⚠️ Needs Changes** — count drift (🔴) + N+1 escalated (🔴) + new scroll bug
+- 💫 Vega: **❌ Needs Changes** — count drift escalated + N+1 + LRU
 
-## Verdict: ⚠️ Needs Changes (2/3)
-
-**架构扎实** — 访问控制正确 (`requireGuildMember`)、N+1 避免了 (`getForMessages` batch)、FK CASCADE 正确、Gateway 事件限 guild 范围。但有几个需要修的问题：
+## Verdict: ⚠️ Needs Changes (3/3)
 
 ---
 
 ## 🔴 Must Fix
 
-### 1. Emoji 路径参数无验证 (Nova + Vega consensus)
+### 1. Client count drift for other users (3/3 consensus — 部分修复不够)
 
-`routes/reactions.ts` — `decodeURIComponent(c.req.param("emoji"))` 直接入库。无长度限制、无格式检查。
+只 guard 了 `me === true` 的 dedup。其他用户的重复 `MESSAGE_REACTION_ADD` 仍然 `count + 1` → reconnect 后 drift。
 
-**风险：** 恶意 client 可以插入 MB 级 "emoji" 字符串 → 撑爆数据库 + WS 广播。
+**Fix 二选一：**
+- Server event 带 absolute `count` → client 做 last-writer-wins replace
+- Client 维护 per-emoji `Set<userId>` → count = set.size
 
-**Fix:**
-```ts
-if (!emoji || emoji.length > 64) return c.json({ message: "Invalid emoji" }, 400);
-```
+### 2. `getUsersForReaction` 无分页 + N+1 (3/3 consensus — escalated)
 
-### 2. 双重 URL decode (Nova)
+每个 reactor 一次 `getById()` 查询，无 limit。1000 reactions = 1000 DB queries。
 
-Hono `c.req.param()` 已经 decode 了，再调 `decodeURIComponent` 是多余的。含 `%` 的 emoji name 会被错误处理。
-
-**Fix:** 去掉 `decodeURIComponent` wrapper。
-
-### 3. Client 非幂等 count math (Nova)
-
-`useMessageStore` 的 `addReaction`/`removeReaction` 用 `count + 1` / `count - 1`。如果 WS 重发同一事件（reconnect、duplicate dispatch），count 会 drift。
-
-**Fix:** 改为 set-membership 模型（track user list），或让 server event 带 absolute `count`。
-
-### 4. 零测试 (Nova + Stella)
-
-新 route + repo + dispatcher 没有任何测试。`ReactionsRepo` 的 add/remove idempotency、auth 路径、CASCADE 行为都没覆盖。
-
-**Fix:** 至少加 repo + route happy/error path 测试。
+**Fix:** JOIN query + `LIMIT 25` + `after` cursor。
 
 ---
 
 ## 🟡 Should Fix
 
-### 5. SentMessageTracker 重启后丢失 (Stella + Vega + Nova)
+### 3. LRU eviction bug (Stella + Nova + Vega)
 
-Plugin 默认 `reactionNotifications: "own"` 但 tracker 纯内存。重启后对历史 bot 消息的 reaction 静默丢弃。
+```ts
+// 现在的代码 — re-add 已存在 id 时白白驱逐
+add(id) {
+  if (this.ids.size >= this.maxSize) { evict oldest; }
+  this.ids.add(id); // no-op if already exists
+}
+```
 
-**Fix:** cache miss 时 REST fetch message 检查 `author.id`，或 READY 时 rebuild tracker。
+**Fix:**
+```ts
+add(id) {
+  if (this.ids.has(id)) this.ids.delete(id); // refresh recency
+  else if (this.ids.size >= this.maxSize) { evict oldest; }
+  this.ids.add(id);
+}
+```
 
-### 6. `getUsersForReaction` 无分页 + N+1 user lookup (Nova)
+### 4. React key collision (Stella + Nova + Vega)
 
-无 `limit`/`after` 参数，per-user 逐条查。大量 reaction 时性能差。
+`key={r.emoji.name}` → 改为 `key={r.emoji.id ?? r.emoji.name}`
 
-### 7. SentMessageTracker LRU eviction bug (Nova)
+### 5. Auto-scroll over-fires (Nova — new)
 
-已存在的 id 被 re-add 时仍会驱逐最老条目。
-
-### 8. React key 用 `emoji.name` 不够唯一 (Nova)
+`MessageList` 依赖 `lastMessageReactions`（每次 reaction 都新引用）→ 任何 reaction 都触发 scrollToBottom。
 
 ---
 
-## 🟢 Looks Good
+## 🟢 Positive
 
-- N+1 避免 — `getForMessages` batch query ✅
-- Auth — `requireGuildMember` 所有 route 一致 ✅
-- Dispatcher 只在实际变化时 emit (`if (added)` / `if (removed)`) ✅
-- `INSERT OR IGNORE` 处理并发 ✅
-- FK CASCADE 正确清理 ✅
-- Client WS subscription 模式一致 ✅
+- Server 层扎实：idempotent INSERT OR IGNORE、batch `getForMessages`、正确的 auth + FK CASCADE
+- 测试覆盖了 repo + route happy/error paths
+- SentMessageTracker REST fallback 解决了重启问题
+- Gateway 事件正确限 guild 范围
 
 ---
 
 ## 修复优先级
 
-1. Emoji 验证 + 去掉 double decode（2 行改动）
-2. 加测试（repo + route）
-3. Client count math 改 idempotent
-4. SentMessageTracker 加 REST fallback
+1. **Count drift** — 改 WS payload 带 absolute count（影响面最大）
+2. **N+1 pagination** — JOIN + LIMIT（性能安全）
+3. **LRU fix** — 3 行改动
+4. **React key** — 1 行改动
+5. **Scroll bug** — 改依赖为 stable signal

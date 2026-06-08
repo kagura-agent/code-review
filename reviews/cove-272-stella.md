@@ -1,50 +1,76 @@
-# PR Review: kagura-agent/cove#272 — emoji reactions
+# R2 Review — kagura-agent/cove#272 — feat: emoji reactions
 
-Reviewer: Stella
-Verdict: **Needs Changes**
+Reviewer: 🌟 Stella  
+Verdict: ⚠️ Needs Changes
 
 ## Summary
 
-The server-side access checks, idempotent `INSERT OR IGNORE`, FK cascade model, and batched message-list reaction loading are generally solid. I did not find evidence of cross-guild reaction data leakage in the new REST routes or gateway dispatch path.
+R2 fixes several R1 server-side correctness gaps: emoji length validation is now present, the extra URL decode is gone, reaction repo/route tests were added, and `reactionNotifications: "own"` now has a REST fallback for pre-restart bot messages.
 
-However, the default plugin reaction notification mode is effectively unreliable after a restart/reconnect because "own message" tracking is in-memory only and is not rebuilt from Cove state. Since the PR advertises reaction notifications/sync behavior through the plugin-facing changes and defaults to `reactionNotifications: "own"`, this will silently drop real reaction events for existing bot messages in common production cases.
+However, multiple R1 issues remain unaddressed and must be escalated per R2 rules. The most important one is still the client-side reaction count model: the store still mutates aggregate counts from delta WS events and only deduplicates the current user's own reaction state. Duplicate/replayed events for other users can still drift counts.
 
-## Blocking findings
+## R1 Issue Status
 
-### 1. Default `reactionNotifications: "own"` drops reactions for bot messages sent before the current gateway process lifetime
+### 🔴 Must Fix
 
-**Location:** `packages/plugin/src/channel.ts:192-205`, `packages/plugin/src/channel.ts:235-239`
+1. ✅ Fixed — Emoji path param length validation
+   - `packages/server/src/routes/reactions.ts:16`, `:41`, `:66` now reject missing/`>64` emoji values.
+   - There is also a route test for the too-long case at `packages/server/src/__tests__/reactions.test.ts:142`.
 
-`sentMessages` is a fresh in-memory LRU created when the account gateway starts. In the default mode (`reactionNotifications ?? "own"`), a reaction event is ignored unless `sentMessages.has(payload.message_id)` is true:
+2. ✅ Fixed — Double URL decode
+   - `packages/server/src/routes/reactions.ts:14`, `:39`, `:64` use `c.req.param("emoji")` directly; no extra `decodeURIComponent` remains.
 
-```ts
-const sentMessages = new SentMessageTracker();
-const reactionNotifications = ... ?? "own";
-...
-if (reactionNotifications === "own" && !sentMessages.has(payload.message_id)) return;
-```
+3. ❌ Unaddressed → escalated — Client reaction count math is still delta-based and non-idempotent for other users
+   - `packages/client/src/stores/useMessageStore.ts:90-112` increments `count + 1` on every `MESSAGE_REACTION_ADD` unless `me && reactions[idx].me`.
+   - `packages/client/src/stores/useMessageStore.ts:113-136` decrements/removes on every `MESSAGE_REACTION_REMOVE` unless `me && !reactions[idx].me`.
+   - This only deduplicates duplicate events for the logged-in user's own reaction. Duplicate/replayed add/remove events from another user still drift the aggregate count because the client has no per-user membership set and the server events at `packages/server/src/ws/dispatcher.ts:198-216` still do not include an absolute count.
+   - Required fix: either have the server send authoritative reaction summaries/absolute counts after mutation, or maintain per-message/per-emoji user membership on the client using event `user_id`.
 
-The set is only populated from `MESSAGE_CREATE` events observed during this runtime:
+4. ✅ Mostly fixed — Tests are no longer zero
+   - New repo/route coverage exists in `packages/server/src/__tests__/reactions.test.ts`.
+   - Remaining gap: dispatcher/client WS idempotency is not covered; see fresh issue below.
 
-```ts
-if (gatewayClient.botUser && message.author.id === gatewayClient.botUser.id) {
-  sentMessages.add(message.id);
-  return;
-}
-```
+### 🟡 Should Fix
 
-That means reactions to bot-authored messages that already exist when the plugin starts, reconnects with a fresh process, or misses the original `MESSAGE_CREATE` are silently discarded in the default configuration. This is not just a polish issue: a user reacting to an agent response after a restart will not notify the agent, even though the reaction event arrives and the message author can be verified from REST.
+5. ✅ Fixed — `SentMessageTracker` lost on restart
+   - `packages/plugin/src/channel.ts:205-211` now falls back to `restClient.getMessage(...)` in `reactionNotifications: "own"` mode and caches the message if the author is the bot.
 
-**Suggested fix:** when `reactionNotifications === "own"` and the message id is not in the tracker, fetch the message (or add a small `getMessage(channelId, messageId)` REST client method) and check `message.author.id === gatewayClient.botUser.id`. Cache positive results in `sentMessages`. Alternatively, persist/rebuild the tracker from recent messages per channel on READY/reconnect. Avoid defaulting to `"own"` unless the ownership check is durable.
+6. ❌ Unaddressed → escalated — `getUsersForReaction` remains unbounded + N+1
+   - `packages/server/src/repos/reactions.ts:76-80` still returns every user id for the emoji with no `limit/after` pagination.
+   - `packages/server/src/routes/reactions.ts:77-88` still calls `repos.users.getById(uid)` once per reactor.
+   - Required fix: add Discord-style pagination/limit and return users via a joined query or batch lookup.
 
-## Non-blocking observations
+7. ❌ Unaddressed → escalated — LRU eviction bug remains
+   - `packages/plugin/src/channel.ts:30-36` still evicts the oldest item before checking whether the incoming id already exists.
+   - Re-adding an existing id while the set is full still unnecessarily evicts another tracked message and also does not refresh recency correctly.
+   - Required fix: if `ids.has(id)`, delete it first and then re-add it; only evict after that if size exceeds max.
 
-- `packages/server/src/routes/reactions.ts:14,35,56` decodes the route parameter directly and accepts any decoded string as an emoji. Consider centralizing validation: reject empty values and set a sane max length. This protects the DB primary key and gateway payloads from arbitrarily large path segments or malformed inputs.
-- `packages/server/src/routes/reactions.ts:65-76` does an N+1 user lookup for the reaction-users endpoint. This is probably acceptable for now, but if this endpoint is used for Discord-compatible user lists with larger reactions, a batch user lookup would be better.
-- `packages/server/src/__tests__/migration.test.ts:42-56` still verifies the old expected table set and does not assert that `reactions` exists. Please add coverage for the new table, unique constraint/idempotency, and `ON DELETE CASCADE` from messages/users.
+8. ❌ Unaddressed → escalated — React key still uses `emoji.name` only
+   - `packages/client/src/components/MessageItem.tsx:87-90` still uses `key={r.emoji.name}`.
+   - Current server only emits `id: null`, but the shared type supports `{ id, name }`. This will collide for custom emoji with the same name or when ids are later populated.
+   - Required fix: use a stable compound key such as `${r.emoji.id ?? "unicode"}:${r.emoji.name}`.
 
-## Validation performed
+## Fresh Findings
 
-- Pulled the PR diff with `gh pr diff 272 --repo kagura-agent/cove`.
-- Read the high-risk server route/repo/migration/dispatcher files and relevant client/plugin files.
-- Attempted a workspace build, but this worktree had no completed `node_modules` install; `pnpm -r build` failed before compiling the PR changes because package binaries such as `tsc`/`vite`/`esbuild` were unavailable. A subsequent install attempt was terminated by the environment before completion, so I am not treating build output as evidence for or against this PR.
+### 🔴 Must Fix — Add WS/store tests for duplicate reaction events
+
+The exact R1 count-drift bug survived because the new tests only cover server repo/route behavior. There is no test that dispatches duplicate `MESSAGE_REACTION_ADD` / `MESSAGE_REACTION_REMOVE` events through `gateway-subscriptions` or directly against `useMessageStore` for `me=false`.
+
+Suggested minimal test cases:
+- Start with one message and one reaction `{ emoji: "👍", count: 1, me: false }`; apply the same non-self add event twice; count must not become 3.
+- Start with count 2; apply the same non-self remove event twice; count must not remove two users' reactions.
+- Verify dispatcher reaction payload shape if the chosen fix sends absolute counts.
+
+### 🟡 Should Fix — `getUsersForReaction` tests do not cover scale or batching
+
+`packages/server/src/__tests__/reactions.test.ts:130-140` only verifies a single reactor. That would not catch the unbounded/N+1 issue above. Add a multi-user test that asserts bounded output and ideally exercises the joined/batched lookup path.
+
+## Positive Notes
+
+- Server-side persistence is idempotent via the `(message_id, user_id, emoji)` primary key and `INSERT OR IGNORE` (`packages/server/src/repos/reactions.ts:17-21`).
+- Message list hydration uses `getForMessages(...)`, avoiding a per-message reaction query when loading channel history (`packages/server/src/repos/messages.ts:79-83`).
+- Route-level channel/message existence checks correctly prevent reacting to a message through the wrong channel (`packages/server/src/routes/reactions.ts:21-25`, `:46-50`, `:71-75`).
+
+## Final Rating
+
+⚠️ Needs Changes — several R1 items are fixed, but unaddressed R1 issues #3, #6, #7, and #8 must be escalated and resolved before merge.
