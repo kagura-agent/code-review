@@ -1,117 +1,81 @@
-# 🌠 Nova — R5 Re-Review of cove#264 (Session TTL)
+# PR #264 Review — Round 6 (Nova 🌠)
 
-**Verdict: ✅ Approve with minor follow-ups**
-
-R4 ratchet check: every escalated R4 item is genuinely fixed in code (not just claimed). On a fresh pass I found a couple of small hygiene issues, but nothing block-merge.
-
----
-
-## R4 Ratchet Check
-
-### 🔴 Escalated from R3
-1. **Sliding refresh threshold breaks for short TTLs** — ✅ **Fixed**
-   `auth.ts`:
-   ```ts
-   const refreshThreshold = Math.max(SESSION_TTL_MS / 2, SESSION_TTL_MS - 86_400_000);
-   ```
-   Exactly the proposed fix. For 7d TTL → 6d (matches old behavior); for 1h TTL → 30m. No more negative threshold.
-
-2. **No `expires_at` index** — ✅ **Fixed**
-   `v6-session-ttl.ts`:
-   ```sql
-   CREATE INDEX IF NOT EXISTS idx_users_expires_at ON users(expires_at) WHERE expires_at IS NOT NULL
-   ```
-   Partial index — better than the proposed full index (skips bot rows). Cleanup query `WHERE expires_at IS NOT NULL AND expires_at < ?` will use it.
-
-3. **Cleanup has no logging** — ✅ **Fixed**
-   `index.ts`:
-   ```ts
-   try {
-     const removed = repos.users.cleanupExpired();
-     if (removed > 0) console.log(`🧹 Session cleanup: cleared ${removed} expired tokens`);
-   } catch (err) { console.error('Session cleanup failed:', err); }
-   ```
-   try/catch + count log. Good.
-
-4. **Cookie not reissued on sliding refresh** — ✅ **Fixed**
-   Both `requireAuth` and `/api/auth/me` now `setCookie(...)` when `result.refreshed && cookieToken`. The guard correctly avoids reissuing for Bearer-header-only callers.
-
-### 🔴 New in R4
-5. **OAuth token + expires_at non-atomic** — ✅ **Fixed**
-   `routes/auth.ts` now:
-   ```ts
-   db.prepare("UPDATE users SET username=?, avatar=?, google_id=?, email=?, token=?, expires_at=?, updated_at=? WHERE id=?")
-   ```
-   Single UPDATE. Bonus: also addresses the latent bug where `existing.token ?? crypto.randomUUID()` would resurrect an old (potentially compromised) token — now always rotates on OAuth login. 👍
-
-### 🟡 New in R4
-6. **v6 backfill hardcoded 7d** — ✅ **Fixed**
-   `v6-session-ttl.ts` reads `process.env.SESSION_TTL_MS`. (See N2 below for a residual concern.)
-
-7. **Default bot footgun (`opts.bot !== false`)** — ✅ **Fixed**
-   `repos/users.ts`:
-   ```ts
-   const isBot = opts.bot === true;
-   ```
-   Now defaults to **human**. Tests in `api.test.ts` correctly updated to pass explicit `bot: true`. This is the right semantic flip.
-
-**All 7 R4 items addressed. No escalations needed.**
+Branch: `feat/session-ttl-118` @ `a671a62`
+Scope: Session TTL with lazy + periodic cleanup (closes #118).
 
 ---
 
-## Fresh Findings (R5)
+## R5 Issue Follow-up
 
-### 🟡 Medium
+### 🟡 → ✅ Fixed: `resolveUser` returned stale `expires_at` after sliding refresh
+Commit `a671a62` adds `user.expires_at = Date.now() + SESSION_TTL_MS;` immediately after `users.refreshTTL(user.id)` in `auth.ts:71`. The returned `AuthUser` now carries the new expiry, so `/api/auth/me` and `requireAuth` consumers see the post-refresh value. Verified by `__tests__/session-ttl.test.ts` which exercises the `/me` payload and the standalone `refreshTTL` path — though there is still no test that asserts the sliding-refresh path *via* `resolveUser` returns the **bumped** `expires_at` (i.e., no regression test for the exact bug R5 caught). Recommend adding one in a follow-up, but the fix itself is correct.
 
-**N1. v6 backfill grants fresh full TTL to inactive users.**
-`v6-session-ttl.ts`:
+### 🟡 WebSocket sessions outlive expired tokens
+Still unaddressed in this PR (was explicitly out-of-scope per R5). `packages/server/src/ws/index.ts:41,94` call `users.findByToken(sessionToken)` only at upgrade/identify — once authenticated, expired tokens keep streaming. Re-confirming the follow-up issue; not blocking #264, but worth filing now while the context is fresh.
+
+### 🟢 Carry-overs from R5 (still open, all non-blocking)
+- **v6 backfill grants `Date.now() + SESSION_TTL` to every dormant non-bot user.** Old, idle accounts effectively get a fresh 7-day window the moment the migration runs. Policy choice — flagged for visibility, not changed.
+- **Duplicated `SESSION_TTL_MS` parsing.** `repos/users.ts` and `db/migrations/v6-session-ttl.ts` independently parse `process.env["SESSION_TTL_MS"]` with subtly different validation (the repo throws on invalid; the migration silently falls back to `604800000`). Should be hoisted into a single `config.ts` so the two cannot diverge. Not addressed.
+- **No tests for OAuth atomic `token+expires_at` update** (`routes/auth.ts:80–86`) and **no tests for cookie reissue on sliding refresh** in `requireAuth` (`auth.ts:88–90`). Both code paths are now load-bearing for session safety; adding `expect(res.headers.get('set-cookie')).toMatch(/cove-session=/)` and a callback-flow expiry assertion would close the loop.
+
+---
+
+## Fresh Review of New Code
+
+### 🟡 `findByToken` may clear someone else's token on race — minor
+`repos/users.ts:103`:
 ```ts
-const gracePeriod = Date.now() + SESSION_TTL;
-db.prepare("UPDATE users SET expires_at = ? WHERE bot = 0 AND expires_at IS NULL").run(gracePeriod);
+this.db.prepare("UPDATE users SET token = NULL, expires_at = NULL WHERE token = ?").run(token);
 ```
-Every existing human — including users dormant for months — gets a fresh 7-day session at deploy time. The PR description says "`updated_at + 7 days`" but the code uses `Date.now() + 7d`. For a TTL feature whose purpose is to expire stale sessions, this defeats the goal for the entire pre-existing user base on first deploy.
+Race window: if `regenerateToken` rotates the token between the SELECT and this UPDATE *and* (cryptographically improbable) the new token equals the queried `token`, we'd nuke the rotated session. UUID v4 collision is negligible, so this is theoretical. Still cleaner to `WHERE token = ? AND expires_at IS NOT NULL AND expires_at < ?` — would also prevent clearing if the row was just refreshed by a concurrent request. Worth a one-line tweak.
 
-Suggested fix:
+### 🟡 Sliding-refresh threshold has surprising semantics for short TTLs
+`auth.ts:67`:
 ```ts
-db.prepare("UPDATE users SET expires_at = updated_at + ? WHERE bot = 0 AND expires_at IS NULL")
-  .run(SESSION_TTL);
+const refreshThreshold = Math.max(SESSION_TTL_MS / 2, SESSION_TTL_MS - 86_400_000);
 ```
-Then any user whose `updated_at` is already older than `now - SESSION_TTL` will be expired immediately on next request — which is exactly the desired behavior. Update the PR description to match either way.
+For the default 7d TTL this evaluates to `max(3.5d, 6d) = 6d`, i.e., refresh once a day has elapsed — sensible. But for any operator who sets `SESSION_TTL_MS` below ~2 days (e.g., testing, kiosk deployments), `SESSION_TTL_MS - 86_400_000` goes negative and `SESSION_TTL_MS / 2` wins, meaning refresh fires on every single request once half-life is crossed. Likely fine in practice, but the comment "extend TTL if more than 1 day has passed" no longer holds for short TTLs. Either document the asymmetric behaviour or clamp the constant explicitly: `Math.min(SESSION_TTL_MS / 2, 86_400_000)` would express "refresh once per ~day, or at half-life, whichever is sooner" more honestly.
 
-**N2. Duplicated SESSION_TTL_MS parsing with inconsistent failure modes.**
-- `repos/users.ts` (canonical): **throws** on invalid value.
-- `v6-session-ttl.ts` (duplicate): **silently falls back** to 7d default.
+### 🟡 Behavioural change in `POST /api/users` (verify intent)
+`repos/users.ts:48`: `const isBot = opts.bot === true;`
+Previously (`opts.bot !== false`) the default for an omitted `bot` field was `true`. Now the default is `false`, meaning agents posted *without* an explicit `bot: true` become **human** users with a 7-day TTL — and after seven days, the bot stops working with `401`. The PR's own test diff (`api.test.ts:85, 662`) had to add `bot: true` to every existing call site, which is the canary for downstream impact. Anyone using the public API in scripts/automation will get the same surprise. At minimum:
+1. Call this out in CHANGELOG / release notes as a breaking default flip.
+2. Consider documenting in the route handler (`routes/agents.ts:31`) that bot-style integrations must pass `bot: true`.
+Not strictly a bug (tests pass), but a behaviour change of this kind deserves explicit acknowledgement and probably an issue tracking documentation updates.
 
-If `SESSION_TTL_MS=abc` is set, the server will crash on import of `repos/users.ts` — fine, fail-fast — but the duplicate logic in v6 means the contracts diverge. Cleaner: import `SESSION_TTL_MS` from `repos/users.ts` in the migration, or extract to a `config.ts`. (Minor — won't bite in practice because users.ts loads first.)
+### 🟢 Periodic cleanup wiring
+`index.ts:26–35` — interval is `unref()`'d (good, won't block shutdown), errors are caught, only logs on `removed > 0`. The `cleanupExpired` UPDATE is index-supported by the partial index added in the migration (`idx_users_expires_at`). Looks right. One nit: the interval is allocated even for `:memory:`/test DBs that spin up `createApp` separately — fine because `index.ts` is the production entrypoint, but worth a quick comment that test harnesses bypass this code path (which they do, via `createApp`).
 
-### 🟢 Low
+### 🟢 Migration `v6-session-ttl.ts`
+- `addColumnIfMissing` + `DEFAULT NULL` is idempotent and re-running the migration is safe.
+- `CREATE INDEX IF NOT EXISTS ... WHERE expires_at IS NOT NULL` correctly excludes bots from the index — a partial index is the right call here.
+- The `hasColumn(db, "users", "updated_at")` guard is defensive but slightly odd: at v5→v6 we know the column exists. Harmless.
+- Silent fallback on bad `SESSION_TTL_MS` differs from the repo's `throw`. See duplicated-parsing follow-up above.
 
-**N3. Gateway/WebSocket session not invalidated on lazy expiry.**
-`findByToken()` clears the DB token when expired, but an already-open WS connection keyed off that user has no signal. Dispatcher continues to deliver events to a session that just expired. Probably out of scope for this PR (issue #118 is HTTP-focused), but worth a follow-up issue: cleanup should also kick connected clients.
+### 🟢 Schema seed (`schema.ts:148–164`)
+`seedUsers` now writes `expires_at = null` for both bots and seed humans (the in-memory dev seeds don't get TTLs). Comment explains the intent. Reasonable.
 
-**N4. No test covers the cookie-reissue behavior.**
-The R4 escalation #4 fix is critical (without it, browser cookies expire while server sessions live), but `session-ttl.test.ts` doesn't assert that `Set-Cookie` appears on a refreshed request. One-line check using `res.headers.get('set-cookie')` after a request near the threshold would lock in the regression guard.
+### 🟢 Test coverage
+`__tests__/session-ttl.test.ts` cleanly covers:
+- Expired token → 401 + token cleared (lazy cleanup).
+- Bot token never expires.
+- `cleanupExpired` is selective and returns the right count.
+- `create()` sets `expires_at` correctly per bot flag.
+- `refreshTTL` extends expiry and is no-op for bots (implicit via `WHERE bot = 0`).
+- `/api/auth/me` returns `expires_at`.
 
-**N5. No test for OAuth atomic UPDATE / token rotation on re-login.**
-The R4 escalation #5 fix is also untested. Easy to add: insert a user with old token+expires_at, re-run callback, assert token changed and expires_at moved together.
-
-**N6. `refreshTTL` writes `updated_at = Date.now()` separately from the expires_at value.**
-```ts
-.run(Date.now() + SESSION_TTL_MS, Date.now(), id);
-```
-Two `Date.now()` calls — they will differ by microseconds, harmless, but stylistically `const now = Date.now();` once is cleaner and makes invariants like `expires_at - updated_at == SESSION_TTL_MS` exact.
-
-**N7. `requireAuth` doesn't propagate `expires_at` to consumers.**
-`AuthUser` now has `expires_at`, but `c.set("botUser", result.user)` puts the whole thing in context. Good — but no other route currently reads it. Not a bug, just noting that downstream code can now signal "session about to expire" to clients without a /me round-trip.
+Gaps (already enumerated above): sliding-refresh-via-`resolveUser` regression test for R5 bug; OAuth callback atomic update; cookie reissue header; refresh-threshold edge cases.
 
 ---
 
 ## Verdict
 
-**Approve.** R4 ratchet is clean across all 7 items. The v6 backfill grace policy (N1) is the only thing I'd want addressed before merge if you care about expiring dormant pre-existing users at deploy time — but it's a policy choice, not a correctness bug, so an "OK to merge + open follow-up issue" is also defensible.
+**Approve with non-blocking comments.**
 
-Recommended follow-ups (issues, not blockers):
-- N1: align backfill with PR description (`updated_at + TTL`)
-- N3: WS invalidation on session expiry
-- N4/N5: regression tests for cookie reissue + OAuth atomic update
-- N2: dedupe SESSION_TTL_MS config
+The R5 blocker is correctly fixed and the new test suite covers the core TTL semantics. Remaining items are either (a) explicitly deferred follow-ups (WebSocket recheck), (b) test-coverage gaps that aren't safety-critical for merge, or (c) ergonomic/policy nits (duplicated env parsing, threshold comment, breaking default flip on `bot`). The breaking default for `POST /api/users` is the only item I'd want to see at least *documented* before this lands — but tests reflect the new contract, so it's not a correctness defect.
+
+Recommended follow-up issues to file alongside merge:
+1. WebSocket session re-authentication on token expiry.
+2. Centralise `SESSION_TTL_MS` env parsing (single source of truth).
+3. Add regression test for sliding refresh returning bumped `expires_at` via `resolveUser`.
+4. CHANGELOG entry for `POST /api/users` `bot` default change.
