@@ -1,76 +1,90 @@
-# R2 Review — kagura-agent/cove#272 — feat: emoji reactions
+# 🌟 Stella — R3 Re-Review: kagura-agent/cove#272 "feat: emoji reactions"
 
-Reviewer: 🌟 Stella  
-Verdict: ⚠️ Needs Changes
+**Round:** 3  
+**Verdict:** ⚠️ Needs Changes — all R2 blockers are addressed, but R3 found one new pagination correctness bug before merge.
 
-## Summary
+---
 
-R2 fixes several R1 server-side correctness gaps: emoji length validation is now present, the extra URL decode is gone, reaction repo/route tests were added, and `reactionNotifications: "own"` now has a REST fallback for pre-restart bot messages.
-
-However, multiple R1 issues remain unaddressed and must be escalated per R2 rules. The most important one is still the client-side reaction count model: the store still mutates aggregate counts from delta WS events and only deduplicates the current user's own reaction state. Duplicate/replayed events for other users can still drift counts.
-
-## R1 Issue Status
+## R2 Issue Status
 
 ### 🔴 Must Fix
 
-1. ✅ Fixed — Emoji path param length validation
-   - `packages/server/src/routes/reactions.ts:16`, `:41`, `:66` now reject missing/`>64` emoji values.
-   - There is also a route test for the too-long case at `packages/server/src/__tests__/reactions.test.ts:142`.
+1. **Client count drift for other users** — ✅ Fixed
+   - Server gateway payloads now include authoritative absolute `count` for both add/remove events (`packages/server/src/ws/dispatcher.ts`).
+   - Client store now replaces the reaction count with the event payload value instead of doing `count + 1` / `count - 1` locally (`packages/client/src/stores/useMessageStore.ts:90-127`).
+   - Duplicate/replayed events for other users therefore converge to the same count instead of drifting upward/downward.
 
-2. ✅ Fixed — Double URL decode
-   - `packages/server/src/routes/reactions.ts:14`, `:39`, `:64` use `c.req.param("emoji")` directly; no extra `decodeURIComponent` remains.
-
-3. ❌ Unaddressed → escalated — Client reaction count math is still delta-based and non-idempotent for other users
-   - `packages/client/src/stores/useMessageStore.ts:90-112` increments `count + 1` on every `MESSAGE_REACTION_ADD` unless `me && reactions[idx].me`.
-   - `packages/client/src/stores/useMessageStore.ts:113-136` decrements/removes on every `MESSAGE_REACTION_REMOVE` unless `me && !reactions[idx].me`.
-   - This only deduplicates duplicate events for the logged-in user's own reaction. Duplicate/replayed add/remove events from another user still drift the aggregate count because the client has no per-user membership set and the server events at `packages/server/src/ws/dispatcher.ts:198-216` still do not include an absolute count.
-   - Required fix: either have the server send authoritative reaction summaries/absolute counts after mutation, or maintain per-message/per-emoji user membership on the client using event `user_id`.
-
-4. ✅ Mostly fixed — Tests are no longer zero
-   - New repo/route coverage exists in `packages/server/src/__tests__/reactions.test.ts`.
-   - Remaining gap: dispatcher/client WS idempotency is not covered; see fresh issue below.
+2. **`getUsersForReaction` unbounded + N+1** — ✅ Fixed
+   - Route parses bounded `limit` with default 25 and max 100, plus `after` cursor (`packages/server/src/routes/reactions.ts:79-82`).
+   - Repo uses one joined query against `reactions` + `users`, no per-user `getById` loop (`packages/server/src/repos/reactions.ts:83-98`).
 
 ### 🟡 Should Fix
 
-5. ✅ Fixed — `SentMessageTracker` lost on restart
-   - `packages/plugin/src/channel.ts:205-211` now falls back to `restClient.getMessage(...)` in `reactionNotifications: "own"` mode and caches the message if the author is the bot.
+3. **LRU eviction bug** — ✅ Fixed
+   - Re-adding an existing id now deletes it first to refresh recency and only evicts when inserting a genuinely new id at capacity (`packages/plugin/src/channel.ts:30-38`).
 
-6. ❌ Unaddressed → escalated — `getUsersForReaction` remains unbounded + N+1
-   - `packages/server/src/repos/reactions.ts:76-80` still returns every user id for the emoji with no `limit/after` pagination.
-   - `packages/server/src/routes/reactions.ts:77-88` still calls `repos.users.getById(uid)` once per reactor.
-   - Required fix: add Discord-style pagination/limit and return users via a joined query or batch lookup.
+4. **React key collision** — ✅ Fixed
+   - Reaction pill key now uses `r.emoji.id ?? r.emoji.name` (`packages/client/src/components/MessageItem.tsx:87-90`).
 
-7. ❌ Unaddressed → escalated — LRU eviction bug remains
-   - `packages/plugin/src/channel.ts:30-36` still evicts the oldest item before checking whether the incoming id already exists.
-   - Re-adding an existing id while the set is full still unnecessarily evicts another tracked message and also does not refresh recency correctly.
-   - Required fix: if `ids.has(id)`, delete it first and then re-add it; only evict after that if size exceeds max.
+5. **Auto-scroll over-fires on any reaction anywhere** — ✅ Fixed
+   - Effect now derives a primitive key from only the last message id + total reaction count (`packages/client/src/components/MessageList.tsx:86-96`), so reaction updates on older messages no longer change the dependency.
 
-8. ❌ Unaddressed → escalated — React key still uses `emoji.name` only
-   - `packages/client/src/components/MessageItem.tsx:87-90` still uses `key={r.emoji.name}`.
-   - Current server only emits `id: null`, but the shared type supports `{ id, name }`. This will collide for custom emoji with the same name or when ids are later populated.
-   - Required fix: use a stable compound key such as `${r.emoji.id ?? "unicode"}:${r.emoji.name}`.
+---
 
-## Fresh Findings
+## Fresh R3 Findings
 
-### 🔴 Must Fix — Add WS/store tests for duplicate reaction events
+### 🟡 S1. Reaction user pagination can skip users with the same millisecond timestamp
 
-The exact R1 count-drift bug survived because the new tests only cover server repo/route behavior. There is no test that dispatches duplicate `MESSAGE_REACTION_ADD` / `MESSAGE_REACTION_REMOVE` events through `gateway-subscriptions` or directly against `useMessageStore` for `me=false`.
+`getUsersForReaction` orders and pages only by `r.created_at`:
 
-Suggested minimal test cases:
-- Start with one message and one reaction `{ emoji: "👍", count: 1, me: false }`; apply the same non-self add event twice; count must not become 3.
-- Start with count 2; apply the same non-self remove event twice; count must not remove two users' reactions.
-- Verify dispatcher reaction payload shape if the chosen fix sends absolute counts.
+- `packages/server/src/repos/reactions.ts:90-95`
 
-### 🟡 Should Fix — `getUsersForReaction` tests do not cover scale or batching
+```ts
+if (after) {
+  query += ` AND r.created_at > (SELECT created_at FROM reactions WHERE message_id = ? AND user_id = ? AND emoji = ?)`;
+}
+query += ` ORDER BY r.created_at LIMIT ?`;
+```
 
-`packages/server/src/__tests__/reactions.test.ts:130-140` only verifies a single reactor. That would not catch the unbounded/N+1 issue above. Add a multi-user test that asserts bounded output and ideally exercises the joined/batched lookup path.
+Because `created_at` comes from `Date.now()` (`packages/server/src/repos/reactions.ts:17-20`), multiple reactions can share the same millisecond. If page 1 ends at user A with `created_at = 1000`, page 2 uses `created_at > 1000`, so any other users reacted in the same millisecond after A are permanently skipped. The ordering is also nondeterministic for equal timestamps.
+
+**Product impact:** reactor popovers/lists can silently omit users under bursty reactions, exactly where pagination matters most.
+
+**Suggested fix:** make the cursor ordering stable with a tie-breaker, e.g. `ORDER BY r.created_at, r.user_id`, and page with tuple semantics:
+
+```sql
+AND (
+  r.created_at > :afterCreatedAt
+  OR (r.created_at = :afterCreatedAt AND r.user_id > :afterUserId)
+)
+```
+
+Add a test where 3+ users share the same `created_at`, request `limit=1`, and verify all users are reachable across pages.
+
+### 🟢 S2. Add a composite index for the reaction user-list query
+
+The new user-list query filters by `(message_id, emoji)`, orders by `created_at`, and limits (`packages/server/src/repos/reactions.ts:83-98`), but the migration only adds `idx_reactions_message_id` (`packages/server/src/db/migrations/v7-reactions.ts:13`). For popular messages with multiple emoji, SQLite may scan/sort more rows than needed.
+
+**Suggested index:**
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_reactions_message_emoji_created
+ON reactions(message_id, emoji, created_at, user_id);
+```
+
+This pairs naturally with the stable pagination fix above.
+
+---
 
 ## Positive Notes
 
-- Server-side persistence is idempotent via the `(message_id, user_id, emoji)` primary key and `INSERT OR IGNORE` (`packages/server/src/repos/reactions.ts:17-21`).
-- Message list hydration uses `getForMessages(...)`, avoiding a per-message reaction query when loading channel history (`packages/server/src/repos/messages.ts:79-83`).
-- Route-level channel/message existence checks correctly prevent reacting to a message through the wrong channel (`packages/server/src/routes/reactions.ts:21-25`, `:46-50`, `:71-75`).
+- The absolute-count gateway design is the right fix for client drift; much safer than local counter math.
+- The R2 N+1 fix is clean: one joined query and route-level limit clamping.
+- Reaction list integration into `MessagesRepo.list()` uses batch aggregation, avoiding a per-message reaction query.
+- Tests cover the core route/repo behavior and cascade delete paths.
 
-## Final Rating
+---
 
-⚠️ Needs Changes — several R1 items are fixed, but unaddressed R1 issues #3, #6, #7, and #8 must be escalated and resolved before merge.
+## Recommendation
+
+⚠️ **Needs small changes before merge.** The R2 blockers are resolved, but please fix the `after` pagination tie-breaker before shipping the reactor-list endpoint. The index can be done alongside it and is cheap while the migration is still fresh.

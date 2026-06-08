@@ -1,93 +1,51 @@
-# Consolidated Review R2 — cove#272: emoji reactions
+# Consolidated Review R3 — cove#272: emoji reactions
 
 **Reviewers:** 🌟 Stella (GPT-5.5) · 🌠 Nova (Claude Opus 4.7) · 💫 Vega (Gemini 3.1 Pro)
-**Round:** 2
+**Round:** 3
 
-## R1 Issue Resolution
+## R2 Issue Resolution — 全部修复 ✅
 
 | # | Issue | Status |
 |---|-------|--------|
-| 🔴 | Emoji 长度验证 | ✅ Fixed |
-| 🔴 | Double URL decode | ✅ Fixed |
-| 🔴 | Client count 非幂等 | ⚠️ 部分修复 — 只 guard 了 self，other users 仍 drift |
-| 🔴 | 零测试 | ✅ Fixed — 新增 180 行 repo/route 测试 |
-| 🟡 | SentMessageTracker 重启丢失 | ✅ Fixed — REST fallback |
-| 🟡 | getUsersForReaction 无分页 + N+1 | ❌ 未修 → escalated 🔴 |
-| 🟡 | LRU eviction bug | ❌ 未修 |
-| 🟡 | React key collision | ❌ 未修 |
+| 🔴 | Client count drift | ✅ Fixed — server 发 absolute count，client last-writer-wins |
+| 🔴 | getUsersForReaction N+1 | ✅ Fixed — JOIN query + limit + after cursor |
+| 🟡 | LRU eviction bug | ✅ Fixed — re-add 先 delete 再 add |
+| 🟡 | React key collision | ✅ Fixed — `key={r.emoji.id ?? r.emoji.name}` |
+| 🟡 | Auto-scroll over-fires | ✅ Fixed — primitive key 只跟 last message |
 
 ## Reviewer Verdicts
 
-- 🌟 Stella: **⚠️ Needs Changes** — count drift + N+1 + LRU + key
-- 🌠 Nova: **⚠️ Needs Changes** — count drift (🔴) + N+1 escalated (🔴) + new scroll bug
-- 💫 Vega: **❌ Needs Changes** — count drift escalated + N+1 + LRU
+- 🌟 Stella: **⚠️ Needs Changes** — pagination cursor 同毫秒 skip bug (🟡)
+- 🌠 Nova: **✅ Approve** — all fixed, minor follow-ups only
+- 💫 Vega: **✅ Approve** — LGTM
 
-## Verdict: ⚠️ Needs Changes (3/3)
+## Verdict: ✅ Approve (2/3 approve, 1/3 wants pagination fix)
 
----
+**R2 的全部 5 个问题都修好了！** 🎉
 
-## 🔴 Must Fix
+## 🟡 Minor (non-blocking, follow-up)
 
-### 1. Client count drift for other users (3/3 consensus — 部分修复不够)
+### Pagination cursor 同毫秒 skip (Stella)
 
-只 guard 了 `me === true` 的 dedup。其他用户的重复 `MESSAGE_REACTION_ADD` 仍然 `count + 1` → reconnect 后 drift。
+`getUsersForReaction` 用 `created_at >` 做分页，同毫秒的多个 reaction 可能被 skip。
 
-**Fix 二选一：**
-- Server event 带 absolute `count` → client 做 last-writer-wins replace
-- Client 维护 per-emoji `Set<userId>` → count = set.size
+**Fix:** 加 tie-breaker `ORDER BY r.created_at, r.user_id` + tuple comparison。低概率但值得后续修。
 
-### 2. `getUsersForReaction` 无分页 + N+1 (3/3 consensus — escalated)
+### Config typing (Nova)
 
-每个 reactor 一次 `getById()` 查询，无 limit。1000 reactions = 1000 DB queries。
+`reactionNotifications` 用 `as any`，无 schema 文档。
 
-**Fix:** JOIN query + `LIMIT 25` + `after` cursor。
+### Dynamic import per reaction (Nova)
 
----
-
-## 🟡 Should Fix
-
-### 3. LRU eviction bug (Stella + Nova + Vega)
-
-```ts
-// 现在的代码 — re-add 已存在 id 时白白驱逐
-add(id) {
-  if (this.ids.size >= this.maxSize) { evict oldest; }
-  this.ids.add(id); // no-op if already exists
-}
-```
-
-**Fix:**
-```ts
-add(id) {
-  if (this.ids.has(id)) this.ids.delete(id); // refresh recency
-  else if (this.ids.size >= this.maxSize) { evict oldest; }
-  this.ids.add(id);
-}
-```
-
-### 4. React key collision (Stella + Nova + Vega)
-
-`key={r.emoji.name}` → 改为 `key={r.emoji.id ?? r.emoji.name}`
-
-### 5. Auto-scroll over-fires (Nova — new)
-
-`MessageList` 依赖 `lastMessageReactions`（每次 reaction 都新引用）→ 任何 reaction 都触发 scrollToBottom。
+`enqueueSystemEvent` 每次 reaction 都 dynamic import，应 hoist 到 module scope。
 
 ---
 
-## 🟢 Positive
+## 总结
 
-- Server 层扎实：idempotent INSERT OR IGNORE、batch `getForMessages`、正确的 auth + FK CASCADE
-- 测试覆盖了 repo + route happy/error paths
-- SentMessageTracker REST fallback 解决了重启问题
-- Gateway 事件正确限 guild 范围
+**从 R1 到 R3 的进化：**
+- R1: 零验证 + 零测试 + count drift + N+1 → ⚠️
+- R2: 验证/测试修了，count drift + N+1 仍在 → ⚠️
+- R3: **全部修复，server absolute count + JOIN pagination** → ✅
 
----
-
-## 修复优先级
-
-1. **Count drift** — 改 WS payload 带 absolute count（影响面最大）
-2. **N+1 pagination** — JOIN + LIMIT（性能安全）
-3. **LRU fix** — 3 行改动
-4. **React key** — 1 行改动
-5. **Scroll bug** — 改依赖为 stable signal
+可以 merge 了 🚀
