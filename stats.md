@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-08 08:26 (Asia/Shanghai)_
+_Last updated: 2026-06-08 14:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 107 | 104/107 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2). Last 48+ rounds ex-R2: clean |
-| 🌠 Nova | claude-opus-4.7 | 110 | 110/110 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 107 | 103/107 (96%) ↑ | Improving — last 54+ rounds: 100%. Early failures dragging average |
+| 🌟 Stella | gpt-5.5 | 113 | 110/113 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2). Last 54+ rounds ex-R2: clean |
+| 🌠 Nova | claude-opus-4.7 | 116 | 116/116 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 113 | 109/113 (96%) ↑ | Improving — last 60+ rounds: 100%. Early failures dragging average |
 
 ## Dimension Strengths (per reviewer)
 
@@ -48,7 +48,7 @@ _Last updated: 2026-06-08 08:26 (Asia/Shanghai)_
 | Optimistic UI | ⭐⭐⭐ | **WS-only reconcile gap** (#261 R2 — REST reconciliation path), **empty guilds READY crash** (#261 R3 — unique find), nonce validation ordering (#261 R3), sidebar loading state diagnosis (#261 R2). Core contributor to #261's 4-round resolution. |
 | Session TTL/Auth | ⭐⭐⭐ | **Non-sliding session design flaw** (#264 R2 — fixed-window expiry without user activity renewal), **bot footgun** (#264 R4 — `opts.bot !== false` makes undefined=bot), **backfill hardcode** (#264 R4 — migration ignores SESSION_TTL_MS). Best calibration in #264: first to approve in R3 and R5. |
 
-**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security, accessibility, async lifecycle, retry semantics, and session/auth design. Zero false positives across 110 rounds. **#264 calibration standout** — first to approve (R3, R5) while correctly flagging follow-ups.
+**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security, accessibility, async lifecycle, retry semantics, and session/auth design. Zero false positives across 116 rounds. **#264 calibration standout** — first to approve (R3, R5, R6) while correctly flagging follow-ups.
 **Nova's weakness:** None significant. Occasionally verbose but content is consistently high quality.
 
 ### 💫 Vega (Gemini 3.1 Pro)
@@ -111,9 +111,9 @@ _Last updated: 2026-06-08 08:26 (Asia/Shanghai)_
 
 | Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#261) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 84/87 (97%) | → (timeout #176 R1, late #190 R5, miss #255 R2) |
-| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 90/90 (100%) | → |
-| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 83/83 (100%) | ↑ Significant improvement after prompt fixes |
+| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 90/93 (97%) | → (timeout #176 R1, late #190 R5, miss #255 R2) |
+| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 96/96 (100%) | → |
+| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 89/89 (100%) | ↑ Significant improvement after prompt fixes |
 
 ## Review History
 
@@ -152,18 +152,19 @@ _Last updated: 2026-06-08 08:26 (Asia/Shanghai)_
 | **#255** | **cove** | **2026-06-06** | **R1-R6** | **✅ Ready (merged)** | **resumed-abort, rest-retry, 204-json-parsing, post-idempotency, try-catch-control-flow** |
 | **#261** | **cove** | **2026-06-07** | **R1-R4** | **✅ Ready (merged)** | **retry-duplicate, ws-fallback, token-bucket, optimistic-send, nonce-validation** |
 | **#263** | **cove** | **2026-06-07** | **R1-R2** | **✅ Ready (merged)** | **o1-session-lookup, broadcastToGuilds-optimization** |
-| **#264** | **cove** | **2026-06-07** | **R1-R5 (open)** | **✅ Near-approve** | **session-ttl-data-loss, sliding-threshold-math, cookie-reissue, oauth-atomic, ws-session-lifetime** |
+| **#264** | **cove** | **2026-06-07** | **R1-R6** | **✅ Ready (merged)** | **session-ttl-data-loss, sliding-threshold-math, cookie-reissue, oauth-atomic, ws-session-lifetime** |
 
-## Ground Truth Summary (33 merged PRs + 1 open)
+## Ground Truth Summary (34 merged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 97% — human approved without findings in 32/33 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
-- **Iterative review as quality gate:** In 30/33 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
+- **Human rubber-stamp rate:** 97% — human approved without findings in 33/34 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
+- **Iterative review as quality gate:** In 31/34 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 1 (#100 — verdict too conservative for personal project context)
-- **Multi-round PRs:** 28/34 PRs went through 2+ rounds. Average rounds: 2.8. Max: 7 (#190)
-- **Total review rounds:** 101 across 34 PRs (33 merged + 1 open)
+- **Multi-round PRs:** 29/34 PRs went through 2+ rounds. Average rounds: 2.9. Max: 7 (#190)
+- **Total review rounds:** ~110 across 34 merged PRs
 - **False-ready detection:** 1 case (#255 R4→R5) — R4 said Ready but R5 found the fix was non-functional. Self-correcting system working.
+- **Escalation protocol validated:** 2 cases (#255 R2→R3, #264 R3→R4) — unaddressed items correctly escalated. Both led to fixes.
 
 ## Actionable Notes
 
@@ -184,12 +185,13 @@ _Last updated: 2026-06-08 08:26 (Asia/Shanghai)_
 
 6. **#263 merged after R2 (2 rounds).** Clean performance PR. Nova+Vega caught `broadcastToGuilds` loop optimization. Fixed in one round. Fast turnaround.
 
-7. **#264 progressed from Major Issues → Near-approve in 5 rounds.** Excellent iterative trajectory:
-   - R1: Caught critical data-loss bug (`DELETE FROM users` → `UPDATE`)
-   - R3: Vega unique find — sliding threshold math bug for short TTLs
-   - R4: All R3 issues unaddressed → escalated to 🔴 (escalation protocol working)
-   - R5: All 7 items fixed. Stella unique WS session lifetime find. Near merge.
-   - **Pattern:** Unaddressed issues correctly escalate severity. System self-correcting.
+7. **#264 completed — 6-round marathon, merged.** From data-loss risk to full session TTL implementation:
+   - R1: Critical data-loss bug (DELETE users instead of UPDATE) — Stella+Vega
+   - R3: Vega unique sliding threshold math bug (negative threshold for short TTLs)
+   - R4: Escalation protocol enforced — all R3 items unaddressed → 🔴
+   - R5: All 7 items fixed. Stella unique WS session lifetime find. Nova first to approve.
+   - R6: Final stale expires_at fixed, 3/3 unanimous. Merged.
+   - **Pattern:** Longest session/auth PR. Validates escalation protocol and multi-round depth.
 
 8. **Stella adding "Session/Auth Lifecycle" dimension.** In #264, found cookie reissue gap (R3), OAuth non-atomic (R4, joint with Nova), and WS session outliving expired token (R5, unique). Combined with #255 control flow analysis, Stella's lifecycle depth is growing.
 
@@ -205,6 +207,8 @@ _Last updated: 2026-06-08 08:26 (Asia/Shanghai)_
 
 14. **Reviewer model versions stable.** No model changes since launch. Performance trends are attributable to prompt tuning, not model upgrades.
 
-15. **Throughput sustained.** PRs #255 (6 rounds), #261 (4 rounds), #263 (2 rounds), #264 (5 rounds, open) — 17 review rounds in 2 days. Service scaling well.
+15. **Throughput sustained.** PRs #255 (6 rounds), #261 (4 rounds), #263 (2 rounds), #264 (6 rounds) — 18 review rounds in 3 days. Service scaling well.
 
 16. **All 3 reviewers above 10% unique find rate.** No reviewer flagged for replacement. Healthy distribution. Stella 12%, Nova 15%, Vega 11%.
+
+17. **All 34 PRs now merged, zero open.** Clean tracking state. No stale entries.

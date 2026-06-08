@@ -1032,11 +1032,18 @@
     "round": 4,
     "mode": "comment",
     "reviewed_at": "2026-06-07T22:22+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "needs_changes",
     "reviewers": 3,
-    "ground_truth": null,
-    "last_checked": "2026-06-08T08:26+08:00",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "needs_changes",
+      "accuracy": "correct",
+      "notes": "R4: All R3 items unaddressed, correctly escalated. +OAuth non-atomic, backfill hardcode, bot footgun."
+    },
+    "last_checked": "2026-06-08T14:26+08:00",
     "notes": "R4: All R3 issues unaddressed → escalated to 🔴. +OAuth non-atomic, backfill hardcode, bot footgun. 3/3 needs_changes."
   },
   {
@@ -1046,11 +1053,50 @@
     "round": 5,
     "mode": "comment",
     "reviewed_at": "2026-06-07T23:58+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "approve_with_minor",
     "reviewers": 3,
-    "ground_truth": null,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "approve_with_minor",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "notes": "R5: All 7 R4 items fixed. Stale expires_at (Stella+Vega). WS session lifetime (Stella unique). Nova first to approve."
+    },
     "notes": "R5: All 7 R4 items fixed! Near-approve. Stale expires_at return (Stella+Vega). WS session lifetime (Stella unique). Nova clean approve.",
-    "last_checked": "2026-06-08T08:26+08:00"
+    "last_checked": "2026-06-08T14:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 264,
+    "round": 6,
+    "mode": "comment",
+    "reviewed_at": "2026-06-08T01:48+08:00",
+    "status": "merged",
+    "verdict": "ready",
+    "reviewers": 3,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "effective_dimensions": [
+        "session-ttl-data-loss",
+        "sliding-threshold-math",
+        "cookie-reissue",
+        "oauth-atomic",
+        "ws-session-lifetime"
+      ],
+      "calibration": "6-round marathon. R1 caught critical data-loss (DELETE users instead of UPDATE). R3 Vega sliding threshold math. R4 escalation protocol enforced. R5 all 7 items fixed + Stella WS session lifetime. R6 final stale expires_at fixed, 3/3 unanimous. Human approved without comments — iterative review was the quality gate."
+    },
+    "notes": "R6: 3/3 APPROVE. stale expires_at fixed. 164 tests pass. Merged 2026-06-08T01:53Z.",
+    "last_checked": "2026-06-08T14:26+08:00"
   }
 ]
