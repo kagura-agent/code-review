@@ -1,128 +1,76 @@
-# Review — cove#274: NEW divider + unread banner
+# 🌠 Nova — Re-Review (R2) of kagura-agent/cove#274
 
-**Reviewer:** 🌠 Nova
-**Verdict:** Request changes (a few real bugs; mostly polish)
+**Scope:** Message-level unread indicators — banner + `NEW` divider in `MessageList.tsx`, snapshot state in `useReadStateStore.ts`, comment-only change in `gateway-subscriptions.ts`.
 
-Solid first cut. Divider placement logic is correct, snapshot lifecycle is sound, and the auto-ack comment in gateway is a nice touch. A handful of issues worth fixing before merge.
-
----
-
-## 🔴 Bugs
-
-### 1. `setTimeout` leak / setState-on-unmount in fetch effect
-`MessageList.tsx` (~L70–75)
-```ts
-setTimeout(() => {
-  if (wasNearBottomRef.current) {
-    setShowBanner(false);
-  }
-}, 5000);
-```
-The timer is created inside the fetch effect but never cleared. If the user switches channels within 5s, the effect's cleanup runs but this timer keeps ticking and calls `setShowBanner` on an unmounted-or-different-state component (React 18 warning, in some cases stomps the *next* channel's banner state because `setShowBanner` is the same setter identity after remount on a different `channelId` key only if React preserves the instance — here it does, since `channelId` is a prop, not a `key`. So it **can leak state across channels.**)
-
-Fix:
-```ts
-let bannerTimer: ReturnType<typeof setTimeout> | undefined;
-// ...
-bannerTimer = setTimeout(...);
-// in the outer cleanup:
-return () => {
-  cancelled = true;
-  if (bannerTimer) clearTimeout(bannerTimer);
-};
-```
-
-### 2. "Mark as Read" doesn't actually mark as read
-`handleMarkAsRead` only clears the local snapshot + banner. No `api.ackMessage` call. If the user is scrolled up and clicks the button:
-- Local UI clears ✅
-- Server still has stale `last_read_message_id` ❌
-- Sidebar badge on other clients / next session reload reappears
-
-Fix: call `api.ackMessage(channelId, lastMessage.id)` before clearing the snapshot.
-
-### 3. Wrapping every message in an extra `<div>` may regress layout
-```tsx
-return (
-  <div key={msg.id}>
-    {showDivider && <div ref={dividerRef}><NewMessagesDivider /></div>}
-    <MessageItem ... />
-  </div>
-);
-```
-Previously `MessageItem` was a direct flex child of `.scroll-container`. Now it's nested in an extra block `div`. Any sibling-selector CSS (`MessageItem + MessageItem`, gap, group-start margin rules, hover-pill positioning that relies on parent geometry) will silently break. Worth spot-checking message spacing/grouping visually.
-
-Cheap fix: use a fragment with the divider hoisted before the item:
-```tsx
-return showDivider ? (
-  <Fragment key={msg.id}>
-    <div ref={dividerRef}><NewMessagesDivider /></div>
-    <MessageItem message={msg} isGroupStart />
-  </Fragment>
-) : (
-  <MessageItem key={msg.id} message={msg} isGroupStart={isGroupStart} />
-);
-```
+**Verdict:** ✅ **All 8 R1 items addressed.** Code is approvable after addressing 2 small follow-ups noted below. Nice, surgical implementation.
 
 ---
 
-## 🟡 Correctness / state edges
+## R1 Issue Status
 
-### 4. Snapshot only taken when `unreadChannels[channelId]` is true
-```ts
-if (store.unreadChannels[channelId]) {
-  store.snapshotChannelOpen(channelId);
-}
-```
-That's the intended path (don't show divider when there's nothing new), but it means a channel that becomes unread *after* mount (e.g., new message arrives while user is in the channel but scrolled up) never gets a snapshot → **no NEW divider for messages arriving mid-session.** The banner handles count, but the in-thread divider line is missing.
-
-Consider snapshotting lazily the first time `wasNearBottomRef.current === false` and a new message arrives.
-
-### 5. `unreadInfo` count keeps accumulating after dismiss-via-scroll
-When the user scrolls to bottom, `showBanner` flips to false but `unreadInfo` is left intact. If they scroll up and a new message arrives:
-```ts
-const count = (prev?.count ?? 0) + newCount;
-```
-…now the banner shows e.g. "12 new messages" when only 1 actually arrived since the last bottom hit. Reset `unreadInfo` to `null` (or zero) when banner is hidden by scroll, not just on mark-as-read.
-
-### 6. `channelOpenReadId` is reactive, but `dividerBeforeIndex` is recomputed in render
-```ts
-let dividerBeforeIndex = -1;
-if (channelOpenReadId) {
-  dividerBeforeIndex = messages.findIndex((m) => m.id > channelOpenReadId);
-}
-```
-`messages.findIndex` runs O(n) on **every** render (typing indicator, hover, reaction, scroll causing parent re-render via context, etc.). For a 500-message channel and a chatty UI this is wasted work. Wrap in `useMemo([messages, channelOpenReadId])`.
-
-While there: message IDs look comparable with `>` (string compare). If IDs are ULIDs/snowflakes-as-strings this works; if they ever become numeric strings of unequal length (`"9" > "10"`), the divider will land in the wrong spot. Worth a comment confirming the ID format, or use a sequence/timestamp field instead.
-
-### 7. `onScroll` effect re-binds on every `showBanner` change
-```ts
-useEffect(() => { ... }, [showBanner]);
-```
-Each `showBanner` toggle removes/re-adds the scroll listener. Not catastrophic, but easy to avoid by reading `showBanner` from a ref or moving the hide-on-bottom logic into the same place that sets `wasNearBottomRef`.
+| # | Severity | Issue | Status | Evidence |
+|---|----------|-------|--------|----------|
+| 1 | 🔴 | setTimeout leak / cross-channel pollution | ✅ Fixed | `autoHideTimerRef` stored, cleared on channel switch effect-cleanup AND before scheduling new timer AND inside its own callback. |
+| 2 | 🔴 | Mark as Read didn't ack server | ✅ Fixed | `handleMarkAsRead` now calls `api.ackMessage(channelId, lastMessage.id)` and updates `lastAckedIds` + `clearUnread`. |
+| 3 | 🔴 | Banner direction mismatch (catchup vs live) | ✅ Fixed | `bannerModeRef` tracks `"catchup" \| "live"`. Click → `scrollToDivider()` for catchup, `scrollToBottom()` for live. Arrow + text differ accordingly (`↑ … since HH:MM — Jump` vs `↓ N new messages`). |
+| 4 | 🔴 | Initial scroll race hides banner | ✅ Fixed (mostly) | `isInitialScrollRef` guard skips the first scroll event after the programmatic `scrollIntoView("instant")`. See **Follow-up A** below. |
+| 5 | 🟡 | Extra wrapper div | ✅ Fixed | Top-level uses `<Fragment>` (`<>…</>`), per-row uses `Fragment` keyed by msg.id. |
+| 6 | 🟡 | unreadInfo accumulates after dismiss-via-scroll | ✅ Fixed | onScroll handler clears both `showBanner` and `unreadInfo` when user reaches bottom; banner click handler also resets `unreadInfo`. |
+| 7 | 🟡 | findIndex O(n) every render | ✅ Fixed | `dividerBeforeIndex` wrapped in `useMemo([messages, channelOpenReadId])`. Placed before early returns — correctly respects Rules of Hooks. |
+| 8 | 🟡 | onScroll re-binds on showBanner change | ✅ Fixed | `showBannerRef` mirror used inside handler; effect deps narrowed to `[channelId]`. |
 
 ---
 
-## 🟢 Nits
+## Follow-ups (minor — non-blocking)
 
-- The `5000ms` auto-hide is a magic number; pull it to a named constant alongside `NEAR_BOTTOM_THRESHOLD`.
-- `bannerWrapperStyle` has `position: relative; zIndex: 10` but the banner is rendered *outside* `scrollContainerRef` as a sibling, so `position: relative` doesn't do anything here. Either drop it or change to `absolute` if you wanted it to overlay the list (current placement pushes layout — fine, but document the choice).
-- `aria-label="New messages"` on the divider is good. The banner has `role="button" tabIndex={0}` but **no `onKeyDown`** — keyboard users can focus it but can't activate it. Add `Enter`/`Space` handling.
-- The dismiss `<button>` lives inside a `role="button"` div → nested interactive elements. Accessibility tools will complain. Make the outer container a real `<button>` or restructure (header text as button, dismiss as separate sibling button).
-- `prev` declared with `let` reuses the closure variable from the parent map's `(msg, i)` — fine but could be `const prev = i > 0 ? ...`.
+### A. 🟡 `isInitialScrollRef` may swallow a real user scroll
+`isInitialScrollRef.current = true` is set unconditionally before the rAF, but the `scrollIntoView("instant")` does **not** fire a scroll event when the container is already at the bottom (or when there is no overflow at all — short channel). In that case the flag stays `true` until the user's first manual scroll, which then gets eaten as if it were the initial programmatic one.
+
+**Suggested fix (one of):**
+- Clear the flag from a `setTimeout(…, 0)` / second rAF after the scroll so the guard is one-shot in time, not one-shot per event:
+  ```ts
+  requestAnimationFrame(() => {
+    scrollToBottom("instant");
+    setShowBanner(true);
+    requestAnimationFrame(() => { isInitialScrollRef.current = false; });
+    // …timer setup…
+  });
+  ```
+- Or only set the guard when `container.scrollHeight > container.clientHeight`.
+
+Low-impact (only manifests on short or already-bottom channels), but easy to fix.
+
+### B. 🟡 `bannerModeRef` is a ref, not state — banner text relies on a piggy-backed re-render
+`bannerText` is computed during render from `bannerModeRef.current`. Today this is fine because every transition that changes the mode also calls `setUnreadInfo`/`setShowBanner`, triggering a render. If a future edit ever sets the mode without also calling a setter, the banner will show stale arrow/text with no warning.
+
+**Suggested:** promote to `useState<BannerMode>("catchup")`. The single-state-update batching cost is negligible and the invariant becomes self-enforcing. Not required for this PR.
+
+### C. 🟢 Nit — `handleMarkAsRead` swallows ack errors silently
+`api.ackMessage(...).catch(() => {})` — consistent with the rest of the file, but if the server ack fails the sidebar/local state will diverge until next event. Consider at minimum `console.warn`. Non-blocking, matches existing pattern.
+
+### D. 🟢 Nit — `bannerModeRef` reset on channel switch but not on dismiss-via-scroll
+After live mode → user scrolls to bottom → `unreadInfo=null`, `showBanner=false`, but `bannerModeRef.current` stays `"live"`. If new messages arrive while still scrolled up… mode is still "live", which is actually correct. So this is fine — flagging only to confirm the design is intentional.
 
 ---
 
-## ✅ What's good
+## New Code — Fresh Findings
 
-- Snapshot lifecycle (snapshot on mount-if-unread, clear on unmount) is the right shape.
-- `channelOpenReadIds` carved out as a separate field from `readStates` keeps the "I have unread" semantic clean and survives the auto-ack overwriting `readStates`.
-- The gateway-subscriptions comment explains the dual-ack responsibility — future readers will thank you.
-- `isGroupStart={showDivider || isGroupStart}` is a nice touch so the first unread message gets full author header.
+1. **Effect ordering on channel open — verified safe.** The snapshot effect and the fetch effect both depend on `[channelId]`. React runs them top-to-bottom, so the `snapshotChannelOpen` call lands before `fetchMessages().then(...)` reads `channelOpenReadIds[channelId]`. The `getState()` access inside `.then` is correct (avoids stale closure).
+
+2. **`snapshotChannelOpen` only fires when channel was unread.** Good — prevents producing a `NEW` divider on a fully-read channel.
+
+3. **`removeChannel` now also strips `channelOpenReadIds`.** Good cleanup, prevents memory leak on channel deletion.
+
+4. **`isGroupStart={showDivider || isGroupStart}`** — neat: forces the first post-divider message into its own group visually. ✅
+
+5. **`position: "relative"` added to `listStyle`** — used so… actually the banner is rendered as a **sibling** to the scroll container (outside the `<div ref={scrollContainerRef}>`), not inside it. So `position: relative` on `listStyle` isn't doing anything for the banner. Either remove it or move the banner inside the scroll container if sticky-over-messages was the intent. Currently it sits below the list in the flex column — works, but the relative position is dead code.
+
+6. **Gateway subscription auto-ack still in place.** Comment correctly documents the dual ack path (gateway for active-channel-bottom; MessageList for scroll/explicit). No race observed: both call `api.ackMessage` with monotonically increasing ids; server should be idempotent on duplicate/older ids.
+
+7. **Banner accessibility:** `role="button" tabIndex={0}` on the outer banner div is good, but there's no `onKeyDown` handler — Enter/Space won't trigger it. Minor a11y gap (matches codebase patterns, non-blocking).
 
 ---
 
-## Recommended path
-1. Fix #1, #2, #3 (real bugs / regressions).
-2. Memoize #6 and decide on string-ID comparison safety.
-3. The rest can be follow-ups but #5 will visibly confuse users, worth grabbing now.
+## Approval
+
+✅ **Approve with minor follow-ups.** R1 must-fix items are all resolved with sensible patterns. Items A/B/C/E/G are quality-of-life improvements — fine to land as a follow-up PR or squash into this one. No regressions detected vs R1.

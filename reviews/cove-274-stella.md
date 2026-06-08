@@ -1,92 +1,67 @@
-# Stella Review — kagura-agent/cove#274
-
-PR: feat: message-level unread indicators — NEW divider + banner (closes #193)
-Reviewer: 🌟 Stella
-Date: 2026-06-08
+# R2 Review — kagura-agent/cove#274 (Stella)
 
 ## Verdict
 
-**Changes requested.** The UI direction is good and the client build/typecheck passes after wiring the worktree dependencies, but I found two correctness issues around live unread handling / cleanup that can make the banner misleading or disappear at the wrong time.
+**Request changes.** Most R1 items were addressed in the visible diff, but the timer/state pollution fix is incomplete: the new `requestAnimationFrame` path can still run after a channel switch and recreate stale banner/timer state. I also found one fresh product-correctness gap for channels with no previous read cursor.
 
-Validation performed:
-- `gh pr diff 274 --repo kagura-agent/cove`
-- Checked PR worktree at `31785f5`
-- `pnpm -F @cove/client exec tsc -p tsconfig.json --noEmit --pretty false` ✅ after restoring the local workspace symlink for `@cove/shared` in the temporary worktree
-- `pnpm -F @cove/client lint` ✅ existing warning only in `useWebSocketStore.ts`
+## R1 Follow-up Checklist
 
-## Findings
+### 🔴 Must Fix
 
-### 1. Live “new messages” banner has no divider target, so Jump can be a no-op
+1. **setTimeout leak / cross-channel state pollution** — ❌ **Not fully addressed; escalated.**
+   - The timeout is stored/cleared, but the `requestAnimationFrame` scheduled at `MessageList.tsx:162-176` is not cancelled and does not re-check `cancelled` inside the callback. If the user switches channels after fetch resolves but before the RAF runs, the stale callback can still call `scrollToBottom`, `setShowBanner(true)`, and create a new timeout after cleanup already ran.
 
-**Severity: High**
+2. **Mark as Read doesn't call `ackMessage`** — ✅ Addressed.
+   - `handleMarkAsRead` now calls `api.ackMessage(channelId, lastMessage.id)` at `MessageList.tsx:289-295` and clears local unread state.
 
-When the currently active channel receives messages while the user is scrolled up, the new-message effect sets `unreadInfo` and `showBanner`:
+3. **Banner direction mismatch** — ✅ Mostly addressed.
+   - `bannerModeRef` distinguishes `catchup` vs `live`; catch-up jumps to the divider and live jumps to bottom (`MessageList.tsx:270-280`, `317-321`).
 
-- `packages/client/src/components/MessageList.tsx:184-200`
+4. **Initial scroll race** — ✅ Mostly addressed, but related stale RAF caveat above.
+   - The first programmatic scroll event is guarded with `isInitialScrollRef` (`MessageList.tsx:160-164`, `209-214`).
 
-But the divider is only rendered from `channelOpenReadId`, which is only snapshotted when the channel is already unread at open time:
+### 🟡 Should Fix
 
-- snapshot only on open unread: `MessageList.tsx:102-113`
-- divider placement only from `channelOpenReadId`: `MessageList.tsx:250-254`
-- banner click only scrolls to `dividerRef`: `MessageList.tsx:226-228`
+5. **Extra wrapper div may break CSS layout** — ✅ Addressed.
+   - Uses `Fragment` around divider + message (`MessageList.tsx:332-336`).
 
-For the live active-channel case, there is usually no `channelOpenReadId`, so `dividerBeforeIndex === -1`, `dividerRef.current` is null, and clicking “Jump” hides the banner without scrolling anywhere.
+6. **`unreadInfo` count accumulates after dismiss-via-scroll** — ✅ Addressed.
+   - Scroll-to-bottom and banner click both clear `unreadInfo` (`MessageList.tsx:216-220`, `277-279`).
 
-This is especially visible because the code explicitly creates the banner for this scenario (`wasNearBottomRef.current === false`), but does not create the corresponding divider anchor.
+7. **`findIndex` O(n) every render** — ✅ Addressed.
+   - Divider index is memoized (`MessageList.tsx:299-303`).
 
-Suggested fix:
-- Track a local `liveFirstUnreadId` / `firstUnseenMessageId` when the first message arrives while scrolled up.
-- Render the divider before that message when there is no channel-open snapshot.
-- Have banner click scroll to that divider; only hide the banner after a successful scroll / after reaching bottom.
+8. **`onScroll` re-binds on `showBanner` change** — ✅ Addressed.
+   - `showBannerRef` is used and the scroll listener deps no longer include `showBanner` (`MessageList.tsx:105-107`, `205-224`).
 
-### 2. Auto-hide timer is not cleaned up and can hide the next channel’s banner after rapid switching
+## Blocking Findings
 
-**Severity: Medium**
+### 🔴 Must Fix: stale RAF can still leak banner/timer state across channel switches
 
-The initial unread-open path schedules a 5s timer inside `requestAnimationFrame`:
+**Where:** `packages/client/src/components/MessageList.tsx:162-176`
 
-- `packages/client/src/components/MessageList.tsx:138-146`
+The R2 fix clears `autoHideTimerRef` during cleanup, but the timeout is created inside an uncancelled `requestAnimationFrame`. This leaves a race:
 
-That timeout is never stored or cleared. If a user opens unread channel A, the timeout is scheduled, then quickly switches to unread channel B, the old timer can still call `setShowBanner(false)` on the reused `MessageList` component instance and hide B’s banner.
+1. Channel A fetch resolves and schedules the RAF at lines 162-176.
+2. User quickly switches to Channel B before the RAF executes.
+3. Cleanup runs, but there is no timeout yet to clear and the RAF id is not cancelled.
+4. The stale RAF from Channel A executes in the reused component instance, scrolling the current DOM, setting `showBanner`, and creating a fresh timeout using Channel A unread info.
 
-The fetch effect’s `cancelled` flag only protects the fetch continuation; it does not protect the later timeout callback after it has already been scheduled.
+This is the same class of cross-channel state pollution as R1 #1, just moved one async boundary earlier.
 
-Suggested fix:
-- Store the timeout id in a ref and clear it in the `[channelId]` cleanup.
-- Also guard the callback with the channel id / a generation token before mutating state.
+**Recommendation:** store the RAF id in a ref and cancel it on cleanup, and also re-check `cancelled` / current `channelId` inside every RAF before setting state or creating timers.
 
-### 3. First visit to an unread/non-empty channel does not show the divider/banner
+### 🔴 Must Fix: channels with no prior read cursor never show message-level unread indicators
 
-**Severity: Medium**
+**Where:** `packages/client/src/stores/useReadStateStore.ts:55-60`, `packages/client/src/components/MessageList.tsx:117-123`, `150-181`
 
-`initReadStates` marks a channel unread when it has `last_message_id` and `last_read_message_id !== last_message_id`, including the first-visit case where `last_read_message_id` is null:
+`initReadStates` marks a channel unread when `last_read_message_id` is `null` and `last_message_id` exists, but `snapshotChannelOpen` only writes `channelOpenReadIds[channelId]` when `get().readStates[channelId]` exists. For a user who has never acked/read that channel before, `current` is `undefined`, so no snapshot is stored. Then `MessageList` sees no `openReadId` and takes the plain `scrollToBottom("instant")` path, with no NEW divider and no catch-up banner.
 
-- `packages/client/src/stores/useReadStateStore.ts:24-36`
+That means a fully unread channel — arguably the most important unread case — silently loses the new message-level indicators.
 
-But `snapshotChannelOpen` only writes a snapshot if `readStates[channelId]` exists:
+**Recommendation:** represent the “no previous cursor” case explicitly (e.g. `null` snapshot) and treat it as “divider before first message / unread count = all loaded messages,” or snapshot enough metadata to compute that case without relying on a truthy message id.
 
-- `useReadStateStore.ts:55-60`
+## Non-blocking Notes
 
-So first visit to an unread channel with existing messages has `unreadChannels[channelId] === true` but no snapshot. The fetch path then sees no `openReadId`, scrolls to bottom, auto-acks the last message, and never shows the NEW divider/banner.
-
-If this is intentional (“no prior read boundary means no divider”), it should be made explicit. If not, use a sentinel for “before first loaded message” or compute the first-visit divider as index 0.
-
-### 4. Scroll-to-bottom hides the banner but does not clear the divider snapshot
-
-**Severity: Low / UX**
-
-The scroll handler comment says:
-
-> If user scrolled to bottom, hide banner and clear divider
-
-But it only hides the banner:
-
-- `packages/client/src/components/MessageList.tsx:173-178`
-
-The divider snapshot remains in `channelOpenReadIds` until unmount or “Mark as Read”. If the intended behavior is “divider remains as a session marker”, the comment should be corrected. If the intended behavior is to clear after the user reaches bottom, also call `clearChannelOpenSnapshot(channelId)` and clear `unreadInfo` when near-bottom.
-
-## Non-blocking notes
-
-- The O(n) `findIndex` during render is fine with the current `limit=50`; no performance concern unless message windows grow substantially.
-- The banner `div role="button" tabIndex={0}` is not keyboard-activatable. Add `onKeyDown` for Enter/Space or make it a real `<button>` if accessibility matters for this pass.
-- The gateway comment says “MessageList handles ack on scroll-to-bottom”, but current `MessageList` only acks after initial load, and gateway still acks every incoming active-channel message immediately. That may be acceptable for current Cove semantics, but it conflicts with unread UX for users who are scrolled up.
+- `handleMarkAsRead` swallows `ackMessage` errors (`catch(() => {})`) after optimistically clearing local UI. Existing code does this elsewhere too, so I’m not blocking on it, but a visible retry/log path would make this feature easier to debug.
+- The clickable banner `div` has `role="button"` and `tabIndex={0}` but no keyboard handler. Consider handling Enter/Space for accessibility.
