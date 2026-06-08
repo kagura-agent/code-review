@@ -1,61 +1,61 @@
-# Stella Review — PR #255 Round 4
+# Stella Review — Cove PR #255 (Round 6)
 
-## Verdict: ⚠️ Needs Changes
+Verdict: ⚠️ Needs Changes
 
-The duplicate-message blocker from Round 3 is fixed in the current diff, and the refactor still looks structurally sound. One previous Round 3 issue is only partially addressed: `sendTyping` now has a 3s fetch timeout, but it can still enter the shared 429 retry loop and wait up to ~120s across retry-after sleeps. Per the re-review escalation rule, this remains a blocker.
+## Re-review of R5 issue
 
-## Previous Issues Status
+### ✅ Addressed: POST/PATCH no longer retry on 5xx/network errors
 
-### 🔴 M1: POST `sendMessage` retries on 5xx/network → duplicate user messages
-**Status: Addressed.**
+The R5 critical control-flow bug in `packages/plugin/src/rest-client.ts` is fixed:
 
-- `packages/plugin/src/rest-client.ts:31` adds an idempotency check.
-- `packages/plugin/src/rest-client.ts:51-59` retries 5xx only for idempotent methods.
-- `packages/plugin/src/rest-client.ts:69-77` retries network errors only for idempotent methods.
-- `sendMessage()` uses POST at `packages/plugin/src/rest-client.ts:110-114`, so ambiguous 5xx/network failures now fail fast instead of replaying potentially committed sends.
+- `POST`/`PATCH` 5xx now reaches `throw lastError` at `rest-client.ts:59`, then the `catch` rethrows at `rest-client.ts:78` because `isIdempotent === false`.
+- Network errors for non-idempotent methods also rethrow at `rest-client.ts:78`.
+- Tests were added in `packages/plugin/src/rest-client.test.ts`:
+  - `POST (sendMessage) does NOT retry on 500`
+  - `PATCH (editMessage) does NOT retry on 500`
+  - `POST does NOT retry on fetch error`
 
-429 retry remains allowed for all methods (`packages/plugin/src/rest-client.ts:43-49`), which matches the previous review's accepted assumption that Cove's 429 means the request was not processed.
+I also ran:
 
-### 🔴 M2 escalated: `sendTyping` is still not true zero-retry best-effort
-**Status: Partially addressed, still needs changes.**
+- `pnpm -F openclaw-cove test -- --runInBand` → ✅ 53 tests passed
+- `pnpm -F openclaw-cove check` → ✅ TypeScript passed
 
-`sendTyping()` now passes a 3s timeout signal:
+## Fresh findings
 
-- `packages/plugin/src/rest-client.ts:134-136`
+### 🟡 Idempotent 4xx HTTP errors are retried as if they were network errors
 
-But the request helper still applies the generic 429 retry loop before it returns:
+File: `packages/plugin/src/rest-client.ts:62-78`
 
-- `packages/plugin/src/rest-client.ts:43-49`
+The `!res.ok` branch throws ordinary `Error` objects inside the same `try` block:
 
-That sleep is not bounded by the passed `AbortSignal`, and the code does not check `attempt < MAX_RETRIES` before sleeping. A typing request that receives `429 Retry-After: 30` can still keep the typing promise alive through multiple 30s sleeps. That violates the requested Round 3 fix: **zero retries + 3s timeout for typing**.
+```ts
+if (!res.ok) {
+  const text = await res.text().catch(() => "");
+  throw new Error(`Cove API ${method} ${path} failed: ${res.status} ${text}`);
+}
+```
 
-Why this matters:
+That throw is immediately caught by the broad `catch` at line 69. For idempotent methods, the catch treats it like a retryable network error:
 
-- Typing is best-effort UX, not delivery-critical work.
-- `dispatch.ts` calls typing both as an early fire-and-forget cue and through `createTypingCallbacks` (`packages/plugin/src/dispatch.ts:129-136`). If the SDK awaits `start()`, a long 429 sleep can still delay or entangle dispatch behavior for something that should be disposable.
-- The 3s timeout only bounds the `fetch()`, not retry-after backoff sleeps.
+```ts
+if (isIdempotent && attempt < MAX_RETRIES) {
+  await backoff;
+  continue;
+}
+```
 
-Recommended fix: give `request()` per-call retry options, e.g. `{ retries: 0, timeoutMs: 3000, retry429: false }`, and call `sendTyping()` with all retries disabled. Alternatively, implement `sendTyping()` as a one-shot `fetch` with a 3s `AbortSignal.timeout(3000)` and no shared retry helper.
+Impact:
 
-## Fresh Review Notes
+- `GET /gateway` with `401`/`403`/`404` retries 4 total times instead of failing immediately.
+- `DELETE /messages/:id` with `404` retries with exponential backoff, delaying cleanup/fallback paths.
+- This can make auth/config mistakes look like transient network problems and adds unnecessary API traffic and user-visible latency.
 
-No additional correctness blockers found in the current diff.
+Expected behavior: only `429` and idempotent `5xx`/true fetch failures should retry. Non-429 `4xx` should fail immediately for all methods.
 
-Positive points:
+Suggested fix: keep HTTP response error handling outside the `try/catch` that is intended for fetch/network errors, or throw a typed HTTP error and have the catch rethrow non-retryable HTTP statuses immediately. Add a regression test such as `GET does NOT retry on 401/404` and/or `DELETE does NOT retry on 404`.
 
-- The channel orchestration vs dispatch extraction is clearer (`channel.ts` delegates to `dispatch.ts`).
-- The RESUME/reconnect split is sensible: `RESUMED` no longer aborts pending dispatches, while hard `READY` reconnect does.
-- HEARTBEAT now includes the last sequence number (`gateway-client.ts:310-315`).
-- `INVALID_SESSION` uses a current-socket guard before delayed IDENTIFY (`gateway-client.ts:153-158`).
-- 204 responses are handled correctly (`rest-client.ts:67`).
+## Notes
 
-## Verification
-
-Ran locally on fetched PR head `52865fa`:
-
-- `pnpm -F openclaw-cove test` ✅ 38 tests passed
-- `pnpm -F openclaw-cove check` ✅ TypeScript check passed
-
-## Rating
-
-⚠️ Needs Changes — fix `sendTyping` so it is truly zero-retry / bounded to 3s, including 429 retry-after handling.
+- The R5 duplicate-message blocker is resolved.
+- The dispatch extraction and gateway RESUME changes still look structurally sound in this diff.
+- I did not find a new critical duplicate-send path.

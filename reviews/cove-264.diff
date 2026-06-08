@@ -1,0 +1,475 @@
+diff --git a/packages/server/src/__tests__/migration.test.ts b/packages/server/src/__tests__/migration.test.ts
+index da79b0e..472b760 100644
+--- a/packages/server/src/__tests__/migration.test.ts
++++ b/packages/server/src/__tests__/migration.test.ts
+@@ -11,10 +11,10 @@ function tmpDb(): string {
+ }
+ 
+ describe("versioned migration system", () => {
+-  it("fresh DB gets user_version = 5", () => {
++  it("fresh DB gets user_version = 6", () => {
+     const db = initDb();
+     const version = db.pragma("user_version", { simple: true });
+-    expect(version).toBe(5);
++    expect(version).toBe(6);
+     db.close();
+   });
+ 
+@@ -100,7 +100,7 @@ describe("versioned migration system", () => {
+ 
+       const db = initDb(tmpFile);
+       const version = db.pragma("user_version", { simple: true });
+-      expect(version).toBe(5);
++      expect(version).toBe(6);
+ 
+       const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='read_states'").all();
+       expect(tables).toHaveLength(1);
+@@ -171,7 +171,7 @@ describe("versioned migration system", () => {
+       // ID should now be a snowflake
+       expect(String(msg.id)).toMatch(/^\d+$/);
+       const version = db.pragma("user_version", { simple: true });
+-      expect(version).toBe(5);
++      expect(version).toBe(6);
+       db.close();
+     } finally {
+       try { fs.unlinkSync(tmpFile); } catch {}
+@@ -197,7 +197,7 @@ describe("scenes→channels migration guard", () => {
+       expect(rows[0].name).toBe("Scene1");
+ 
+       const version = db2.pragma("user_version", { simple: true });
+-      expect(version).toBe(5);
++      expect(version).toBe(6);
+       db2.close();
+     } finally {
+       try { fs.unlinkSync(tmpFile); } catch {}
+@@ -319,7 +319,7 @@ describe("island→discord schema migration", () => {
+       expect(rows[0].topic).toBe("Living room");
+ 
+       const version = db2.pragma("user_version", { simple: true });
+-      expect(version).toBe(5);
++      expect(version).toBe(6);
+ 
+       db2.close();
+     } finally {
+@@ -391,7 +391,7 @@ describe("V2→V3 migration (UUID→Snowflake)", () => {
+       const db = initDb(tmpFile);
+ 
+       // Version should be 3
+-      expect(db.pragma("user_version", { simple: true })).toBe(5);
++      expect(db.pragma("user_version", { simple: true })).toBe(6);
+ 
+       // Guild ID should be a snowflake (numeric string)
+       const guild = db.prepare("SELECT id, name FROM guilds WHERE name = 'TestGuild'").get() as { id: string; name: string };
+diff --git a/packages/server/src/__tests__/session-ttl.test.ts b/packages/server/src/__tests__/session-ttl.test.ts
+new file mode 100644
+index 0000000..751e69e
+--- /dev/null
++++ b/packages/server/src/__tests__/session-ttl.test.ts
+@@ -0,0 +1,162 @@
++import { describe, it, expect, beforeEach } from "vitest";
++import { createApp } from "../app.js";
++import { initDb, seedChannels } from "../db/schema.js";
++import { createRepos } from "../repos/index.js";
++import { SESSION_TTL_MS } from "../repos/users.js";
++import type Database from "better-sqlite3";
++import { GatewayDispatcher } from "../ws/dispatcher.js";
++import type { OAuthConfig } from "../routes/auth.js";
++import type { Repos } from "../repos/index.js";
++
++describe("Session TTL & Cleanup (#118)", () => {
++  let db: Database.Database;
++  let app: ReturnType<typeof createApp>;
++  let repos: Repos;
++  let defaultGuildId: string;
++
++  const oauthConfig: OAuthConfig = {
++    clientId: "test-client-id",
++    clientSecret: "test-client-secret",
++    redirectUri: "http://localhost:3000/api/auth/callback",
++  };
++
++  class TestDispatcher extends GatewayDispatcher {
++    constructor() {
++      super({ getById: () => null } as any);
++    }
++  }
++
++  beforeEach(() => {
++    db = initDb(":memory:");
++    defaultGuildId = (db.prepare("SELECT id FROM guilds ORDER BY created_at ASC LIMIT 1").get() as { id: string }).id;
++    seedChannels(db, defaultGuildId);
++    repos = createRepos(db);
++    app = createApp(db, repos, new TestDispatcher(), { oauth: oauthConfig });
++  });
++
++  // ─── Expired token returns 401 ────────────────────────────────────────
++
++  it("expired token returns 401 on /api/auth/me", async () => {
++    const now = Date.now();
++    const expiredAt = now - 1000; // already expired
++    db.prepare(
++      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
++    ).run("expired-user", "ExpiredUser", null, 0, null, "expired-token", now, now, expiredAt);
++    db.prepare(
++      "INSERT OR IGNORE INTO guild_members (guild_id, user_id, nick, roles, joined_at) VALUES (?, ?, ?, ?, ?)"
++    ).run(defaultGuildId, "expired-user", null, "[]", now);
++
++    const res = await app.request("/api/auth/me", {
++      headers: { Authorization: "Bearer expired-token" },
++    });
++    expect(res.status).toBe(401);
++
++    // Verify the user row was deleted (lazy cleanup)
++    const row = db.prepare("SELECT id FROM users WHERE id = ?").get("expired-user");
++    expect(row).toBeUndefined();
++  });
++
++  // ─── Bot token (expires_at=null) never expires ────────────────────────
++
++  it("bot token with null expires_at never expires", async () => {
++    const now = Date.now();
++    db.prepare(
++      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
++    ).run("bot-user", "BotUser", null, 1, null, "bot-token", now, now, null);
++    db.prepare(
++      "INSERT OR IGNORE INTO guild_members (guild_id, user_id, nick, roles, joined_at) VALUES (?, ?, ?, ?, ?)"
++    ).run(defaultGuildId, "bot-user", null, "[]", now);
++
++    const res = await app.request("/api/auth/me", {
++      headers: { Authorization: "Bot bot-token" },
++    });
++    expect(res.status).toBe(200);
++    const data = await res.json();
++    expect(data.id).toBe("bot-user");
++    expect(data.bot).toBe(true);
++    expect(data.expires_at).toBeNull();
++  });
++
++  // ─── Cleanup removes expired but keeps valid ──────────────────────────
++
++  it("cleanupExpired removes expired sessions but keeps valid ones", () => {
++    const now = Date.now();
++
++    // Expired human user
++    db.prepare(
++      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
++    ).run("stale-user", "StaleUser", null, 0, null, "stale-token", now, now, now - 1000);
++
++    // Valid human user (expires in the future)
++    db.prepare(
++      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
++    ).run("fresh-user", "FreshUser", null, 0, null, "fresh-token", now, now, now + SESSION_TTL_MS);
++
++    // Bot user (never expires)
++    db.prepare(
++      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
++    ).run("bot-user", "BotUser", null, 1, null, "bot-token-2", now, now, null);
++
++    const deleted = repos.users.cleanupExpired();
++    expect(deleted).toBe(1);
++
++    // Stale user should be gone
++    expect(db.prepare("SELECT id FROM users WHERE id = ?").get("stale-user")).toBeUndefined();
++
++    // Fresh user and bot should remain
++    expect(db.prepare("SELECT id FROM users WHERE id = ?").get("fresh-user")).toBeTruthy();
++    expect(db.prepare("SELECT id FROM users WHERE id = ?").get("bot-user")).toBeTruthy();
++  });
++
++  // ─── create() sets expires_at correctly ───────────────────────────────
++
++  it("create() sets expires_at for human users and null for bots", () => {
++    const before = Date.now();
++    const human = repos.users.create({ username: "Human", bot: false }, defaultGuildId);
++    const bot = repos.users.create({ username: "Robot", bot: true }, defaultGuildId);
++    const after = Date.now();
++
++    const humanRow = db.prepare("SELECT expires_at FROM users WHERE id = ?").get(human.id) as { expires_at: number | null };
++    const botRow = db.prepare("SELECT expires_at FROM users WHERE id = ?").get(bot.id) as { expires_at: number | null };
++
++    expect(humanRow.expires_at).toBeGreaterThanOrEqual(before + SESSION_TTL_MS);
++    expect(humanRow.expires_at).toBeLessThanOrEqual(after + SESSION_TTL_MS);
++    expect(botRow.expires_at).toBeNull();
++  });
++
++  // ─── refreshTTL extends session ───────────────────────────────────────
++
++  it("refreshTTL updates expires_at for non-bot users", () => {
++    const now = Date.now();
++    const oldExpiresAt = now + 1000; // about to expire
++    db.prepare(
++      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
++    ).run("ttl-user", "TTLUser", null, 0, null, "ttl-token", now, now, oldExpiresAt);
++
++    repos.users.refreshTTL("ttl-user");
++
++    const row = db.prepare("SELECT expires_at FROM users WHERE id = ?").get("ttl-user") as { expires_at: number };
++    expect(row.expires_at).toBeGreaterThan(oldExpiresAt);
++    expect(row.expires_at).toBeGreaterThanOrEqual(Date.now() + SESSION_TTL_MS - 1000);
++  });
++
++  // ─── /api/auth/me returns expires_at ──────────────────────────────────
++
++  it("/api/auth/me returns expires_at in response", async () => {
++    const now = Date.now();
++    const expiresAt = now + SESSION_TTL_MS;
++    db.prepare(
++      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
++    ).run("me-user", "MeUser", null, 0, null, "me-token", now, now, expiresAt);
++    db.prepare(
++      "INSERT OR IGNORE INTO guild_members (guild_id, user_id, nick, roles, joined_at) VALUES (?, ?, ?, ?, ?)"
++    ).run(defaultGuildId, "me-user", null, "[]", now);
++
++    const res = await app.request("/api/auth/me", {
++      headers: { Authorization: "Bearer me-token" },
++    });
++    expect(res.status).toBe(200);
++    const data = await res.json();
++    expect(data.expires_at).toBe(expiresAt);
++  });
++});
+diff --git a/packages/server/src/auth.ts b/packages/server/src/auth.ts
+index 1b3087b..7c2d05a 100644
+--- a/packages/server/src/auth.ts
++++ b/packages/server/src/auth.ts
+@@ -9,6 +9,7 @@ export interface AuthUser {
+   bot: boolean;
+   discriminator: string;
+   global_name: string | null;
++  expires_at: number | null;
+ }
+ 
+ export type AppEnv = { Variables: { botUser: AuthUser } };
+@@ -53,7 +54,7 @@ export function resolveUser(users: UsersRepo, authHeader: string | undefined, co
+ 
+   const user = users.findByToken(token);
+   if (!user) return undefined;
+-  return { id: user.id, username: user.username, avatar: user.avatar ?? null, bot: user.bot, discriminator: "0", global_name: null };
++  return { id: user.id, username: user.username, avatar: user.avatar ?? null, bot: user.bot, discriminator: "0", global_name: null, expires_at: user.expires_at };
+ }
+ 
+ export function requireAuth(users: UsersRepo) {
+diff --git a/packages/server/src/db/migrations/index.ts b/packages/server/src/db/migrations/index.ts
+index 2b0503b..8d9b0df 100644
+--- a/packages/server/src/db/migrations/index.ts
++++ b/packages/server/src/db/migrations/index.ts
+@@ -4,8 +4,9 @@ import { migrateV1ToV2 } from "./v2-read-states.js";
+ import { migrateV2ToV3 } from "./v3-snowflake.js";
+ import { migrateV3ToV4 } from "./v4-fk-constraints.js";
+ import { migrateV4ToV5 } from "./v5-last-message-id.js";
++import { migrateV5ToV6 } from "./v6-session-ttl.js";
+ 
+-const LATEST_VERSION = 5;
++const LATEST_VERSION = 6;
+ 
+ type MigrationFn = (db: Database.Database) => void;
+ 
+@@ -15,6 +16,7 @@ const migrations: Record<number, MigrationFn> = {
+   3: migrateV2ToV3,
+   4: migrateV3ToV4,
+   5: migrateV4ToV5,
++  6: migrateV5ToV6,
+ };
+ 
+ export function runMigrations(db: Database.Database): void {
+diff --git a/packages/server/src/db/migrations/v6-session-ttl.ts b/packages/server/src/db/migrations/v6-session-ttl.ts
+new file mode 100644
+index 0000000..eaec02f
+--- /dev/null
++++ b/packages/server/src/db/migrations/v6-session-ttl.ts
+@@ -0,0 +1,18 @@
++import Database from "better-sqlite3";
++import { addColumnIfMissing, hasColumn } from "./util.js";
++
++export function migrateV5ToV6(db: Database.Database): void {
++  // #118: Add expires_at column for session TTL
++  addColumnIfMissing(db, "users", "expires_at", "INTEGER DEFAULT NULL");
++
++  // Backfill existing human users with a 7-day grace period from their last update
++  // Guard: updated_at may not exist in very old schemas migrated from legacy
++  if (hasColumn(db, "users", "updated_at")) {
++    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
++    db.prepare(
++      "UPDATE users SET expires_at = updated_at + ? WHERE bot = 0 AND expires_at IS NULL"
++    ).run(SEVEN_DAYS_MS);
++  }
++
++  // Bot tokens get NULL expires_at (never expire) — already NULL by default
++}
+diff --git a/packages/server/src/db/schema.ts b/packages/server/src/db/schema.ts
+index f128566..eed985e 100644
+--- a/packages/server/src/db/schema.ts
++++ b/packages/server/src/db/schema.ts
+@@ -33,7 +33,8 @@ export function createAllTables(db: Database.Database): void {
+       google_id   TEXT UNIQUE,
+       email       TEXT UNIQUE,
+       created_at  INTEGER NOT NULL,
+-      updated_at  INTEGER NOT NULL
++      updated_at  INTEGER NOT NULL,
++      expires_at  INTEGER DEFAULT NULL
+     );
+ 
+     CREATE TABLE IF NOT EXISTS guild_members (
+@@ -147,7 +148,7 @@ export function seedUsers(db: Database.Database, guildId: string): void {
+   // Find or create users by username (don't use hardcoded string IDs)
+   const findByUsername = db.prepare("SELECT id FROM users WHERE username = ?");
+   const insert = db.prepare(
+-    "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
++    "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+   );
+   const upsertToken = db.prepare(
+     "UPDATE users SET token = ?, updated_at = ? WHERE id = ?"
+@@ -160,7 +161,8 @@ export function seedUsers(db: Database.Database, guildId: string): void {
+       return existing.id;
+     }
+     const id = generateSnowflake();
+-    insert.run(id, username, null, bot ? 1 : 0, null, userToken, now, now);
++    // Seed users: bots get expires_at=null (never expire); non-bots without tokens also get null
++    insert.run(id, username, null, bot ? 1 : 0, null, userToken, now, now, null);
+     return id;
+   };
+ 
+diff --git a/packages/server/src/index.ts b/packages/server/src/index.ts
+index c3724db..cb6130c 100644
+--- a/packages/server/src/index.ts
++++ b/packages/server/src/index.ts
+@@ -22,6 +22,13 @@ db.prepare("DELETE FROM invite_codes WHERE used_at IS NOT NULL AND used_at < ?")
+ 
+ console.log("🏝️  Database initialized and seeded");
+ 
++// #118: Periodic session TTL cleanup — remove expired human sessions every hour
++const SESSION_CLEANUP_INTERVAL_MS = 3_600_000; // 1 hour
++const sessionCleanupTimer = setInterval(() => {
++  repos.users.cleanupExpired();
++}, SESSION_CLEANUP_INTERVAL_MS);
++sessionCleanupTimer.unref();
++
+ const googleClientId = process.env["GOOGLE_CLIENT_ID"];
+ const googleClientSecret = process.env["GOOGLE_CLIENT_SECRET"];
+ const baseUrl = process.env["BASE_URL"] ?? `http://localhost:${PORT}`;
+diff --git a/packages/server/src/repos/users.ts b/packages/server/src/repos/users.ts
+index 6ddcef1..514e61d 100644
+--- a/packages/server/src/repos/users.ts
++++ b/packages/server/src/repos/users.ts
+@@ -2,6 +2,8 @@ import type Database from "better-sqlite3";
+ import crypto from "node:crypto";
+ import type { CoveAgent } from "@cove/shared";
+ 
++export const SESSION_TTL_MS = parseInt(process.env["SESSION_TTL_MS"] ?? "604800000", 10); // 7 days
++
+ interface UserRow {
+   id: string;
+   username: string;
+@@ -11,6 +13,7 @@ interface UserRow {
+   token: string | null;
+   created_at: number;
+   updated_at: number;
++  expires_at: number | null;
+ }
+ 
+ function toUser(row: UserRow): CoveAgent {
+@@ -38,10 +41,12 @@ export class UsersRepo {
+     const id = opts.id?.trim() || username.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+     const now = Date.now();
+     const token = crypto.randomUUID();
++    const isBot = opts.bot !== false;
++    const expiresAt = isBot ? null : now + SESSION_TTL_MS;
+ 
+     this.db.prepare(
+-      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+-    ).run(id, username, opts.avatar ?? null, opts.bot !== false ? 1 : 0, opts.bio ?? null, token, now, now);
++      "INSERT INTO users (id, username, avatar, bot, bio, token, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
++    ).run(id, username, opts.avatar ?? null, isBot ? 1 : 0, opts.bio ?? null, token, now, now, expiresAt);
+ 
+     // Auto-join the bot to the cove guild
+     this.db.prepare(
+@@ -87,8 +92,29 @@ export class UsersRepo {
+     return !!this.db.prepare("SELECT id FROM users WHERE id = ?").get(id);
+   }
+ 
+-  findByToken(token: string): CoveAgent & { bot: boolean } | null {
+-    const row = this.db.prepare("SELECT id, username, avatar, bot, bio FROM users WHERE token = ?").get(token) as UserRow | undefined;
+-    return row ? { id: row.id, username: row.username, avatar: row.avatar, bot: row.bot === 1, bio: row.bio, discriminator: "0" as const, global_name: null } : null;
++  findByToken(token: string): (CoveAgent & { bot: boolean; expires_at: number | null }) | null {
++    const row = this.db.prepare("SELECT id, username, avatar, bot, bio, expires_at FROM users WHERE token = ?").get(token) as (UserRow & { expires_at: number | null }) | undefined;
++    if (!row) return null;
++
++    // Check expiry: non-null expires_at that's in the past means expired
++    if (row.expires_at !== null && row.expires_at < Date.now()) {
++      this.db.prepare("DELETE FROM users WHERE token = ?").run(token);
++      return null;
++    }
++
++    return { id: row.id, username: row.username, avatar: row.avatar, bot: row.bot === 1, bio: row.bio, discriminator: "0" as const, global_name: null, expires_at: row.expires_at };
++  }
++
++  refreshTTL(id: string): void {
++    this.db.prepare(
++      "UPDATE users SET expires_at = ?, updated_at = ? WHERE id = ? AND bot = 0"
++    ).run(Date.now() + SESSION_TTL_MS, Date.now(), id);
++  }
++
++  cleanupExpired(): number {
++    const result = this.db.prepare(
++      "DELETE FROM users WHERE expires_at IS NOT NULL AND expires_at < ?"
++    ).run(Date.now());
++    return result.changes;
+   }
+ }
+diff --git a/packages/server/src/routes/auth.ts b/packages/server/src/routes/auth.ts
+index a95d086..f13a767 100644
+--- a/packages/server/src/routes/auth.ts
++++ b/packages/server/src/routes/auth.ts
+@@ -6,6 +6,7 @@ import type Database from "better-sqlite3";
+ import type { GuildsRepo } from "../repos/guilds.js";
+ import { SESSION_COOKIE, PENDING_COOKIE, COOKIE_OPTIONS, resolveUser } from "../auth.js";
+ import type { UsersRepo } from "../repos/users.js";
++import { SESSION_TTL_MS } from "../repos/users.js";
+ 
+ export interface OAuthConfig {
+   clientId: string;
+@@ -77,8 +78,10 @@ export function authRoutes(db: Database.Database, config: OAuthConfig, guildsRep
+ 
+     if (existing) {
+       const token = existing.token ?? crypto.randomUUID();
+-      db.prepare("UPDATE users SET username = ?, avatar = ?, google_id = ?, email = ?, token = ?, updated_at = ? WHERE id = ?")
+-        .run(googleUser.name, googleUser.picture, googleUser.id, googleUser.email, token, now, existing.id);
++      const isBot = (db.prepare("SELECT bot FROM users WHERE id = ?").get(existing.id) as { bot: number })?.bot === 1;
++      const expiresAt = isBot ? null : now + SESSION_TTL_MS;
++      db.prepare("UPDATE users SET username = ?, avatar = ?, google_id = ?, email = ?, token = ?, updated_at = ?, expires_at = ? WHERE id = ?")
++        .run(googleUser.name, googleUser.picture, googleUser.id, googleUser.email, token, now, expiresAt, existing.id);
+       setCookie(c, SESSION_COOKIE, token, COOKIE_OPTIONS);
+       return c.redirect("/");
+     }
+@@ -98,7 +101,7 @@ export function authRoutes(db: Database.Database, config: OAuthConfig, guildsRep
+     if (!user) {
+       return c.json({ message: "Authentication required", code: 40001 }, 401);
+     }
+-    return c.json({ id: user.id, username: user.username, avatar: user.avatar, bot: user.bot });
++    return c.json({ id: user.id, username: user.username, avatar: user.avatar, bot: user.bot, expires_at: user.expires_at });
+   });
+ 
+   app.get("/api/auth/pending-status", (c) => {
+diff --git a/packages/server/src/routes/register.ts b/packages/server/src/routes/register.ts
+index 741d68e..17505e7 100644
+--- a/packages/server/src/routes/register.ts
++++ b/packages/server/src/routes/register.ts
+@@ -4,6 +4,7 @@ import crypto from "node:crypto";
+ import { generateSnowflake } from "@cove/shared";
+ import type Database from "better-sqlite3";
+ import { SESSION_COOKIE, PENDING_COOKIE, COOKIE_OPTIONS } from "../auth.js";
++import { SESSION_TTL_MS } from "../repos/users.js";
+ 
+ /**
+  * Invite-code registration route.
+@@ -48,8 +49,8 @@ export function registerRoutes(db: Database.Database): Hono {
+       }
+ 
+       db.prepare(
+-        "INSERT INTO users (id, username, avatar, bot, bio, token, google_id, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+-      ).run(userId, pending.username, pending.avatar, 0, null, token, pending.google_id, pending.email, now, now);
++        "INSERT INTO users (id, username, avatar, bot, bio, token, google_id, email, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
++      ).run(userId, pending.username, pending.avatar, 0, null, token, pending.google_id, pending.email, now, now, now + SESSION_TTL_MS);
+ 
+       // #209: Atomic invite consumption — conditional UPDATE (race-safe within transaction)
+       const inviteResult = db.prepare(

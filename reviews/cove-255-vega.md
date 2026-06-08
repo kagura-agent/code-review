@@ -1,23 +1,14 @@
-# PR Review: #255 (Round 4) - Vega
+# Review of PR #255 (kagura-agent/cove) - Round 6
+**Reviewer**: 💫 Vega
 
-## Re-review of Escalated Issues
-
-- ✅ **M1: POST `sendMessage` retries on 5xx → duplicate user messages**
-  - **Status:** Fixed. 
-  - **Analysis:** In `rest-client.ts`, the `isIdempotent` check (`GET`, `DELETE`, `HEAD`, `PUT`) is now correctly used to gate retries for 5xx errors and network failures. Non-idempotent methods (`POST`, `PATCH`) will no longer retry on ambiguous failures, preventing duplicate messages. The `429 Retry-After` handling correctly remains universal, as it implies the server rejected the request before processing.
-
-- ✅ **M2: `sendTyping` inherits full ~50s retry budget**
-  - **Status:** Fixed.
-  - **Analysis:** `sendTyping` now invokes `requestVoid("POST", ...)` with a dedicated `AbortSignal.timeout(3000)`. Since it is a `POST` request, it is correctly excluded from 5xx/network retries. Furthermore, the 3s `AbortSignal` properly guarantees the total duration is capped, and `AbortError` is strictly thrown without retry, effectively overriding even `429` retry loops that exceed 3 seconds.
+## Re-review Protocol Checklist
+1. **POST/PATCH retry on 5xx/Network Error**: ✅ **Fixed**. The missing `throw lastError;` was correctly added to both the `res.status >= 500` block and the `catch (err)` block inside the retry loop in `packages/plugin/src/rest-client.ts` (lines 53 and 65). Control flow now correctly bails out for non-idempotent methods instead of falling through to the next loop iteration.
+2. **Unit Tests for POST 500**: ✅ **Fixed**. `rest-client.test.ts` now includes specific test cases `POST (sendMessage) does NOT retry on 500` and `POST does NOT retry on fetch error`, asserting `expect(mockFetch).toHaveBeenCalledTimes(1)` to strictly verify the absence of unintended retries.
 
 ## Fresh Review
-
-- **Architecture:** The extraction of `dispatch.ts` from `channel.ts` greatly improves readability, successfully decoupling the gateway event routing from the complex dispatch/draft lifecycle.
-- **Resiliency:** The addition of `RESUME`, `RECONNECT`, and `INVALID_SESSION` handling in `gateway-client.ts` is robust. The 5-second timeout for `sendResume` gracefully falling back to `sendIdentify` is a nice touch to prevent stalling.
-- **Re-exports:** Re-exporting `createAbortableDispatch` from `channel.ts` maintains backward compatibility for tests without bloating the gateway router.
+The rest of the PR remains exactly as evaluated in Round 5. All prior approvals stand (Gateway RESUME handling, 204 handling, `dispatch.ts` extraction, Retry-After bounds, typing timeout).
 
 ## Verdict
+✅ **Ready**
 
-**✅ Ready**
-
-Both blocking issues from Round 3 have been completely and elegantly resolved. The code is secure, well-structured, and ready to merge.
+The critical retry control-flow bug from Round 5 has been cleanly resolved with corresponding test coverage. Solid work.

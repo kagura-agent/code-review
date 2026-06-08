@@ -10,14 +10,14 @@
 ## R5 Findings Summary
 - **Consensus:** All 7 R4 items addressed ✅
 - **New (Stella+Vega):** stale expires_at return after sliding refresh (🟡)
-- **New (Stella):** WebSocket sessions outlive expired tokens (follow-up)
+- **New (Stella unique):** WebSocket sessions outlive expired tokens — gateway never rechecks after IDENTIFY (🟡, follow-up scope)
 - **New (Nova):** v6 backfill policy, test gaps (follow-up)
-- **Verdict:** ✅ Approve with minor fix
+- **Verdict:** ✅ Approve with minor fix (stale expires_at = 1 line)
 
-## Reviewer Performance (R5)
-- 🌟 Stella: Strongest this round — found WS session lifetime issue (unique, high impact). Ran tests locally.
-- 🌠 Nova: Best calibration — correctly identified all fixes, flagged backfill policy nuance. Clean approve.
-- 💫 Vega: Found stale expires_at independently. Concise, accurate.
+## Reviewer Performance (R1-R5)
+- 🌟 Stella: 5/5 rounds reliable. Unique finds: DELETE→data loss (R1), cookie reissue gap (R3), OAuth non-atomic (R4, +Nova), WS session lifetime (R5). Strongest lifecycle depth.
+- 🌠 Nova: 5/5 rounds reliable. Best calibration — first to approve in R3 and R5. Unique: non-sliding session (R2), bot footgun (R4), backfill hardcode (R4). Zero false positives.
+- 💫 Vega: 5/5 rounds reliable. Star find: sliding threshold math bug (R3 — negative threshold for short TTLs silently disables sliding). Stale expires_at (R5, +Stella).
 
 ## Cross-round Notes
 - 5 rounds total. R4 was a false alarm (code hadn't been pushed). Real progress R1→R3→R5.

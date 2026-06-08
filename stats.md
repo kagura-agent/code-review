@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
+_Last updated: 2026-06-08 08:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 103 | 100/103 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2). Last 44+ rounds ex-R2: clean |
-| 🌠 Nova | claude-opus-4.7 | 106 | 106/106 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 103 | 99/103 (96%) ↑ | Improving — last 50+ rounds: 100%. Early failures dragging average |
+| 🌟 Stella | gpt-5.5 | 107 | 104/107 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2). Last 48+ rounds ex-R2: clean |
+| 🌠 Nova | claude-opus-4.7 | 110 | 110/110 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 107 | 103/107 (96%) ↑ | Improving — last 54+ rounds: 100%. Early failures dragging average |
 
 ## Dimension Strengths (per reviewer)
 
@@ -24,10 +24,11 @@ _Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
 | Accessibility/A11y | ⭐⭐ | Focus ring WCAG violation (#191 R2), high-contrast mode note (#191 R3), send button aria-label (#191 R3) |
 | Lifecycle Analysis | ⭐⭐⭐ | Auto-ack dedup across mounts (#192 R3-R4), reload dedup gap (#192 R4), same-ms monotonicity (#192 R4) |
 | Auth/Cookie Security | ⭐⭐⭐ | pendingToken leaked to JS (#248 R1), NODE_ENV cookie Secure flag (#248 R2-R3), logout doesn't close WS (#248 R3), local dev NODE_ENV (#248 R3) |
-| Protocol/Gateway | ⭐⭐⭐ | **RESUMED aborts dispatches** (#255 R1 — unique insight: RESUME should NOT trigger dispatch abort), `resumed` vs `reconnect` event distinction, channel refetch lifecycle. **WS fallback gap** (#261 R1 — WS disconnect → sidebar loading forever) |
+| Protocol/Gateway | ⭐⭐⭐ | **RESUMED aborts dispatches** (#255 R1 — unique insight: RESUME should NOT trigger dispatch abort), `resumed` vs `reconnect` event distinction, channel refetch lifecycle. **WS fallback gap** (#261 R1 — WS disconnect → sidebar loading forever). **WS session outlives expired token** (#264 R5 — unique: gateway never rechecks after IDENTIFY) |
 | Control Flow Analysis | ⭐⭐⭐ | **try/catch control flow bug** (#255 R5 — caught that R4's "fix" was non-functional: POST still retried due to throw inside try). New dimension. |
+| Session/Auth Lifecycle | ⭐⭐⭐ | **Cookie reissue gap** (#264 R3 — sliding refresh updates DB but browser cookie keeps old maxAge), **OAuth non-atomic** (#264 R4 — two UPDATEs can leave stale expires_at on crash). Persistent escalation across 5 rounds. |
 
-**Stella's superpower:** Runs actual builds + reproduces bugs locally. Catches things that pure code reading misses. Deepest lifecycle analysis. Most persistent on escalation rules. Protocol-level reasoning. **New: control flow verification** — caught that an apparent fix didn't actually work (#255 R5).
+**Stella's superpower:** Runs actual builds + reproduces bugs locally. Catches things that pure code reading misses. Deepest lifecycle analysis. Most persistent on escalation rules. Protocol-level reasoning. Control flow verification. **New: session lifecycle depth** — #264 found WS session outliving expired tokens (gateway never rechecks), cookie reissue gap, OAuth non-atomic update.
 **Stella's weakness:** Sometimes over-scopes (flags out-of-PR architectural concerns as blocking). Strictest on escalation — same-ms monotonicity (#192 R4) flagged when practically harmless.
 
 ### 🌠 Nova (Claude Opus 4.7)
@@ -45,8 +46,9 @@ _Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
 | Auth Route Analysis | ⭐⭐⭐ | PUBLIC_PATHS signup break (#248 R1 — unique find), resolveUser duplication escalation (#248 R2-R3), cookie attribute assertions (#248 R3), CORS credentials concern (#248 R3) |
 | Retry/Idempotency | ⭐⭐⭐ | Retry-After NaN/unbounded (#255 R1), POST retry duplicates messages (#255 R2), sendTyping retry budget (#255 R2), INVALID_SESSION socket guard (#255 R1). #255 R5: independently confirmed try/catch control flow bug. |
 | Optimistic UI | ⭐⭐⭐ | **WS-only reconcile gap** (#261 R2 — REST reconciliation path), **empty guilds READY crash** (#261 R3 — unique find), nonce validation ordering (#261 R3), sidebar loading state diagnosis (#261 R2). Core contributor to #261's 4-round resolution. |
+| Session TTL/Auth | ⭐⭐⭐ | **Non-sliding session design flaw** (#264 R2 — fixed-window expiry without user activity renewal), **bot footgun** (#264 R4 — `opts.bot !== false` makes undefined=bot), **backfill hardcode** (#264 R4 — migration ignores SESSION_TTL_MS). Best calibration in #264: first to approve in R3 and R5. |
 
-**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security, accessibility, async lifecycle, and retry semantics. Zero false positives across 99 rounds.
+**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security, accessibility, async lifecycle, retry semantics, and session/auth design. Zero false positives across 110 rounds. **#264 calibration standout** — first to approve (R3, R5) while correctly flagging follow-ups.
 **Nova's weakness:** None significant. Occasionally verbose but content is consistently high quality.
 
 ### 💫 Vega (Gemini 3.1 Pro)
@@ -63,30 +65,31 @@ _Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
 | Runtime Error Detection | ⭐⭐⭐ | **204 JSON parsing retry storm** (#255 R2 — star find). `requestVoid` delegates to `request<T>()` which unconditionally calls `res.json()` on 204 No Content → SyntaxError → retry storm. Concrete, testable, would crash production. |
 | Rate Limiting | ⭐⭐ | **Token bucket math errors** (#261 R1), retry_after calculation issues. First reviewer to flag R1 in #261. Ready verdict in R3 when others still had blockers — isolated incident, returned correct in R4. |
 | Performance Optimization | ⭐⭐ | **broadcastToGuilds loop** (#263 R1 — joint with Nova), O(1) session lookup verification |
+| Session TTL Edge Cases | ⭐⭐⭐ | **Sliding threshold math bug** (#264 R3 — unique find: `TTL - 24h` goes negative for short TTLs → sliding silently fails), **stale expires_at return** (#264 R5 — in-memory value not updated after DB refresh), **cookie maxAge escalation** (#264 R2 — elevated from suggestion to Major). Strong on config-math edge cases. |
 
-**Vega's superpower:** Fast (~1m avg). Capable of star-quality finds when the bug is deterministic/logical (gen ID reuse #190, own-message-unread #192, 204 JSON parsing #255). Cleanest fix suggestions. Excellent edge-case tenacity (deleted-message tracked across 3 rounds). Strong on input sanitization/DoS vectors.
+**Vega's superpower:** Fast (~1m avg). Capable of star-quality finds when the bug is deterministic/logical (gen ID reuse #190, own-message-unread #192, 204 JSON parsing #255, sliding threshold math #264). Cleanest fix suggestions. Excellent edge-case tenacity (deleted-message tracked across 3 rounds). Strong on input sanitization/DoS vectors and config-math edge cases.
 **Vega's weakness:** Fewer unique finds overall but improving. Sometimes over-escalates severity (#191 R2 — ❌ Major for all 3 issues). One premature Ready in #261 R3 — isolated, not a pattern.
 
-## Unique Find Rate (last 10 PRs: #240 through #261)
+## Unique Find Rate (last 10 PRs: #248 through #264)
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 15 | ~120 | ~13% | → Stable |
-| 🌠 Nova | 19 | ~120 | ~16% | → Stable |
-| 💫 Vega | 14 | ~120 | ~12% | → Stable |
+| 🌟 Stella | 17 | ~140 | ~12% | → Stable |
+| 🌠 Nova | 21 | ~140 | ~15% | → Stable |
+| 💫 Vega | 16 | ~140 | ~11% | → Stable |
 
-**Notable unique finds (last 10 PRs: #240-#261):**
-- Stella: mobile sidebar scroll overlap (#240 R2), logout doesn't close WS (#248 R3), local dev NODE_ENV gap (#248 R3), presence mutation on GUILD_MEMBER (#252 R1), **RESUMED aborts dispatches** (#255 R1), channel refetch discarded (#255 R1), **dispatch.ts fallback paths use sendMessage** (#255 R3), **try/catch control flow verification** (#255 R5 — caught false-ready from R4), **WS fallback loading forever** (#261 R1), setMessages/pending race (#261 R4)
-- Nova: mobile sidebar safe-area padding (#240 R2), **PUBLIC_PATHS signup break** (#248 R1), cookie attribute test assertions (#248 R3), CORS credentials concern (#248 R3), guildless user stuck (#249 R1), **Retry-After NaN/unbounded** (#255 R1), **POST retry duplicates** (#255 R2), sendTyping retry budget (#255 R2), INVALID_SESSION socket guard (#255 R1), **empty guilds READY crash** (#261 R3), **nonce validation ordering** (#261 R3), retry/dismiss keyboard a11y (#261 R3), **broadcastToGuilds loop optimization** (#263 R1)
-- Vega: safe-area background gap (#240 R1), getComputedStyle render race (#240 R2), **parseCookies URIError DoS** (#248 R1), **localStorage XSS remnant** (#248 R2), null propagation clarity (#254 R2), **204 JSON parsing retry storm** (#255 R2), token bucket math (#261 R1), broadcastToGuilds loop (#263 R1)
+**Notable unique finds (last 10 PRs: #248-#264):**
+- Stella: logout doesn't close WS (#248 R3), local dev NODE_ENV gap (#248 R3), presence mutation on GUILD_MEMBER (#252 R1), **RESUMED aborts dispatches** (#255 R1), **dispatch.ts fallback paths use sendMessage** (#255 R3), **try/catch control flow verification** (#255 R5), **WS fallback loading forever** (#261 R1), setMessages/pending race (#261 R4), **cookie reissue gap** (#264 R3 — sliding refresh doesn't reissue browser cookie), **WS session outlives expired token** (#264 R5 — gateway never rechecks)
+- Nova: **PUBLIC_PATHS signup break** (#248 R1), CORS credentials concern (#248 R3), guildless user stuck (#249 R1), **Retry-After NaN/unbounded** (#255 R1), **POST retry duplicates** (#255 R2), **empty guilds READY crash** (#261 R3), **nonce validation ordering** (#261 R3), **broadcastToGuilds loop optimization** (#263 R1), **non-sliding session flaw** (#264 R2 — fixed-window expiry), **bot footgun** (#264 R4 — undefined=bot), **backfill hardcode** (#264 R4)
+- Vega: **parseCookies URIError DoS** (#248 R1), **localStorage XSS remnant** (#248 R2), null propagation clarity (#254 R2), **204 JSON parsing retry storm** (#255 R2), token bucket math (#261 R1), broadcastToGuilds loop (#263 R1), **sliding threshold math bug** (#264 R3 — negative threshold for short TTL), **cookie maxAge escalation** (#264 R2 — elevated to Major)
 
 ## Consensus Participation
 
 | Reviewer | Part of 2/3+ consensus | Solo dissent (correct) | Solo dissent (noise) |
 |----------|----------------------|----------------------|---------------------|
-| 🌟 Stella | 86% | 8 (WS scoping, presences, build-order, WS disconnect #176 R3, auto-ack dedup #192 R4, RESUMED abort semantics #255 R1, dispatch.ts fallback paths #255 R3, **try/catch control flow #255 R5**) | 1 (WS scoping over-scope #168) |
-| 🌠 Nova | 93% | 4 (ready when others flag, PUBLIC_PATHS #248 R1, POST retry idempotency #255 R2, **empty guilds READY #261 R3**) | 0 |
-| 💫 Vega | 85% | 6 (#125 R1, gen ID reuse #190 R4, own-message-unread #192 R2, parseCookies DoS #248 R1, localStorage XSS #248 R2, 204 JSON parsing #255 R2) | 1 (#261 R3 Ready while Stella+Nova found blockers — isolated) |
+| 🌟 Stella | 86% | 9 (WS scoping, presences, build-order, WS disconnect #176 R3, auto-ack dedup #192 R4, RESUMED abort semantics #255 R1, dispatch.ts fallback paths #255 R3, **try/catch control flow #255 R5**, **WS session lifetime #264 R5**) | 1 (WS scoping over-scope #168) |
+| 🌠 Nova | 93% | 5 (ready when others flag, PUBLIC_PATHS #248 R1, POST retry idempotency #255 R2, **empty guilds READY #261 R3**, **non-sliding session #264 R2**) | 0 |
+| 💫 Vega | 85% | 7 (#125 R1, gen ID reuse #190 R4, own-message-unread #192 R2, parseCookies DoS #248 R1, localStorage XSS #248 R2, 204 JSON parsing #255 R2, **sliding threshold math #264 R3**) | 1 (#261 R3 Ready while Stella+Nova found blockers — isolated) |
 
 ## Severity Calibration
 
@@ -94,7 +97,7 @@ _Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
 |----------|----------------------|------------|-------------|
 | 🌟 Stella | 80% | 15% (WS scoping, build-order, same-ms monotonicity) | 5% |
 | 🌠 Nova | 95% | 3% | 2% |
-| 💫 Vega | 82% | 10% | 8% (↑ from 6% — #261 R3 Ready premature) |
+| 💫 Vega | 83% | 10% | 7% (normalized — #261 R3 isolated, #264 calibration strong) |
 
 ## False Positive Rate (Critical flagged → later proven non-issue)
 
@@ -108,9 +111,9 @@ _Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
 
 | Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#261) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 80/83 (96%) | → (timeout #176 R1, late #190 R5, miss #255 R2) |
-| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 86/86 (100%) | → |
-| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 79/79 (100%) | ↑ Significant improvement after prompt fixes |
+| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 84/87 (97%) | → (timeout #176 R1, late #190 R5, miss #255 R2) |
+| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 90/90 (100%) | → |
+| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 83/83 (100%) | ↑ Significant improvement after prompt fixes |
 
 ## Review History
 
@@ -149,7 +152,7 @@ _Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
 | **#255** | **cove** | **2026-06-06** | **R1-R6** | **✅ Ready (merged)** | **resumed-abort, rest-retry, 204-json-parsing, post-idempotency, try-catch-control-flow** |
 | **#261** | **cove** | **2026-06-07** | **R1-R4** | **✅ Ready (merged)** | **retry-duplicate, ws-fallback, token-bucket, optimistic-send, nonce-validation** |
 | **#263** | **cove** | **2026-06-07** | **R1-R2** | **✅ Ready (merged)** | **o1-session-lookup, broadcastToGuilds-optimization** |
-| **#264** | **cove** | **2026-06-07** | **R1 (open)** | **❌ Major Issues** | **session-ttl-delete-vs-update, migration-immediate-expiry, refreshTTL-dead-code** |
+| **#264** | **cove** | **2026-06-07** | **R1-R5 (open)** | **✅ Near-approve** | **session-ttl-data-loss, sliding-threshold-math, cookie-reissue, oauth-atomic, ws-session-lifetime** |
 
 ## Ground Truth Summary (33 merged PRs + 1 open)
 
@@ -158,8 +161,8 @@ _Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
 - **Human rubber-stamp rate:** 97% — human approved without findings in 32/33 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
 - **Iterative review as quality gate:** In 30/33 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 1 (#100 — verdict too conservative for personal project context)
-- **Multi-round PRs:** 27/34 PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190)
-- **Total review rounds:** 97 across 34 PRs (33 merged + 1 open)
+- **Multi-round PRs:** 28/34 PRs went through 2+ rounds. Average rounds: 2.8. Max: 7 (#190)
+- **Total review rounds:** 101 across 34 PRs (33 merged + 1 open)
 - **False-ready detection:** 1 case (#255 R4→R5) — R4 said Ready but R5 found the fix was non-functional. Self-correcting system working.
 
 ## Actionable Notes
@@ -181,20 +184,27 @@ _Last updated: 2026-06-08 02:26 (Asia/Shanghai)_
 
 6. **#263 merged after R2 (2 rounds).** Clean performance PR. Nova+Vega caught `broadcastToGuilds` loop optimization. Fixed in one round. Fast turnaround.
 
-7. **#264 open with Major Issues (R1).** Session TTL PR has critical data-loss bug: `DELETE FROM users` instead of `UPDATE` token clear. Plus migration immediate-expiry risk. Needs significant rework.
+7. **#264 progressed from Major Issues → Near-approve in 5 rounds.** Excellent iterative trajectory:
+   - R1: Caught critical data-loss bug (`DELETE FROM users` → `UPDATE`)
+   - R3: Vega unique find — sliding threshold math bug for short TTLs
+   - R4: All R3 issues unaddressed → escalated to 🔴 (escalation protocol working)
+   - R5: All 7 items fixed. Stella unique WS session lifetime find. Near merge.
+   - **Pattern:** Unaddressed issues correctly escalate severity. System self-correcting.
 
-8. **Stella adding "Control Flow Analysis" dimension.** The #255 R5 find (try/catch making isIdempotent non-functional) is qualitatively different from code reading — it's tracing execution paths through exception handling. This is becoming a Stella signature strength alongside build verification.
+8. **Stella adding "Session/Auth Lifecycle" dimension.** In #264, found cookie reissue gap (R3), OAuth non-atomic (R4, joint with Nova), and WS session outliving expired token (R5, unique). Combined with #255 control flow analysis, Stella's lifecycle depth is growing.
 
-9. **Nova emerging as "last reviewer standing" pattern.** In #255 R5, #261 R3, and #263 R1, Nova found issues that at least one other reviewer missed. Nova's calibration advantage is growing. 16% unique find rate (highest).
+9. **Nova emerging as "calibration anchor" pattern.** In #264, first to approve in R3 and R5 — correctly identifying when remaining issues are follow-ups not blockers. 15% unique find rate (highest). Zero false positives across 110 rounds.
 
-10. **Vega premature Ready in #261 R3 was isolated.** R4 Vega returned to Ready correctly along with Nova. Not a trend — single instance. Continue monitoring.
+10. **Vega's config-math edge case strength.** #264 R3 sliding threshold bug is the same analytical style as 204 JSON parsing (#255) and own-message-unread (#192) — deterministic logical bugs. Vega's sweet spot.
 
 11. **Security review capability validated across multiple PRs:** #156 (XSS), #202 (snowflake auth), #248 (BFF cookies), #255 (retry semantics), #264 (session TTL data loss). Each surface found by different reviewer combinations — multi-reviewer approach justified.
 
 12. **Ground truth pattern: human rubber-stamps ~97% of the time.** Our iterative review IS the quality gate. This validates the service but also means limited external validation. Consider requesting more detailed human reviews for high-stakes PRs.
 
-13. **Escalation protocol robust.** POST retry: R2 🟡 → R3 🔴 (3/3 consensus). Working as designed. No false escalations observed.
+13. **Escalation protocol robust.** Both #255 (POST retry R2→R3) and #264 (R3→R4 unaddressed items) demonstrate correct escalation. Working as designed. No false escalations observed.
 
 14. **Reviewer model versions stable.** No model changes since launch. Performance trends are attributable to prompt tuning, not model upgrades.
 
-15. **Throughput high this cycle.** PRs #255 (6 rounds), #261 (4 rounds), #263 (2 rounds), #264 (1 round, open) — 13 review rounds in 2 days. Service scaling well.
+15. **Throughput sustained.** PRs #255 (6 rounds), #261 (4 rounds), #263 (2 rounds), #264 (5 rounds, open) — 17 review rounds in 2 days. Service scaling well.
+
+16. **All 3 reviewers above 10% unique find rate.** No reviewer flagged for replacement. Healthy distribution. Stella 12%, Nova 15%, Vega 11%.

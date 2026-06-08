@@ -113,12 +113,12 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "R1 had Vega dissent (needs_changes) on getComputedStyle + member list split; R2 unanimous ready. Human approved without comments \u2014 our findings were valid suggestions but non-blocking for this project context."
+      "calibration": "R1 had Vega dissent (needs_changes) on getComputedStyle + member list split; R2 unanimous ready. Human approved without comments — our findings were valid suggestions but non-blocking for this project context."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
-    "notes": "R1 manual (not FlowForge), R2 via FlowForge #3410. 3/3 \u2705 Ready both rounds.",
+    "notes": "R1 manual (not FlowForge), R2 via FlowForge #3410. 3/3 ✅ Ready both rounds.",
     "last_checked": "2026-06-03T14:26+08:00"
   },
   {
@@ -135,7 +135,7 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "Unanimous ready, human approved quickly. Clean mechanical refactor \u2014 our review correctly identified it as low-risk."
+      "calibration": "Unanimous ready, human approved quickly. Clean mechanical refactor — our review correctly identified it as low-risk."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -162,7 +162,7 @@
         "data-loss-prevention"
       ],
       "noise": [],
-      "calibration": "R1 caught real critical (migration ordering \u2192 silent data loss), 3/3 consensus. R2 correctly cleared after fix. Stella's recovery edge case was valid but non-blocking. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real critical (migration ordering → silent data loss), 3/3 consensus. R2 correctly cleared after fix. Stella's recovery edge case was valid but non-blocking. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -192,7 +192,7 @@
     "reviewers": 2,
     "rounds": 2,
     "flowforge_instance": 3427,
-    "notes": "R1: Vega failed. R2: 3/3 \u2705 unanimous. Merged 2026-06-03.",
+    "notes": "R1: Vega failed. R2: 3/3 ✅ unanimous. Merged 2026-06-03.",
     "last_checked": "2026-06-03T20:26+08:00"
   },
   {
@@ -220,7 +220,7 @@
     "reviewers": 2,
     "rounds": 3,
     "flowforge_instance": 3433,
-    "notes": "R3: 3/3 \u2705. XSS + paragraph collapse fixed. Vega clean for 2nd run after prompt fix."
+    "notes": "R3: 3/3 ✅. XSS + paragraph collapse fixed. Vega clean for 2nd run after prompt fix."
   },
   {
     "owner": "kagura-agent",
@@ -236,13 +236,13 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "Unanimous ready, human approved quickly. Clean polish PR \u2014 correctly identified as low-risk."
+      "calibration": "Unanimous ready, human approved quickly. Clean polish PR — correctly identified as low-risk."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
     "flowforge_instance": 3444,
-    "notes": "Clean polish PR. 3/3 \u2705. Merged 2026-06-03.",
+    "notes": "Clean polish PR. 3/3 ✅. Merged 2026-06-03.",
     "last_checked": "2026-06-03T20:26+08:00"
   },
   {
@@ -264,13 +264,13 @@
         "build-failure-detection"
       ],
       "noise": [],
-      "calibration": "R1 caught real tsc build failure (AppEnv typing) that tests missed. R2 confirmed fix. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real tsc build failure (AppEnv typing) that tests missed. R2 confirmed fix. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3460,
-    "notes": "R1: Stella caught real build failure (AppEnv typing). R2: 3/3 \u2705. Merged 2026-06-03.",
+    "notes": "R1: Stella caught real build failure (AppEnv typing). R2: 3/3 ✅. Merged 2026-06-03.",
     "last_checked": "2026-06-04T02:26+08:00"
   },
   {
@@ -287,13 +287,13 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "Unanimous ready, human approved quickly. Solid defensive programming \u2014 validation and migration guard correctly assessed as ready."
+      "calibration": "Unanimous ready, human approved quickly. Solid defensive programming — validation and migration guard correctly assessed as ready."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
     "flowforge_instance": 3468,
-    "notes": "Clean 3/3 \u2705. Migration guard + validation. Vega 6th consecutive clean. Merged 2026-06-03.",
+    "notes": "Clean 3/3 ✅. Migration guard + validation. Vega 6th consecutive clean. Merged 2026-06-03.",
     "last_checked": "2026-06-04T02:26+08:00"
   },
   {
@@ -316,13 +316,13 @@
         "rest-gateway-shape-mismatch"
       ],
       "noise": [],
-      "calibration": "R1 caught real ghost presence edge case (duplicate IDENTIFY) + style duplication + shape mismatch. R2 confirmed all fixed, 3/3 unanimous. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real ghost presence edge case (duplicate IDENTIFY) + style duplication + shape mismatch. R2 confirmed all fixed, 3/3 unanimous. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3474,
-    "notes": "R2: 3/3 \u2705. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean. Merged 2026-06-03.",
+    "notes": "R2: 3/3 ✅. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean. Merged 2026-06-03.",
     "last_checked": "2026-06-04T08:26+08:00"
   },
   {
@@ -379,7 +379,7 @@
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
-    "notes": "R1: input validation (3/3). R2: 3/3 \u2705. Human had inline comments. Merged 2026-06-04T04:37Z.",
+    "notes": "R1: input validation (3/3). R2: 3/3 ✅. Human had inline comments. Merged 2026-06-04T04:37Z.",
     "last_checked": "2026-06-05T02:30+08:00"
   },
   {
@@ -402,7 +402,7 @@
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
-    "notes": "Template string interpolation caught. 3/3 \u2705 R2. Merged 2026-06-04T05:10Z.",
+    "notes": "Template string interpolation caught. 3/3 ✅ R2. Merged 2026-06-04T05:10Z.",
     "last_checked": "2026-06-05T02:30+08:00"
   },
   {
@@ -540,7 +540,7 @@
         "height-restore-on-failure"
       ],
       "noise": [],
-      "calibration": "R1 caught real IME regression for CJK users (2/3). R2 escalated 3 issues to 3/3 consensus. R3 all fixed, unanimous. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real IME regression for CJK users (2/3). R2 escalated 3 issues to 3/3 consensus. R3 all fixed, unanimous. Human approved without comments — iterative review was the quality gate."
     },
     "rounds": 3,
     "notes": "R1: IME composition (2/3). R2: focus ring + height restore + mobile (3/3). R3: 3/3 unanimous ready. First UI/accessibility-focused review. Merged 2026-06-04.",
@@ -570,10 +570,10 @@
         "dispatch-monotonicity"
       ],
       "noise": [],
-      "calibration": "4-round deep review. All R1-R3 blockers genuine bugs. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "4-round deep review. All R1-R3 blockers genuine bugs. Human approved without comments — iterative review was the quality gate."
     },
     "rounds": 4,
-    "notes": "R1-R3: 5 criticals found+fixed. R4: \u2705 Ready with follow-ups (same-ms monotonicity, deleted-msg edge case). 4-round marathon.",
+    "notes": "R1-R3: 5 criticals found+fixed. R4: ✅ Ready with follow-ups (same-ms monotonicity, deleted-msg edge case). 4-round marathon.",
     "last_checked": "2026-06-05T14:26+08:00"
   },
   {
@@ -598,10 +598,10 @@
         "migration-overflow"
       ],
       "noise": [],
-      "calibration": "3-round deep review. R1 caught critical security (auth token as snowflake). All blockers resolved by R3. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "3-round deep review. R1 caught critical security (auth token as snowflake). All blockers resolved by R3. Human approved without comments — iterative review was the quality gate."
     },
     "rounds": 3,
-    "notes": "R1: \u274c security (snowflake auth token). R2: \u26a0\ufe0f (CAST index, idMap). R3: \u2705 Ready. All blockers resolved. Follow-ups: email UNIQUE, worker ID.",
+    "notes": "R1: ❌ security (snowflake auth token). R2: ⚠️ (CAST index, idMap). R3: ✅ Ready. All blockers resolved. Follow-ups: email UNIQUE, worker ID.",
     "last_checked": "2026-06-05T20:26+08:00"
   },
   {
@@ -629,7 +629,7 @@
       "calibration": "3-round review. R1 caught stale last_message_id + broken clear button (regression from #192 work). All blockers resolved by R3. Human approved without comments."
     },
     "rounds": 3,
-    "notes": "R1-R2: stale last_message_id + broken clear + allowlist. R3: \u2705 Ready with follow-ups (deletion auth deferred to #113, @me tests, clear-all broadcast).",
+    "notes": "R1-R2: stale last_message_id + broken clear + allowlist. R3: ✅ Ready with follow-ups (deletion auth deferred to #113, @me tests, clear-all broadcast).",
     "last_checked": "2026-06-05T20:26+08:00"
   },
   {
@@ -655,7 +655,7 @@
       "calibration": "R1 caught real UX regression (grid clips multi-line input). R2 confirmed fix. Human approved without comments."
     },
     "rounds": 2,
-    "notes": "R1: 3/3 \u26a0\ufe0f (fixed grid clips input). R2: \u2705 Ready. minmax fix correct. Follow-ups: getComputedStyle race, mobile sidebar overlap.",
+    "notes": "R1: 3/3 ⚠️ (fixed grid clips input). R2: ✅ Ready. minmax fix correct. Follow-ups: getComputedStyle race, mobile sidebar overlap.",
     "last_checked": "2026-06-05T20:26+08:00"
   },
   {
@@ -684,7 +684,7 @@
         "resolveuser-duplication"
       ],
       "noise": [],
-      "calibration": "4-round security review. R1 caught PUBLIC_PATHS signup break (Nova unique), URIError DoS (Vega unique), pendingToken leak (Stella+Vega). R2 caught localStorage XSS remnant (Vega). R3 escalated resolveUser duplication (3/3). Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "4-round security review. R1 caught PUBLIC_PATHS signup break (Nova unique), URIError DoS (Vega unique), pendingToken leak (Stella+Vega). R2 caught localStorage XSS remnant (Vega). R3 escalated resolveUser duplication (3/3). Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -843,7 +843,7 @@
         "unit-test-coverage"
       ],
       "noise": [],
-      "calibration": "6-round mega-review. R1: 5 criticals (RESUMED abort, REST retry). R2: 204 JSON parsing (Vega star). R3: POST retry escalated. R4: appeared fixed but R5 caught try/catch control flow bug making isIdempotent non-functional. R6: fix confirmed + 15 unit tests. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "6-round mega-review. R1: 5 criticals (RESUMED abort, REST retry). R2: 204 JSON parsing (Vega star). R3: POST retry escalated. R4: appeared fixed but R5 caught try/catch control flow bug making isIdempotent non-functional. R6: fix confirmed + 15 unit tests. Human approved without comments — iterative review was the quality gate."
     }
   },
   {
@@ -857,7 +857,7 @@
     "verdict": "needs_changes",
     "reviewers": 3,
     "ground_truth": null,
-    "notes": "R3: 3/3 needs_changes. POST retry escalated \ud83d\udfe1\u2192\ud83d\udd34. sendTyping budget escalated. 204 fix confirmed. Stella dispatch.ts fallback paths finding.",
+    "notes": "R3: 3/3 needs_changes. POST retry escalated 🟡→🔴. sendTyping budget escalated. 204 fix confirmed. Stella dispatch.ts fallback paths finding.",
     "last_checked": "2026-06-07T14:27+08:00"
   },
   {
@@ -916,7 +916,7 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "6-round marathon. R5 caught try/catch control flow bug that R4 missed \u2014 isIdempotent gate was non-functional. R6 confirmed fix + 15 unit tests. Human approved without comments."
+      "calibration": "6-round marathon. R5 caught try/catch control flow bug that R4 missed — isIdempotent gate was non-functional. R6 confirmed fix + 15 unit tests. Human approved without comments."
     },
     "last_checked": "2026-06-07T14:27+08:00"
   },
@@ -1031,37 +1031,26 @@
     "pr": 264,
     "round": 4,
     "mode": "comment",
-    "reviewed_at": "2026-06-08T06:20:00+08:00",
+    "reviewed_at": "2026-06-07T22:22+08:00",
     "status": "open",
-    "verdict": "major_issues",
+    "verdict": "needs_changes",
     "reviewers": 3,
     "ground_truth": null,
-    "last_checked": "2026-06-08T02:26+08:00"
+    "last_checked": "2026-06-08T08:26+08:00",
+    "notes": "R4: All R3 issues unaddressed → escalated to 🔴. +OAuth non-atomic, backfill hardcode, bot footgun. 3/3 needs_changes."
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 264,
-    "round": 4,
+    "round": 5,
     "mode": "comment",
-    "reviewed_at": "2026-06-08T06:20:00+08:00",
+    "reviewed_at": "2026-06-07T23:58+08:00",
     "status": "open",
-    "verdict": "needs_changes",
+    "verdict": "approve_with_minor",
     "reviewers": 3,
     "ground_truth": null,
-    "last_checked": "2026-06-08T02:26+08:00"
-  },
-  {
-    "owner": "kagura-agent",
-    "repo": "cove",
-    "pr": 264,
-    "round": 4,
-    "mode": "comment",
-    "reviewed_at": "2026-06-08T06:20:00+08:00",
-    "status": "open",
-    "verdict": "needs_changes",
-    "reviewers": 3,
-    "ground_truth": null,
-    "last_checked": "2026-06-08T02:26+08:00"
+    "notes": "R5: All 7 R4 items fixed! Near-approve. Stale expires_at return (Stella+Vega). WS session lifetime (Stella unique). Nova clean approve.",
+    "last_checked": "2026-06-08T08:26+08:00"
   }
 ]

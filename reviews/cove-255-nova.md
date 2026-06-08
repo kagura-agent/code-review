@@ -1,84 +1,65 @@
-# 🌠 Nova — Round 4 Review: cove PR #255
+# 🌠 Nova — Round 6 Review: cove PR #255
 
 **Verdict: ✅ Ready**
 
-## R3 Carryover Issues — Re-verification
+## R5 Critical Bug — RESOLVED
 
-### 🔴 M1 (R3) — POST `sendMessage` retries on 5xx → duplicate user messages
-**Status: ✅ Fixed (correctly)**
+The "POST/PATCH retry on 5xx via try/catch fallthrough" bug is fixed.
 
-`packages/plugin/src/rest-client.ts:34`:
-```ts
-const isIdempotent = method === "GET" || method === "DELETE" || method === "HEAD" || method === "PUT";
-```
+In the new `rest-client.ts` `request()`:
 
-- **5xx path** (`:50-58`): retries only when `isIdempotent && attempt < MAX_RETRIES`. POST and PATCH now bypass retry and throw immediately. ✅
-- **Network error path** (`:71-75`): same `isIdempotent` gate. POST/PATCH no longer retry on `fetch` rejection. ✅
-- **429 path** (`:42-47`): still retries all methods unconditionally. Correct — 429 is a server-side rejection before processing, so retrying POST is safe. ✅
-- **AbortError pass-through** (`:69`): user-supplied `signal` aborts bail out instantly without retry. ✅
+- 5xx branch in the `try`: `lastError = new Error(...); if (isIdempotent && attempt < MAX_RETRIES) { ...continue; } throw lastError;`
+- That `throw lastError` is caught by the `catch (err)` below, which re-sets `lastError` to the same error and then runs:
+  ```ts
+  if (isIdempotent && attempt < MAX_RETRIES) { ...continue; }
+  throw lastError;
+  ```
+- For POST/PATCH (`isIdempotent === false`), the catch block now ends with `throw lastError;` — the loop exits, no second fetch. ✅
 
-User-message duplication risk is eliminated. The fix is exactly what R3 specified.
+This is the missing terminal throw that R5 flagged. Verified by inspection of the diff.
 
-### 🟠 M2 (R3) — `sendTyping` inherits full retry budget
-**Status: ✅ Substantially fixed (with one minor nit)**
+## Test Coverage — Confirmed
 
-`rest-client.ts:135`:
-```ts
-return this.requestVoid("POST", `${API_PREFIX}/channels/${channelId}/typing`, undefined, AbortSignal.timeout(3000));
-```
+`packages/plugin/src/rest-client.test.ts` (new file) explicitly asserts the regression cases:
 
-- 3s per-attempt timeout: ✅ matches spec
-- POST + 5xx → no retry (per M1 fix): ✅
-- POST + network error → no retry: ✅
-- **Minor gap**: 429 still retries up to `MAX_RETRIES` times with `Retry-After` honored (up to 30s each). Worst-case typing call could block ~120s on persistent 429s. Practically benign because: (a) call sites use `.catch(() => {})` and don't await, (b) 429 on typing is extremely unlikely, (c) blocking only delays the next keepalive tick. Not a blocker — the dominant fix (network/5xx no longer retry) is in place.
+- ✅ `POST (sendMessage) does NOT retry on 500` → `toHaveBeenCalledTimes(1)`
+- ✅ `PATCH (editMessage) does NOT retry on 500` → `toHaveBeenCalledTimes(1)`
+- ✅ `POST does NOT retry on fetch error` → `toHaveBeenCalledTimes(1)`
+- ✅ `AbortError thrown immediately without retry` (GET and POST)
+- ✅ `429 retries all methods including POST` (post-rejection retry is safe)
+- ✅ `Retry-After capped at 30s` and garbage falls back to 1s
+- ✅ `GET retries up to 3 times then succeeds / throws after exhausting`
+- ✅ `DELETE retries on 500`
+- ✅ `204 returns undefined` for both deleteMessage and sendTyping
+- ✅ `sendTyping passes AbortSignal to fetch`
 
-If we wanted to be strict, `sendTyping` could thread a `noRetry` flag through `request()`. Not required for merge.
+This is exactly the test surface R5 asked for. The regression is now locked down.
 
----
+## Cross-Check on Previously Confirmed Items
 
-## Fresh Review — New Code
+All confirmed good across rounds — re-verified in this diff:
 
-### `dispatch.ts` (extraction)
-Pure code-motion from `channel.ts`. Spot-checked vs the deleted block — logic, abort semantics, `isCurrent()` reference-equality guards, `editQueue` ordering, draft seal/fallback flow all preserved. Import of `Message` from `@cove/shared` is consistent with existing type surface. ✅
+- **Gateway RESUME/RESUMED** (`gateway-client.ts`): seq tracked on DISPATCH, sessionId stored on READY, RESUME sent on HELLO when state present, RESUME_TIMEOUT_MS fallback to IDENTIFY, INVALID_SESSION clears state with 1–5s jitter, RECONNECT preserves seq/sessionId for next RESUME attempt, HEARTBEAT carries seq, `clearResumeTimer()` called on close/cleanup, `invalidSessionTimer` cleared in `destroy()` and `cleanup()`. ✅
+- **dispatch.ts extraction**: `channel.ts` reduced to wiring/event-handling; all per-message state (draft lifecycle, tool progress, edit queue, isCurrent check) moved verbatim into `dispatchMessage()`. Behavior preserved (controller registered synchronously before any `await`, finally only deletes its own controller). ✅
+- **`reconnect` semantics**: now correctly describes hard reconnect (post-failed-RESUME). Channel refetch on reconnect is a sensible recovery hook (TODO documented). ✅
+- **`resumed` event**: emitted distinctly from `reconnect`; channel handler logs without aborting in-flight dispatches — correct, since RESUME implies no event loss. ✅
+- **`send()` privatised** on the gateway client (was `public`); all sends go through typed methods. ✅
+- **204 handling**, **Retry-After parsing + 30s cap**, **sendTyping 3s timeout** via `AbortSignal.timeout(3000)`. ✅
 
-### `gateway-client.ts` — RESUME machinery
-- **HELLO branch** (`:122-126`): correctly attempts RESUME when `sessionId && seq !== null`, else IDENTIFY. ✅
-- **`sendResume` + `resumeTimer`** (`:269-289`): 5s fallback to IDENTIFY if server never responds (e.g. older server without RESUME support). Clears `sessionId`/`seq` before re-identifying. ✅
-- **`RESUMED` handler** (`:196-203`): does NOT emit `reconnect` — instead emits `resumed`. This is the critical fix: `channel.ts` aborts pending dispatches on `reconnect` but leaves them alone on `resumed`. State preserved across transient WS blips. ✅
-- **`INVALID_SESSION`** (`:148-162`): clears session state, schedules re-IDENTIFY with 1–5s jitter, guarded by `this.ws === currentWs` so a closed/reconnected socket won't double-IDENTIFY. ✅
-- **`RECONNECT`** (`:164-170`): closes with 4000 but **preserves** `seq`/`sessionId`, so the subsequent reconnect attempts RESUME. Correct. ✅
-- **HEARTBEAT seq** (`:312`): now sends `this.seq` as `d` (was `null`). Discord-compatible. ✅
-- **Timer cleanup**: `cleanup()` clears all three timers (heartbeat, resume, invalidSession); `disconnect()` clears reconnect + invalidSession + resume timers. No leaks. ✅
-- **`send()` privatized** (`:327`): good encapsulation hardening; eliminates the risk of external code firing arbitrary opcodes.
+## Minor Observations (non-blocking)
 
-### `channel.ts` — orchestration
-- Hard reconnect handler aborts pending dispatches and re-fetches channel list (with `TODO` for future routing). ✅
-- `resumed` handler only logs — correct, since dispatches are still valid. ✅
-- Single `restClient` instance hoisted out of the per-message path. Minor perf/clarity win. ✅
-- Delegation to `dispatchMessage` is clean; no behavioral drift.
+1. **Edge in 429 loop termination** (`rest-client.ts`): the 429 branch only `continue`s without checking `attempt < MAX_RETRIES`. The `for` bound still caps total attempts at 4, but if every attempt returns 429, the loop exits without `lastError` ever being set and throws the generic `"failed after retries"`. Cosmetic — error message is less informative than the 429 path warrants. Suggest: in the 429 branch, set `lastError = new Error(\`Cove API ${method} ${path} rate-limited (429)\`)` before `continue`.
 
-### `types.ts`
-- New event signatures match `gateway-client.ts` emit shapes. ✅
-- Added `Channel` import — used. ✅
+2. **`request()` `signal` parameter** is plumbed but only `sendTyping` uses it. Future callers can wire per-call cancellation; current uses are fine.
 
-### `shared/src/types.ts`
-- `RESUME = 6`, `RECONNECT = 7`, `INVALID_SESSION = 9` — Discord-compatible numeric values. ✅
-- `VOICE_STATE_UPDATE = 4` reserved with a comment explaining it's locked out. Defensive and clear. ✅
+3. **`reconnect` channel refresh**: fire-and-forget; the result is logged but the TODO admits no consumer yet. Acceptable as a placeholder hook — just don't let the TODO age silently.
 
----
+4. **`VOICE_STATE_UPDATE = 4` "reserved/locked out"** comment in `shared/types.ts` is added as an enum member but there's no runtime guard in `send()` to refuse it. Comment-only enforcement. Low risk because `send()` is now private and no caller emits opcode 4, but if hardening is desired, an assertion in the typed senders would make "locked out" literal.
 
-## Other Observations
-
-- **`AbortSignal.timeout` error name**: in Node 20+ this throws `DOMException("TimeoutError")` rather than `AbortError`. The check at `rest-client.ts:69` (`err.name === "AbortError"`) only short-circuits user-supplied aborts. Timeout errors fall through to retry logic — which for POST means "no retry" (correct), for GET/DELETE means "retry" (also correct). Behavior is right, but worth a code comment to prevent future confusion.
-- **Retry-After parsing** (`:44`): `parseFloat("") || 1` correctly defaults to 1s. `Math.min(..., 30)` caps the wait. Solid.
-- **`dispatch.ts:115` `Message` import**: ensure `@cove/shared` exports `Message` (it does — channel.ts already imported it transitively). ✅
-
----
+5. **`pendingDispatches` Map of `channelId → controller`** continues to be the single source of identity. Verified `dispatch.ts` keeps the synchronous-register-before-await invariant.
 
 ## Summary
 
-R3's two carryover blockers are resolved with the correct semantics. The RESUME/RECONNECT/INVALID_SESSION machinery is well-formed and Discord-compatible. The `dispatch.ts` extraction is a faithful move. M2's residual 429-on-typing edge is benign and not blocking.
+R5's critical bug is fixed with the correct control-flow change AND backed by unit tests that pin the regression. Refactor extraction of `dispatch.ts` is faithful to the original. Gateway RESUME path is complete and defensively timed. No new issues of consequence introduced. The minor items above are quality-of-life polish, not blockers.
 
-**Ship it.** 🚀
-
-/home/kagura/.openclaw/workspace/code-review/reviews/cove-255-nova.md
+**Recommendation: merge.**
