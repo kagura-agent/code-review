@@ -1,33 +1,32 @@
-# R2 Code Review: cove#269 (Vega)
+# Code Review - PR #269 (Round 3)
 
-## 🔴 Must Fix (Escalated from R1 "Should Address")
+Reviewer: 💫 Vega
 
-The following issues were raised in R1 as "Should Address" but were ignored in this round. Per review policy, unaddressed issues are escalated to "Must Fix".
+## 1. R2 Issues Verification
 
-1. **60s per-connection polling scalability**
-   - **Status**: ❌ Unaddressed (Escalated to 🔴 Must Fix)
-   - **Details**: `SESSION_EXPIRY_CHECK_INTERVAL` is still 60s per connection (`ws/index.ts`). This does not scale. Please use a centralized check or rely on sliding token expiry.
+| Issue | Status | Notes |
+|-------|--------|-------|
+| **1. Short TTL test still tautological** (🟡) | ✅ Fixed | `getRefreshThreshold` was extracted into a pure function and is properly tested with hardcoded assertions (e.g. `1h -> 30m`). Integration test also directly controls DB setup without circular dependencies. Excellent. |
+| **2. 60s per-connection polling** (🟡) | ✅ Fixed | Removed the per-connection `setInterval` polling and replaced it with a `setTimeout(..., ttl)` bound to the session expiry. *(Note: See critical regressions introduced by this change below).* |
+| **3. `@deprecated` on `repos/users.ts`** (🟢) | ✅ Fixed | Added proper JSDoc `@deprecated` tag. |
+| **4. preAuthUser not revalidated at IDENTIFY** (🟢) | ✅ Fixed | The session expiry is now scheduled via `setTimeout(..., expires_at - Date.now())` using the timestamp fetched at UPGRADE. This perfectly bounds the connection without leaking out-of-bounds uptime. |
 
-2. **`repos/users.ts` re-export needs `@deprecated`**
-   - **Status**: ❌ Unaddressed (Escalated to 🔴 Must Fix)
-   - **Details**: `export { SESSION_TTL_MS };` in `packages/server/src/repos/users.ts` still lacks the `@deprecated` JSDoc tag.
+## 2. New Findings & Regressions
 
-3. **`preAuthUser` not revalidated at IDENTIFY time**
-   - **Status**: ❌ Unaddressed (Escalated to 🔴 Must Fix)
-   - **Details**: When falling back to `preAuthUser` during `IDENTIFY`, the user is still not re-queried from the database, meaning revoked sessions or changed user states aren't caught until the expiry check fires.
+While replacing the 60s polling interval fixed the performance concern, the specific `setTimeout` implementation introduced two major session management bugs:
 
----
+### 🔴 Regression: Session Revocation (Logout) No Longer Drops WebSockets
+By removing the 60s polling interval, you removed the server's ability to detect early session revocations. 
+- **Scenario:** A user logs in, receives a 7-day TTL, and connects via WebSocket. The user then manually logs out (or their token is deleted/regenerated from the DB by OAuth re-login). 
+- **Bug:** Their existing WebSocket connection will now stay alive for up to 7 days because the DB check only happens when the timer fires at the end of the TTL.
+- **Fix:** You must explicitly close the WebSocket when a session is invalidated. Since the `GatewayDispatcher` tracks sessions, when a user logs out, the server should find the `GatewaySession` associated with that user/token and forcefully `close()` it. Alternatively, implement a shared background ticker that sweeps active WS sessions and checks them against the DB periodically (batching the queries).
 
-## ✅ Addressed R1 Must-Fix Issues
+### 🔴 Bug: Timer Not Rescheduled After Refresh
+When the `setTimeout` fires, you query the DB to check if the session is still valid (`const valid = users.findByToken(sessionToken);`). If the user recently made an HTTP request and triggered a sliding refresh, `valid` will be true.
+- **Bug:** If the session was refreshed, the `if (!valid)` block correctly skips the close, but the callback finishes without setting a **new** timer. The WebSocket is now entirely unmonitored and will remain connected indefinitely, even after the new `expires_at` timestamp passes.
+- **Fix:** If `valid` is true, you must calculate the new TTL (`valid.expires_at - Date.now()`) and schedule a new `setTimeout` to continue monitoring the connection.
 
-1. **re-IDENTIFY leaks intervals**
-   - **Status**: ✅ Fixed (Noted that `session.isIdentified` guard is already present and prevents the interval leak).
-2. **Cookie fallback tracks wrong token**
-   - **Status**: ✅ Fixed (Always parses the token from the cookie headers instead of trusting the invalid explicit token).
-3. **Test 2 doesn't test short TTL**
-   - **Status**: ✅ Fixed (Properly tests the threshold logic with a 1h short TTL).
-4. **Test 3 is tautological**
-   - **Status**: ✅ Fixed (Uses real `app.request` integration test with global fetch mocking instead of manual SQL updates).
+## 3. Verdict
+**Status:** ❌ Changes Requested (Escalated to 🔴 due to regressions)
 
-## Conclusion
-**Block merging.** The critical issues from R1 were correctly addressed, but the R1 optional issues were unaddressed and are now escalated to blocking per our review rules. Please address the escalated issues.
+All R2 feedback was cleanly addressed, but the structural change to WebSocket session timers introduced regressions where revoked tokens aren't disconnected and refreshed tokens are left unmonitored indefinitely. Please fix the timer rescheduling and revocation logic.

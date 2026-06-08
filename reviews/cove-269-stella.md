@@ -1,152 +1,88 @@
-# R2 Re-review: kagura-agent/cove#269
-
-Reviewer: 🌟 Stella  
-PR: https://github.com/kagura-agent/cove/pull/269  
-Head reviewed: `f7372a7baa6482ebef325c32f28d60fc3959b134`
+# R3 Review — kagura-agent/cove#269 (Stella)
 
 ## Verdict
 
-Request changes.
+⚠️ **Needs Changes**
 
-R2 fixed several R1 items, but some R1 concerns remain. Per the escalation rule, all unaddressed R1 items below are escalated in severity. I also found one fresh config-validation issue in the new central config module.
+The R2 test/documentation follow-ups are mostly addressed, and the old per-connection 60s DB polling is gone. However, the replacement one-shot WebSocket expiry timer does not correctly preserve the session-expiry guarantee: refreshed sessions stop being monitored after the first timer fires, and cookie pre-auth is still not revalidated at IDENTIFY. Because these were carry-over auth/session issues, I am escalating the remaining ones per the re-review rule.
 
-## Validation performed
+Validated locally:
+- `pnpm -F @cove/server build` ✅
+- `pnpm -F @cove/server test -- --run packages/server/src/__tests__/session-ttl.test.ts` ✅ (Vitest ran the server suite successfully)
 
-- Fetched PR metadata/diff with `gh pr view` / `gh pr diff`.
-- Checked GitHub checks: `test` and `deploy` passing.
-- Ran targeted tests locally:
-  - `pnpm -r --filter @cove/server exec vitest run src/__tests__/session-ttl.test.ts` ✅ 9 passed
-- Ran server typecheck locally:
-  - `pnpm -r --filter @cove/server exec tsc --noEmit` ✅ passed
+## Previous R2 Issues Status
 
-## R1 issue status
+### Already fixed in R2 — verify still fixed
 
-### 🔴 Previous Must Fix
+1. ✅ **re-IDENTIFY guard (close 4005) remains fixed**
+   - `packages/server/src/ws/index.ts:83-87` closes already-identified sessions with `4005` before doing any second identify work.
 
-1. ✅ Fixed — re-IDENTIFY leaks intervals / double registration
-   - `packages/server/src/ws/index.ts:84-88` rejects a second IDENTIFY with close code `4005` before `session.identify`, `dispatcher.addSession`, or expiry interval setup.
+2. ✅ **Cookie fallback token tracking is addressed**
+   - `packages/server/src/ws/index.ts:104-109` replaces an invalid/missing explicit identify token with the cookie token when falling back to `preAuthUser`.
+   - `packages/server/src/ws/index.ts:127-129` stores that token for expiry validation.
+   - Caveat: this still relies on stale `preAuthUser` identity; see escalated issue below.
 
-2. ✅ Fixed for the explicit-token/cookie fallback bug — cookie fallback now tracks the cookie token
-   - `packages/server/src/ws/index.ts:105-110` replaces the invalid explicit token with the `cove-session` cookie token before starting the expiry checker.
-   - Caveat: see escalated pre-auth revalidation finding below; the fallback token is now the right token, but the pre-authenticated user snapshot itself is still not revalidated at IDENTIFY time.
+3. ✅ **OAuth test now drives the real route**
+   - `packages/server/src/__tests__/session-ttl.test.ts:282-287` calls `/api/auth/callback?code=mock-auth-code`, verifies the redirect, and checks the DB update afterward.
 
-3. ❌ Unaddressed — short-TTL test still does not exercise the production short-TTL branch
-   - Escalated to ⛔ Blocker below.
+### Remaining from R2
 
-4. ✅ Fixed — OAuth test now drives the actual callback route
-   - `packages/server/src/__tests__/session-ttl.test.ts:254-313` calls `/api/auth/callback?code=mock-auth-code` and mocks Google token/userinfo endpoints instead of hand-writing the update SQL.
+1. ✅ **Short TTL test no longer tautologically re-implements the hidden formula**
+   - `packages/server/src/auth.ts:20-27` extracts `getRefreshThreshold(ttlMs)`.
+   - `packages/server/src/auth.ts:73-75` makes `resolveUser` consume the extracted function.
+   - `packages/server/src/__tests__/session-ttl.test.ts:219-246` covers short TTL threshold values and also verifies `resolveUser` refresh behavior. This is acceptable for the requested “extract pure function” fix path.
 
-### 🟡 Previous Should Address
+2. ❌ **Escalated: WebSocket expiry monitoring is still incorrect after replacing the 60s polling**
+   - Severity: 🟡 R2 → 🟠 R3
+   - The per-connection `setInterval` DB polling was removed, but the new one-shot timer only checks once at the original `expires_at`.
+   - At `packages/server/src/ws/index.ts:131-140`, when the timer fires it calls `users.findByToken(sessionToken)`. If the user refreshed their TTL via REST before the original expiry, `findByToken` returns a valid row and the callback does nothing. No new timer is scheduled for the refreshed `expires_at`.
+   - Result: a non-bot WebSocket can remain connected indefinitely after the first refresh unless another close path happens. This breaks the intended bounded session lifetime.
+   - Suggested fix: wrap expiry scheduling in a function. On timer fire, re-fetch the row; if missing/expired, close; if still valid with a future `expires_at`, schedule the next timer for `row.expires_at - Date.now()`.
 
-1. ❌ Unaddressed — 60s per-connection polling scalability
-   - Escalated to 🔴 Must Fix below.
+3. ✅ **`@deprecated` on `repos/users.ts` re-export is fixed**
+   - `packages/server/src/repos/users.ts:6-7` adds the requested JSDoc deprecation marker.
 
-2. ❌ Unaddressed — `repos/users.ts` re-export needs `@deprecated`
-   - Escalated to 🔴 Must Fix below.
+4. ❌ **Escalated: `preAuthUser` is still not revalidated at IDENTIFY, and the old 60s bound is gone**
+   - Severity: 🟢 R2 → 🟡 R3
+   - `verifyClient` snapshots `preAuthUser` at upgrade time (`packages/server/src/ws/index.ts:36-47`). Later, IDENTIFY can accept that cached object directly (`packages/server/src/ws/index.ts:104-105`) without re-reading `users.findByToken(cookieToken)`.
+   - In R2 this was lower-risk because the 60s polling would eventually re-check the token. In R3 the polling is gone, and the new timer does not validate until the originally captured `expires_at` (`packages/server/src/ws/index.ts:126-140`). For a 7-day TTL, a token invalidated after upgrade but before IDENTIFY can still identify successfully and remain connected until the old expiry timer fires.
+   - Suggested fix: when falling back to cookie auth during IDENTIFY, parse the cookie token and call `users.findByToken(cookieToken)` immediately. Build `user` from the fresh row, not from the upgrade-time snapshot.
 
-3. ❌ Unaddressed — `preAuthUser` not revalidated at IDENTIFY time
-   - Escalated to 🔴 Must Fix below.
+## Fresh Review Findings
 
-## Findings
+### 🟠 One-shot expiry timer must reschedule after sliding refresh
 
-### ⛔ Blocker: R1 short-TTL test is still not testing the production short-TTL path
+This is the main correctness issue in the new code. The timer comments say “Re-validate in case session was refreshed” (`packages/server/src/ws/index.ts:132`), but the implementation only avoids closing when refreshed; it does not continue monitoring the refreshed expiry.
 
-Location: `packages/server/src/__tests__/session-ttl.test.ts:219-252`
-
-The new test adds a local calculation:
-
-```ts
-const shortTTL = 3_600_000;
-const shortThreshold = Math.max(shortTTL / 2, shortTTL - 86_400_000);
-expect(shortThreshold).toBe(shortTTL / 2);
-```
-
-But that only tests the formula copied into the test. It does not execute `resolveUser` or any production helper with `SESSION_TTL_MS < 24h` / `< 2 days`. The integration portion immediately returns to the imported default `SESSION_TTL_MS` (`packages/server/src/__tests__/session-ttl.test.ts:233-251`), so it still exercises the 7-day long-TTL branch.
-
-A production regression such as hard-coding the threshold to `SESSION_TTL_MS - 86_400_000` would still pass the local short-TTL assertions and likely pass the default-TTL integration path. This was the core R1 objection, so it remains unaddressed.
-
-Suggested fixes:
-
-- Extract the refresh-threshold calculation into a production helper, e.g. `getRefreshThreshold(ttlMs)`, and unit-test that helper for both 1h and 7d TTLs; or
-- In the integration test, isolate module loading with `vi.stubEnv("SESSION_TTL_MS", "3600000")` + `vi.resetModules()` before importing `config`, `auth`, and `repos/users`, then verify `resolveUser` refresh behavior under an actual 1h configured TTL.
-
-### 🔴 Must Fix: Cookie pre-auth is still not revalidated at IDENTIFY time
-
-Location: `packages/server/src/ws/index.ts:37-47`, `packages/server/src/ws/index.ts:61-62`, `packages/server/src/ws/index.ts:105-110`, `packages/server/src/ws/index.ts:124-140`
-
-The upgrade-time cookie lookup caches `preAuthUser` on the request. Later, IDENTIFY trusts that cached object directly:
+Minimal shape:
 
 ```ts
-if (!user && preAuthUser) {
-  user = preAuthUser;
-  const cookies = parseCookies(request.headers.cookie);
-  identifyToken = cookies[SESSION_COOKIE] || undefined;
+function scheduleExpiry(token: string, delayMs: number) {
+  if (expiryTimer) clearTimeout(expiryTimer);
+  expiryTimer = setTimeout(() => {
+    const row = users.findByToken(token);
+    if (!row || row.bot || !row.expires_at) {
+      closeExpired();
+      return;
+    }
+    const nextDelay = row.expires_at - Date.now();
+    if (nextDelay <= 0) closeExpired();
+    else scheduleExpiry(token, nextDelay);
+  }, delayMs);
 }
 ```
 
-This means a browser socket can be accepted and receive READY/guild data using a cookie that was valid during HTTP upgrade but expired or was revoked before IDENTIFY. The new 60s expiry checker eventually closes it, but only after `session.identify(...)` and `dispatcher.addSession(...)` have already run.
+### 🟡 Add WebSocket regression tests for expiry behavior
 
-Impact:
+The current tests cover REST/session TTL behavior well, but not the new Gateway timer behavior. I would add at least:
 
-- Expired/revoked sessions can be registered as online for up to 60s.
-- READY can leak user/guild/channel/read-state data before the checker closes the socket.
-- Presence side effects can be emitted for a session that should have failed authentication.
+- cookie-authenticated WS with `expires_at` already past by IDENTIFY time closes/rejects without READY
+- WS expiry timer closes after token expiry
+- if TTL is refreshed before the initial timer fires, the session gets a second timer and eventually closes at the refreshed expiry
+- pre-auth cookie fallback revalidates the cookie token at IDENTIFY time
 
-Fix: at IDENTIFY time, re-read the cookie token and call `users.findByToken(cookieToken)`. Use the fresh row returned from that call, not the cached `preAuthUser`, before calling `session.identify`.
+## Positive Notes
 
-### 🔴 Must Fix: Session expiry uses one polling interval per non-bot WebSocket
-
-Location: `packages/server/src/ws/index.ts:127-140`
-
-The PR still starts a `setInterval(..., 60_000)` for every non-bot gateway session, and every interval performs a DB token lookup. This was called out in R1 as a scalability concern and is unchanged.
-
-At modest fanout this becomes N timers + N DB reads/minute for N connected browser sessions, independent of actual expiry times. It is also imprecise: expired/revoked sockets may remain active until the next poll.
-
-Suggested fixes:
-
-- Prefer scheduling per session with `setTimeout` to the current `expires_at` returned by `findByToken`, refreshing/rescheduling only when TTL is extended; or
-- Use one central expiry scheduler/ticker that batches due sessions; or
-- Tie token invalidation/logout/regeneration to dispatcher close events, and use expiry-time scheduling for natural expiry.
-
-### 🔴 Must Fix: Deprecated compatibility re-export is still undocumented
-
-Location: `packages/server/src/repos/users.ts:4-6`
-
-R1 requested the compatibility re-export to be marked deprecated. It remains a bare re-export:
-
-```ts
-import { SESSION_TTL_MS } from "../config.js";
-export { SESSION_TTL_MS };
-```
-
-Because the PR centralizes config in `config.ts`, this re-export should be explicitly documented as a temporary compatibility shim so future imports do not continue spreading from `repos/users.ts`.
-
-Suggested fix:
-
-```ts
-/** @deprecated Import SESSION_TTL_MS from ../config.js instead. */
-export { SESSION_TTL_MS };
-```
-
-### 🟡 Should Fix: `SESSION_TTL_MS` validation accepts partially numeric garbage
-
-Location: `packages/server/src/config.ts:10-14`
-
-The new central config uses `parseInt(rawTTL, 10)`. That accepts values like `"60000abc"` as `60000`, despite the file comment saying env vars are parsed and validated once here.
-
-If invalid config should fail fast, use stricter parsing:
-
-```ts
-const parsedTTL = Number(rawTTL);
-if (!Number.isInteger(parsedTTL) || parsedTTL <= 0) {
-  throw new Error(...);
-}
-```
-
-This is lower risk than the R1 escalations, but it is fresh code in the high-risk `config.ts` path and worth tightening before config centralization becomes the import point for more settings.
-
-## Notes on fixed areas
-
-- OAuth existing-user login now updates `token`, `expires_at`, and `updated_at` in one SQL statement, and the new route-level regression test covers the callback route rather than duplicating the SQL manually.
-- Cookie fallback now uses the cookie token for later expiry checks when an explicit bad token is supplied with a valid cookie. That addresses the specific R1 token-tracking bug, but not the stale pre-auth snapshot described above.
-- Local targeted tests and typecheck pass on the reviewed head.
+- Centralizing `SESSION_TTL_MS` in `packages/server/src/config.ts` is a good cleanup and avoids env parsing drift.
+- The OAuth callback regression test is much stronger now because it exercises the actual route and verifies atomic token/expiry update.
+- Removing the 60s interval is the right direction; it just needs rescheduling semantics to preserve correctness.
