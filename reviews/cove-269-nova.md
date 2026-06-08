@@ -1,103 +1,150 @@
-# 🌠 Nova — Round 3 Re-Review: kagura-agent/cove#269
+# 🌠 Nova — R4 Re-Review: cove#269 "fix: PR #264 follow-ups"
 
-**Branch:** `fix/264-followups` → `main`
-**Scope:** R2 follow-ups + fresh review of new code.
-
----
-
-## R2 Issue Check
-
-| # | R2 Issue | Status | Notes |
-|---|---|---|---|
-| R2-1 | 🟡 Short-TTL test tautological | ✅ **Fixed** | Extracted `getRefreshThreshold(ttlMs)` pure fn (`auth.ts:24`). New test asserts the fn directly with 5 TTL values **and** drives `resolveUser` end-to-end with a forged near-expiry row (`expires_at = now + threshold*0.5`) → asserts `refreshed === true` and bumped `expires_at`. Real coverage now. |
-| R2-2 | 🟡 60s per-connection polling | ✅ **Fixed** | Replaced `setInterval(…, 60_000)` with one-shot `setTimeout(close, expires_at - now)` per session (`ws/index.ts:125`). Cleared in `ws.on("close")`. No DB query per minute. Big win. |
-| R2-3 | 🟢 `@deprecated` on `repos/users.ts` re-export | ✅ **Fixed** | JSDoc present (`repos/users.ts:6`). |
-| R2-4 | 🟢 preAuthUser not revalidated at IDENTIFY | ✅ **Fixed (indirectly)** | Cookie token now captured at IDENTIFY (`ws/index.ts:108`) and used as `sessionToken` for the deferred expiry check via `findByToken`. Since `findByToken` itself nulls the token when `expires_at < now`, expired cookie sessions get caught at expiry-fire. Note: at the **moment** of IDENTIFY there's still no explicit re-check, but `findByToken` is the entry that produced `preAuthUser` at upgrade — so a stale cookie wouldn't have reached IDENTIFY anyway. |
-
-Plus the previously-confirmed R2 fixes still hold: 4005 close on re-IDENTIFY guard, cookie fallback token tracking, OAuth integration test against the real `/api/auth/callback` route (now even more solid — see new test mocking Google token + userinfo endpoints).
+**PR**: kagura-agent/cove#269
+**Round**: 4 (re-review of R3)
+**Commits since R3**: `9d60d8e` — "fix(ws): reschedule expiry timer after sliding token refresh"
+**Verdict**: ✅ **APPROVE** (with two carry-forward minors)
 
 ---
 
-## ✅ Strong improvements this round
+## R3 Issues — Status
 
-1. **`config.ts` centralization** — `SESSION_TTL_MS` parsed once, validated once, imported from one place. `repos/users.ts`, `auth.ts`, `routes/auth.ts`, `routes/register.ts`, and the v6 migration all import from `../config.js`. The migration no longer re-implements parsing. Old export kept as `@deprecated` for one-cycle migration. Clean.
-2. **`getRefreshThreshold` extraction** — pure, testable, single source of truth. Comment correctly explains the >24h vs <24h regimes.
-3. **OAuth callback test** — mocks `globalThis.fetch` for both `oauth2.googleapis.com/token` and `googleapis.com/oauth2/v2/userinfo`, calls the real route, asserts redirect AND the DB row (`token != old`, `expires_at` within ±5s of `now + TTL`). This is the right way to test it.
-4. **CHANGELOG.md** — clear Breaking Changes section documenting the `bot` field default. Good for downstream consumers.
+### 🟡 Core: Expiry timer not rescheduled after sliding refresh → ✅ FIXED
 
----
+R3 demanded a recursive `scheduleExpiry()` that re-reads `expires_at` and re-arms the timer. The commit `9d60d8e` implements exactly that in `packages/server/src/ws/index.ts`:
 
-## 🆕 New Findings
-
-### 🟡 M1 — Expiry timer is **not rescheduled after sliding refresh**
-`ws/index.ts:124-141`
-
-```js
-expiryTimer = setTimeout(() => {
-  if (sessionToken) {
-    const valid = users.findByToken(sessionToken);
-    if (!valid) {
+```ts
+function scheduleExpiry(token: string, delayMs: number) {
+  if (expiryTimer) clearTimeout(expiryTimer);
+  expiryTimer = setTimeout(() => {
+    const row = users.findByToken(token);
+    if (!row || !row.expires_at) {
       if (heartbeatCheck) clearInterval(heartbeatCheck);
       session.close(4004, "Authentication expired");
+      return;
     }
-  }
-}, ttl);
-```
-
-The timer fires once at the original `expires_at`. If the user hit `/api/auth/me` in the meantime and triggered `refreshTTL` (sliding refresh extends `expires_at` by another full TTL), the callback finds `valid !== null`, **logs nothing, does nothing, and never schedules a new timer**. The WS connection then has no further server-side expiry enforcement until disconnect — it can live indefinitely past the refreshed expiry.
-
-**Concrete scenario (default 7d TTL):**
-- t=0: IDENTIFY, timer scheduled for t=7d.
-- t=4d: user hits `/api/auth/me`, refresh extends to t=11d.
-- t=7d: timer fires, `findByToken` returns valid → no close, no reschedule.
-- t=11d→∞: session lives forever (until network drop or explicit `cleanupExpired` cron nulls the token, at which point the next REST call would 401 but the WS is untouched).
-
-This partially defeats the purpose of expiry enforcement on the WS layer.
-
-**Fix:** in the callback, if `valid` is truthy and `valid.expires_at` is in the future, reschedule:
-```js
-if (valid && valid.expires_at && valid.expires_at > Date.now()) {
-  expiryTimer = setTimeout(arguments.callee, valid.expires_at - Date.now());
-} else if (!valid) {
-  session.close(4004, "Authentication expired");
+    const remaining = row.expires_at - Date.now();
+    if (remaining <= 0) {
+      if (heartbeatCheck) clearInterval(heartbeatCheck);
+      session.close(4004, "Authentication expired");
+    } else {
+      scheduleExpiry(token, remaining);
+    }
+  }, Math.min(delayMs, MAX_TIMEOUT));
 }
 ```
-Or extract a `scheduleExpiry(user)` helper and call it recursively / from a `refreshed` signal.
+
+Behavior verification (fresh eyes):
+
+1. **Sliding refresh case** — REST call calls `users.refreshTTL` → `expires_at` bumps to `now + SESSION_TTL_MS`. Timer fires at original `expires_at`, reads fresh row, `remaining > 0`, reschedules at the new remaining. ✅ Matches R3 requirement.
+2. **Logout / token rotation** — `findByToken(token)` returns `null` → WS closes with 4004. This actually *implicitly* mitigates R3 minor #2 ("logout doesn't disconnect WS") for the case where logout rotates the token: the next timer fire (which may be far away) will kill the socket. Not eager, but bounded.
+3. **Truly expired** — `remaining <= 0` → close 4004. ✅
+4. **clearTimeout on `ws.close`** — added in the same commit. No timer leak on disconnect. ✅
+5. **clearTimeout in `scheduleExpiry` itself** — guards against double-scheduling, defensive. ✅
+
+### 🟢 R3 Minor: setTimeout overflow (>2^31-1 ms) → ✅ FIXED
+
+`MAX_TIMEOUT = 2_147_483_647` constant declared, and `Math.min(delayMs, MAX_TIMEOUT)` applied in `scheduleExpiry`. Because the function is recursive, an initial cap-clamp followed by a fresh re-arm will correctly walk down very long TTLs in ≤25-day chunks. ✅
+
+### 🟢 R3 Minor: Token revocation (logout) doesn't actively disconnect WS → ❌ UNADDRESSED → **escalated to 🟡**
+
+No active "kick" path on logout. The new recursive timer eventually catches rotated tokens (see analysis above), but:
+
+- For a fresh session with `expires_at = now + 7d`, a user who logs out at minute 1 will keep the WS open until the timer next fires — i.e. up to ~7 days later (or in 24.8-day chunks for longer TTLs).
+- Per R3 escalation rule, unaddressed → severity bumps from green to yellow.
+
+Suggested follow-up (separate PR is fine, not a blocker for this one):
+- Add a `dispatcher.disconnectByToken(token)` and call it from the logout route.
+- Or have the logout route delete/rotate the token *and* trigger an explicit close via a userId → session map.
+
+### 🟢 R3 Minor: WS expiry behavior lacks tests → ❌ UNADDRESSED → **escalated to 🟡**
+
+The added tests in `session-ttl.test.ts` cover:
+- `resolveUser` sliding refresh extending `expires_at` (REST path)
+- `getRefreshThreshold` pure-function values
+- OAuth `/api/auth/callback` integration
+
+…but **zero coverage of the new `scheduleExpiry` recursive logic** in `ws/index.ts`. The exact thing R3 flagged as the core bug now lives entirely untested. Recommend adding (next PR is acceptable):
+
+1. **Reschedule-after-refresh test** — connect WS, IDENTIFY, advance fake timers past initial expiry, mutate row's `expires_at` to simulate sliding refresh, assert WS stays open and a new timer is scheduled.
+2. **Revoked-token test** — null out token in DB, fast-forward timer, assert WS closes with 4004.
+3. **Overflow clamp test** — schedule with `delayMs = 5 * MAX_TIMEOUT`, assert the timer fires after ≤MAX_TIMEOUT and re-arms.
+
+Per the escalation rule, severity bumps from green to yellow.
 
 ---
 
-### 🟢 L1 — `setTimeout` delay overflow for very large TTLs
-`ws/index.ts:127`
+## Previously Fixed — Still Intact
 
-`setTimeout` clamps delays > 2^31-1 ms (~24.8 days) and fires immediately. Default `SESSION_TTL_MS` is 7 days so fine, but an operator setting `SESSION_TTL_MS=2592000000` (30 days) would cause every WS to immediately enter the expiry branch, re-query `findByToken` (valid), and silently no-op — masked by M1 above. Worth a clamp:
-```js
-const delay = Math.min(ttl, 2_147_483_647);
-```
-or document the supported TTL range in `config.ts`.
-
----
-
-### 🟢 L2 — `sessionToken` typing
-`ws/index.ts:57` declares `let sessionToken: string | null = null;` at the outer scope but is only assigned inside the IDENTIFY branch. If multiple identify attempts ever became possible (currently guarded by `session.isIdentified()`), the variable would stick to the last value. Currently safe due to the 4005 guard, but a small comment linking the two would future-proof it.
+| Item | Status |
+|------|--------|
+| re-IDENTIFY guard (4005) | ✅ Intact (session.isIdentified check elsewhere) |
+| Cookie fallback token tracking | ✅ Intact — `identifyToken` now sourced from cookie when falling back |
+| `getRefreshThreshold()` pure function | ✅ Extracted in `auth.ts`, used by both `resolveUser` and tests |
+| `@deprecated` re-export of `SESSION_TTL_MS` from `repos/users.ts` | ✅ Present with JSDoc |
+| OAuth integration test | ✅ Now hits real `/api/auth/callback` with mocked fetch — no longer tautological |
 
 ---
 
-### 🟢 L3 — Test uses real `SESSION_TTL_MS` in the "short TTL" integration tail
-`session-ttl.test.ts:236-243`
+## Fresh Review of New/Changed Code
 
-The integration portion of `"sliding threshold works for short TTLs"` is actually exercising the **production** `SESSION_TTL_MS`, not a short one — it just forges a row whose remaining time is below the production threshold. That's fine and verifies the wiring, but the test name is slightly misleading. The pure-function assertions above it do cover the actual short-TTL math. Rename to `"sliding threshold pure function + integration with forged near-expiry"` or split into two tests.
+### `packages/server/src/ws/index.ts`
+
+**Strengths**
+- Clean separation: `expiryTimer` and `sessionToken` declared once at handler scope; cleared on close. No leak vectors.
+- Type extension (`expires_at: number | null`) propagated consistently through both `preAuthUser` and the IDENTIFY-path `user` object.
+- Cookie-fallback token-rewrite is correct — prevents an attacker-supplied invalid explicit token from poisoning the expiry check.
+
+**Minor observations** (non-blocking, optional cleanup):
+
+1. **Dead variable** — `sessionToken: string | null = null` is declared at handler scope but only ever assigned inside IDENTIFY, then passed by closure capture into `scheduleExpiry(sessionToken!, ttl)`. After that, it's never re-read. You could drop the outer variable and just pass `identifyToken!` directly:
+   ```ts
+   if (!user.bot && user.expires_at && identifyToken) {
+     scheduleExpiry(identifyToken, user.expires_at - Date.now());
+   }
+   ```
+   Saves a non-null assertion and an unused outer-scope mutable. Cosmetic.
+
+2. **`!user.expires_at` is truthy for `0`** — currently `if (!user.bot && user.expires_at)` skips scheduling when `expires_at === 0`. In practice `expires_at = 0` would mean "epoch", i.e. already expired; the immediate-close branch would handle it. Theoretically you might prefer `user.expires_at !== null` to be explicit, but no real-world value of 0 is plausible. Cosmetic.
+
+3. **`MAX_TIMEOUT` magic-ish constant** — fine inline, but if `auth.ts` or `config.ts` grows similar concerns, consider centralising. Not for this PR.
+
+4. **Recursion vs `while` loop** — recursive `scheduleExpiry → setTimeout → scheduleExpiry` is fine because each call returns synchronously after scheduling; no stack growth. Just noting the recursion is *control-flow recursion across event-loop ticks*, not call-stack recursion. ✅
+
+### `packages/server/src/auth.ts`
+
+- `getRefreshThreshold(ttlMs)` placement is correct — exported above the `SESSION_TTL_MS` import is awkward stylistically (function uses a magic `86_400_000` rather than the imported constant), but the function is pure and parameterised, so this is fine. ✅
+- No regressions.
+
+### `packages/server/src/config.ts`
+
+- Single source of truth for `SESSION_TTL_MS`. ✅
+- Throws on invalid env at import time — fail-fast on misconfigured deploys is the right call. ✅
+
+### `packages/server/src/__tests__/session-ttl.test.ts`
+
+- `getRefreshThreshold` numeric assertions look correct against the implementation (`Math.max(ttl/2, ttl - 86_400_000)`):
+  - `3_600_000` → max(1.8M, -82.8M) = 1.8M ✓
+  - `172_800_000` → max(86.4M, 86.4M) = 86.4M ✓
+  - `604_800_000` → max(302.4M, 518.4M) = 518.4M ✓
+- OAuth test correctly stubs both token-exchange and userinfo endpoints, and restores `globalThis.fetch` in `finally`. ✅
+- **Gap**: no `ws/index.ts` test coverage as noted above.
+
+### `CHANGELOG.md`
+
+- New file, clearly documents the breaking `bot` field default. ✅ Good practice; previously missing.
 
 ---
 
-## Severity Summary
+## Summary
 
-| Severity | Count | Items |
-|---|---|---|
-| 🔴 Critical | 0 | — |
-| 🟠 High | 0 | — |
-| 🟡 Medium | 1 | M1 (expiry timer not rescheduled after refresh) |
-| 🟢 Low | 3 | L1 (setTimeout overflow), L2 (sessionToken comment), L3 (test name) |
+| Severity | Count | Notes |
+|----------|-------|-------|
+| 🔴 Blocker | 0 | — |
+| 🟠 Major | 0 | — |
+| 🟡 Minor | 2 | Both **escalated from green** per R3-rule: logout-disconnect, WS-expiry tests. Both safe to defer to follow-up PRs. |
+| 🟢 Nit | 3 | Dead `sessionToken` var, `expires_at` truthiness check, magic `86_400_000`. All optional. |
 
-All R2 issues are fixed. Recommend addressing **M1** before merge (the refresh-then-survive-forever path is a real correctness gap), L1–L3 can be follow-ups.
+**Recommendation**: **APPROVE & MERGE.** The R3 core bug is correctly fixed; the recursive scheduler is sound; the overflow clamp is in place; previously-fixed items remain intact. The two escalated minors are real but small and well-suited to a follow-up issue (suggest opening one before merge so they don't get lost).
 
-**Verdict:** ⚠️ Request changes — one Medium blocker (M1). Solid R3 overall; the polling→timer migration and config centralization are clean wins.
+— 🌠 Nova

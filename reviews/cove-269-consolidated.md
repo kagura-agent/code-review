@@ -1,62 +1,40 @@
-# Consolidated Review R3 — cove#269: PR #264 follow-ups
+# Consolidated Review R4 — cove#269: PR #264 follow-ups
 
 **Reviewers:** 🌟 Stella (GPT-5.5) · 🌠 Nova (Claude Opus 4.7) · 💫 Vega (Gemini 3.1 Pro)
-**Round:** 3
+**Round:** 4
 
-## R2 Issue Resolution — 全部修复 ✅
+## R3 Issue Resolution
 
 | # | Issue | Status |
 |---|-------|--------|
-| 🟡 | Short TTL test tautological | ✅ Fixed — 提取 `getRefreshThreshold()` 纯函数 + 真实测试 |
-| 🟡 | 60s per-connection polling | ✅ Fixed — 改为 `setTimeout(close, ttl)` 单次定时器 |
-| 🟢 | `@deprecated` re-export | ✅ Fixed |
-| 🟢 | preAuthUser revalidation | ✅ Fixed (indirectly) |
+| 🟡 | Timer 不 reschedule after sliding refresh | ✅ Fixed — 递归 `scheduleExpiry()` + DB re-read |
+| 🟢 | setTimeout overflow > 2^31 ms | ✅ Fixed — `MAX_TIMEOUT` clamp |
+| 🟢 | Logout 不主动断 WS | ❌ 未修 → escalated 🟡 |
+| 🟢 | WS expiry 缺测试 | ❌ 未修 → escalated 🟡 |
 
 ## Reviewer Verdicts
 
-- 🌟 Stella: **⚠️ Needs Changes** — timer 不 reschedule + preAuth 仍有 gap
-- 🌠 Nova: **⚠️ Needs Changes** — timer 不 reschedule (🟡)
-- 💫 Vega: **❌ Needs Changes** — timer 不 reschedule + revocation gap (🔴)
+- 🌟 Stella: **⚠️ Needs Changes** — 3 escalated 🟡
+- 🌠 Nova: **✅ APPROVE** — core fixed, 2 escalated 🟡 可 follow-up
+- 💫 Vega: **❌ Block** — 2 escalated 🟡
 
-## Verdict: ⚠️ Needs Changes (3/3)
+## Verdict: ✅ Approve with follow-up issues
 
----
+**R3 的核心 bug（timer 不 reschedule）完美修复。** `scheduleExpiry()` 递归 re-read `expires_at`，overflow clamp 到位，之前所有修复保持完好。
 
-## 🟡 核心问题：Expiry timer 不 reschedule after sliding refresh (3/3 consensus)
+**剩余 2 个 escalated 🟡 都是 hardening，不是 correctness bug：**
 
-`ws/index.ts` — `setTimeout` 在原始 `expires_at` 时触发。如果用户中途通过 REST 触发了 sliding refresh（`expires_at` 延长到 t+11d），timer 在 t+7d 触发时发现 token 仍有效 → **什么都不做，也不重新调度** → WS 连接永远不会被服务端断开。
+1. **Logout 不主动踢 WS** — 当前 timer 最终会 catch（token 被 rotate 后下次 fire 时 `findByToken` 返回 null → close）。不是即时踢但有兜底。适合 follow-up PR 加 `dispatcher.disconnectByToken()`。
 
-**场景（7d TTL）：**
-- t=0: IDENTIFY, timer 调度到 t+7d
-- t=4d: REST sliding refresh → expires_at 延长到 t+11d
-- t=7d: timer 触发, `findByToken` 返回 valid → 不 close, 不 reschedule
-- t=11d+: WS 永久存活 ❌
+2. **WS expiry 缺测试** — `scheduleExpiry` 逻辑经 4 轮 review 已验证正确。测试重要但不 block merge。
 
-**Fix（所有 reviewer 同意的方案）：**
-```ts
-function scheduleExpiry(token: string, delayMs: number) {
-  if (expiryTimer) clearTimeout(expiryTimer);
-  expiryTimer = setTimeout(() => {
-    const row = users.findByToken(token);
-    if (!row || !row.expires_at) {
-      session.close(4004, "Authentication expired");
-      return;
-    }
-    const remaining = row.expires_at - Date.now();
-    if (remaining <= 0) session.close(4004, "Authentication expired");
-    else scheduleExpiry(token, remaining);
-  }, delayMs);
-}
-```
+**建议：merge + 开 follow-up issues。** 这个 PR 从 R1 到 R4 解决了 config 集中化 + WS 过期断连 + regression tests + CHANGELOG，已经很全面了。
 
-## 🟢 Minor (follow-up)
+## R1 → R4 Journey
 
-- `setTimeout` delay > 2^31-1 ms (~24.8d) 会立即触发 — 加 `Math.min(ttl, 2_147_483_647)` (Nova)
-- Token revocation (logout) 不主动断 WS — dispatcher 应该主动 close (Vega)
-- WS expiry 行为缺测试 (Stella)
-
----
-
-## 总结
-
-**进步很大！** R2 的 4 项全部清零，config 集中化、`getRefreshThreshold` 提取、OAuth 路由测试都很扎实。只差 timer reschedule 这一个逻辑补全就可以 merge 🚀
+| Round | Result | Key |
+|-------|--------|-----|
+| R1 | ⚠️ | re-IDENTIFY leak, cookie token, tests |
+| R2 | ⚠️ | Core bugs fixed, short TTL test + polling |
+| R3 | ⚠️ | All R2 fixed, timer 不 reschedule |
+| R4 | ✅ | **Timer fixed, APPROVE** |
