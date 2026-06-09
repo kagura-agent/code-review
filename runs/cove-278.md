@@ -39,3 +39,13 @@
 - **Vega:** crashed (no output)
 - **Consolidator verdict:** lint error is blocking (same class as R2#2)
 - **Language:** English ✅
+
+## Round 5
+- **Date:** 2026-06-09
+- **Verdict:** ✅ Ready to Merge (2/2 Approve, Stella timeout)
+- **R4 blocker:** scrollContainerRef.current read during render → ✅ Fixed (callback ref + useState)
+- **Nova:** ✅ Approve — thorough fresh review, all hook hygiene verified
+- **Vega:** ✅ Approve — confirmed lint fix, listed follow-ups
+- **Stella:** timeout (GPT-5.5 LLM request timed out)
+- **All R1-R4 blockers resolved across 5 rounds**
+- **Language:** English ✅
