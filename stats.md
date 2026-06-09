@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-09 08:26 (Asia/Shanghai)_
+_Last updated: 2026-06-09 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 113 | 110/113 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2). Last 54+ rounds ex-R2: clean |
-| 🌠 Nova | claude-opus-4.7 | 116 | 116/116 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 113 | 109/113 (96%) ↑ | Improving — last 60+ rounds: 100%. Early failures dragging average |
+| 🌟 Stella | gpt-5.5 | 118 | 114/118 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 54+ rounds ex-R2: 1 timeout |
+| 🌠 Nova | claude-opus-4.7 | 122 | 122/122 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 118 | 113/118 (96%) → | 1 crash (#278 R4). Last 60+ rounds before: 100%. Stable overall |
 
 ## Dimension Strengths (per reviewer)
 
@@ -27,8 +27,9 @@ _Last updated: 2026-06-09 08:26 (Asia/Shanghai)_
 | Protocol/Gateway | ⭐⭐⭐ | **RESUMED aborts dispatches** (#255 R1 — unique insight: RESUME should NOT trigger dispatch abort), `resumed` vs `reconnect` event distinction, channel refetch lifecycle. **WS fallback gap** (#261 R1 — WS disconnect → sidebar loading forever). **WS session outlives expired token** (#264 R5 — unique: gateway never rechecks after IDENTIFY) |
 | Control Flow Analysis | ⭐⭐⭐ | **try/catch control flow bug** (#255 R5 — caught that R4's "fix" was non-functional: POST still retried due to throw inside try). New dimension. |
 | Session/Auth Lifecycle | ⭐⭐⭐ | **Cookie reissue gap** (#264 R3 — sliding refresh updates DB but browser cookie keeps old maxAge), **OAuth non-atomic** (#264 R4 — two UPDATEs can leave stale expires_at on crash). Persistent escalation across 5 rounds. |
+| React Hooks Hygiene | ⭐⭐⭐ | **Ref mutation during render** (#278 R2 — unique find, verified by eslint), **scrollContainerRef.current read during render** (#278 R4 — unique find from shared observer refactor). Caught same lint class twice in one PR. |
 
-**Stella's superpower:** Runs actual builds + reproduces bugs locally. Catches things that pure code reading misses. Deepest lifecycle analysis. Most persistent on escalation rules. Protocol-level reasoning. Control flow verification. **New: session lifecycle depth** — #264 found WS session outliving expired tokens (gateway never rechecks), cookie reissue gap, OAuth non-atomic update.
+**Stella's superpower:** Runs actual builds + reproduces bugs locally. Catches things that pure code reading misses. Deepest lifecycle analysis. Most persistent on escalation rules. Protocol-level reasoning. Control flow verification. Session lifecycle depth. **New: React hooks hygiene** — #278 caught ref-in-render lint errors twice (R2, R4), both verified.
 **Stella's weakness:** Sometimes over-scopes (flags out-of-PR architectural concerns as blocking). Strictest on escalation — same-ms monotonicity (#192 R4) flagged when practically harmless.
 
 ### 🌠 Nova (Claude Opus 4.7)
@@ -66,6 +67,7 @@ _Last updated: 2026-06-09 08:26 (Asia/Shanghai)_
 | Rate Limiting | ⭐⭐ | **Token bucket math errors** (#261 R1), retry_after calculation issues. First reviewer to flag R1 in #261. Ready verdict in R3 when others still had blockers — isolated incident, returned correct in R4. |
 | Performance Optimization | ⭐⭐ | **broadcastToGuilds loop** (#263 R1 — joint with Nova), O(1) session lookup verification |
 | Session TTL Edge Cases | ⭐⭐⭐ | **Sliding threshold math bug** (#264 R3 — unique find: `TTL - 24h` goes negative for short TTLs → sliding silently fails), **stale expires_at return** (#264 R5 — in-memory value not updated after DB refresh), **cookie maxAge escalation** (#264 R2 — elevated from suggestion to Major). Strong on config-math edge cases. |
+| Scroll/DOM Architecture | ⭐⭐ | **Scroll listener not attached on first visit** (#278 R1 — unique find: useEffect deps missed container mount). Strong first-principles DOM lifecycle analysis. |
 
 **Vega's superpower:** Fast (~1m avg). Capable of star-quality finds when the bug is deterministic/logical (gen ID reuse #190, own-message-unread #192, 204 JSON parsing #255, sliding threshold math #264). Cleanest fix suggestions. Excellent edge-case tenacity (deleted-message tracked across 3 rounds). Strong on input sanitization/DoS vectors and config-math edge cases.
 **Vega's weakness:** Fewer unique finds overall but improving. Sometimes over-escalates severity (#191 R2 — ❌ Major for all 3 issues). One premature Ready in #261 R3 — isolated, not a pattern.
@@ -109,11 +111,11 @@ _Last updated: 2026-06-09 08:26 (Asia/Shanghai)_
 
 ## Reliability History
 
-| Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#261) | Trend |
+| Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#279) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 90/93 (97%) | → (timeout #176 R1, late #190 R5, miss #255 R2) |
-| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 96/96 (100%) | → |
-| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 89/89 (100%) | ↑ Significant improvement after prompt fixes |
+| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 94/98 (96%) | → (timeout #176 R1, late #190 R5, miss #255 R2, timeout #278 R5) |
+| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 102/102 (100%) | → |
+| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 93/94 (99%) | → (crash #278 R4. Otherwise 100% since #168) |
 
 ## Review History
 
@@ -153,16 +155,18 @@ _Last updated: 2026-06-09 08:26 (Asia/Shanghai)_
 | **#261** | **cove** | **2026-06-07** | **R1-R4** | **✅ Ready (merged)** | **retry-duplicate, ws-fallback, token-bucket, optimistic-send, nonce-validation** |
 | **#263** | **cove** | **2026-06-07** | **R1-R2** | **✅ Ready (merged)** | **o1-session-lookup, broadcastToGuilds-optimization** |
 | **#264** | **cove** | **2026-06-07** | **R1-R6** | **✅ Ready (merged)** | **session-ttl-data-loss, sliding-threshold-math, cookie-reissue, oauth-atomic, ws-session-lifetime** |
+| **#278** | **cove** | **2026-06-09** | **R1-R5** | **✅ Ready (merged)** | **scroll-listener-attachment, deep-history-restore, stale-cache-clobber, ref-in-render-lint, shared-observer** |
+| **#279** | **cove** | **2026-06-09** | **R1** | **✅ Ready (merged)** | **tuple-comparison-pagination** |
 
-## Ground Truth Summary (34 merged PRs)
+## Ground Truth Summary (36 merged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 97% — human approved without findings in 33/34 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
-- **Iterative review as quality gate:** In 31/34 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
+- **Human rubber-stamp rate:** 97% — human approved without findings in 35/36 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
+- **Iterative review as quality gate:** In 33/36 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 1 (#100 — verdict too conservative for personal project context)
-- **Multi-round PRs:** 29/34 PRs went through 2+ rounds. Average rounds: 2.9. Max: 7 (#190)
-- **Total review rounds:** ~110 across 34 merged PRs
+- **Multi-round PRs:** 31/36 PRs went through 2+ rounds. Average rounds: 2.8. Max: 7 (#190)
+- **Total review rounds:** ~116 across 36 merged PRs
 - **False-ready detection:** 1 case (#255 R4→R5) — R4 said Ready but R5 found the fix was non-functional. Self-correcting system working.
 - **Escalation protocol validated:** 2 cases (#255 R2→R3, #264 R3→R4) — unaddressed items correctly escalated. Both led to fixes.
 
@@ -179,7 +183,7 @@ _Last updated: 2026-06-09 08:26 (Asia/Shanghai)_
 
 3. **Vega gave premature Ready in #261 R3 (isolated).** While Stella and Nova found remaining blockers (empty guilds READY crash, nonce validation ordering), Vega said LGTM. Single instance — not a pattern. Vega returned correct Ready in R4.
 
-4. **Nova continues zero false positives across 99 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker.
+4. **Nova continues zero false positives across 122 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker.
 
 5. **#261 merged after R4 (4 rounds).** All issues from R1-R3 resolved. Stella's R4 setMessages/pending race was correctly assessed as non-blocking (follow-up issue). System self-calibrating on blocker vs follow-up.
 
@@ -195,7 +199,7 @@ _Last updated: 2026-06-09 08:26 (Asia/Shanghai)_
 
 8. **Stella adding "Session/Auth Lifecycle" dimension.** In #264, found cookie reissue gap (R3), OAuth non-atomic (R4, joint with Nova), and WS session outliving expired token (R5, unique). Combined with #255 control flow analysis, Stella's lifecycle depth is growing.
 
-9. **Nova emerging as "calibration anchor" pattern.** In #264, first to approve in R3 and R5 — correctly identifying when remaining issues are follow-ups not blockers. 15% unique find rate (highest). Zero false positives across 110 rounds.
+9. **Nova emerging as "calibration anchor" pattern.** In #264, first to approve in R3 and R5 — correctly identifying when remaining issues are follow-ups not blockers. 15% unique find rate (highest). Zero false positives across 122 rounds.
 
 10. **Vega's config-math edge case strength.** #264 R3 sliding threshold bug is the same analytical style as 204 JSON parsing (#255) and own-message-unread (#192) — deterministic logical bugs. Vega's sweet spot.
 
@@ -211,4 +215,15 @@ _Last updated: 2026-06-09 08:26 (Asia/Shanghai)_
 
 16. **All 3 reviewers above 10% unique find rate.** No reviewer flagged for replacement. Healthy distribution. Stella 12%, Nova 15%, Vega 11%.
 
-17. **All 34 PRs now merged, zero open.** Clean tracking state. No stale entries.
+17. **All 36 PRs now merged, zero open.** Clean tracking state. No stale entries.
+
+18. **#278 completed — 5-round scroll architecture review.** First major frontend/React review:
+    - R1: Vega unique find (scroll listener not attached on first visit)
+    - R2: Stella unique (lint: ref mutation during render)
+    - R3: 2/3 Ready but dead code cleanup needed
+    - R4: Stella caught same lint class again from shared observer refactor; Vega crashed
+    - R5: 2/2 Ready (Stella timeout). All R1-R4 blockers resolved.
+    - **New dimension: React hooks hygiene** — `react-hooks/refs` lint rule caught twice. Stella strongest on this.
+    - **Reliability note:** Vega crash R4 + Stella timeout R5 in same PR. Both isolated, no impact on final verdict.
+
+19. **#279: cleanest review to date.** 3/3 Ready R1, zero blockers. Textbook keyset pagination fix. Validates that the system correctly fast-tracks clean PRs without over-flagging.
