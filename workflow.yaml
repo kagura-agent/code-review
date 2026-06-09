@@ -85,9 +85,18 @@ nodes:
 
   post_summary:
     task: |
-      Consolidate the 3 reviews into a structured summary:
+      **0. Verify findings (anti-hallucination gate):**
+      Before consolidating, run verify-findings.sh on each reviewer's output:
+      ```
+      bash code-review/verify-findings.sh <repo-path> code-review/reviews/<review-file>.md
+      ```
+      If any review has >30% unverified file references, flag it in the summary as
+      "⚠️ Low confidence — file references could not be verified" and deprioritize
+      its unique findings. Do NOT drop verified findings from that reviewer.
+
+      **1. Consolidate** the 3 reviews into a structured summary:
       - Consensus findings (2+ reviewers agree) — high confidence
-      - Per-reviewer unique findings
+      - Per-reviewer unique findings (mark verification confidence)
       - Per-reviewer rating and key points
       - Overall verdict
       Post to channel AND to the PR via `gh pr review --comment`.

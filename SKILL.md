@@ -50,6 +50,10 @@ For Round 2+, include the previous consolidated review in each reviewer's prompt
 3. **Anti-confirmation bias**: "Your previous acceptance doesn't mean correct. Re-evaluate fresh."
 4. Fresh review of any new code.
 
+## Language
+
+**All review comments posted to GitHub PRs must be in English.** No exceptions — whether it's our own repo or external. Internal workspace files (reviews/, channel messages) can use any language, but the moment it goes on a PR, English only.
+
 ## Review Standards
 
 - `prompts/<repo>.prompt.md` — project-specific
