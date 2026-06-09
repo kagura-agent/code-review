@@ -1,6 +1,6 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-09 20:26 (Asia/Shanghai)_
+_Last updated: 2026-06-10 02:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -165,8 +165,8 @@ _Last updated: 2026-06-09 20:26 (Asia/Shanghai)_
 - **Human rubber-stamp rate:** 97% — human approved without findings in 35/36 cases. Exception: #174 where human asked design-level questions while our review caught code-level safety. Complementary perspectives.
 - **Iterative review as quality gate:** In 33/36 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 1 (#100 — verdict too conservative for personal project context)
-- **Multi-round PRs:** 31/36 PRs went through 2+ rounds. Average rounds: 2.8. Max: 7 (#190)
-- **Total review rounds:** ~116 across 36 merged PRs
+- **Multi-round PRs:** 29/36 PRs went through 2+ rounds. Average rounds: 2.9. Max: 7 (#190)
+- **Total review rounds:** 103 across 36 merged PRs
 - **False-ready detection:** 1 case (#255 R4→R5) — R4 said Ready but R5 found the fix was non-functional. Self-correcting system working.
 - **Escalation protocol validated:** 2 cases (#255 R2→R3, #264 R3→R4) — unaddressed items correctly escalated. Both led to fixes.
 
