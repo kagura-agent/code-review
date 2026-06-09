@@ -21,7 +21,7 @@
     "verdict": "needs_changes",
     "reviewers": 2,
     "run_id": 2844,
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -43,7 +43,7 @@
     "review_url": "https://github.com/kagura-agent/cove/pull/96#pullrequestreview-4362806507",
     "reviewers": 2,
     "run_id": 2846,
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -66,7 +66,7 @@
       ],
       "calibration": "verdict too conservative for small-team/personal project context"
     },
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -98,7 +98,7 @@
     "reviewers": 3,
     "rounds": 6,
     "flowforge_instance": 3346,
-    "last_checked": "2026-06-09T02:26+08:00",
+    "last_checked": "2026-06-09T08:26+08:00",
     "notes": "R6: all issues resolved. 3/3 Ready. Merged 2026-06-02."
   },
   {
@@ -121,7 +121,7 @@
     "reviewers": 3,
     "rounds": 2,
     "notes": "R1 manual (not FlowForge), R2 via FlowForge #3410. 3/3 ✅ Ready both rounds.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -143,7 +143,7 @@
     "reviewers": 3,
     "rounds": 1,
     "flowforge_instance": 3422,
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -171,7 +171,7 @@
     "rounds": 2,
     "flowforge_instance": 3424,
     "notes": "R1: critical migration ordering (3/3 consensus). R2: fixed, Stella found recovery edge case (1/3). Merged 2026-06-03.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -195,7 +195,7 @@
     "rounds": 2,
     "flowforge_instance": 3427,
     "notes": "R1: Vega failed. R2: 3/3 ✅ unanimous. Merged 2026-06-03.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -223,7 +223,7 @@
     "rounds": 3,
     "flowforge_instance": 3433,
     "notes": "R3: 3/3 ✅. XSS + paragraph collapse fixed. Vega clean for 2nd run after prompt fix.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -246,7 +246,7 @@
     "rounds": 1,
     "flowforge_instance": 3444,
     "notes": "Clean polish PR. 3/3 ✅. Merged 2026-06-03.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -274,7 +274,7 @@
     "rounds": 2,
     "flowforge_instance": 3460,
     "notes": "R1: Stella caught real build failure (AppEnv typing). R2: 3/3 ✅. Merged 2026-06-03.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -297,7 +297,7 @@
     "rounds": 1,
     "flowforge_instance": 3468,
     "notes": "Clean 3/3 ✅. Migration guard + validation. Vega 6th consecutive clean. Merged 2026-06-03.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -326,7 +326,7 @@
     "rounds": 2,
     "flowforge_instance": 3474,
     "notes": "R2: 3/3 ✅. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean. Merged 2026-06-03.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -354,7 +354,7 @@
     "reviewers": 3,
     "rounds": 6,
     "notes": "R6: REST fully secured, WS scoping deferred as follow-up. Merged 2026-06-04T02:29Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -383,7 +383,7 @@
     "reviewers": 3,
     "rounds": 2,
     "notes": "R1: input validation (3/3). R2: 3/3 ✅. Human had inline comments. Merged 2026-06-04T04:37Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -406,7 +406,7 @@
     "reviewers": 3,
     "rounds": 2,
     "notes": "Template string interpolation caught. 3/3 ✅ R2. Merged 2026-06-04T05:10Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -439,7 +439,7 @@
     "reviewers": 3,
     "rounds": 3,
     "notes": "R1: Stella timeout. R2: 3/3 unanimous needs_changes. R3: 2/3 ready. Merged 2026-06-04T07:06Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -465,7 +465,7 @@
     "reviewers": 3,
     "rounds": 3,
     "notes": "R1: FK pragma no-op in transaction (3/3). R2: fake test escalated. R3: 3/3 unanimous ready. Merged 2026-06-04T08:19Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -492,7 +492,7 @@
     "reviewers": 3,
     "rounds": 3,
     "notes": "R1: stale guildIds (Stella+Nova). R2: self-broadcast + GUILD events (3/3). R3: 2/3 ready. Merged 2026-06-04T09:49Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -519,7 +519,7 @@
     "reviewers": 3,
     "rounds": 7,
     "notes": "7-round journey. R4 Vega star find (gen ID reuse). R7: 3/3 unanimous. Merged 2026-06-04T11:58Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -547,7 +547,7 @@
     },
     "rounds": 3,
     "notes": "R1: IME composition (2/3). R2: focus ring + height restore + mobile (3/3). R3: 3/3 unanimous ready. First UI/accessibility-focused review. Merged 2026-06-04.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -577,7 +577,7 @@
     },
     "rounds": 4,
     "notes": "R1-R3: 5 criticals found+fixed. R4: ✅ Ready with follow-ups (same-ms monotonicity, deleted-msg edge case). 4-round marathon.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -605,7 +605,7 @@
     },
     "rounds": 3,
     "notes": "R1: ❌ security (snowflake auth token). R2: ⚠️ (CAST index, idMap). R3: ✅ Ready. All blockers resolved. Follow-ups: email UNIQUE, worker ID.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -633,7 +633,7 @@
     },
     "rounds": 3,
     "notes": "R1-R2: stale last_message_id + broken clear + allowlist. R3: ✅ Ready with follow-ups (deletion auth deferred to #113, @me tests, clear-all broadcast).",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -659,7 +659,7 @@
     },
     "rounds": 2,
     "notes": "R1: 3/3 ⚠️ (fixed grid clips input). R2: ✅ Ready. minmax fix correct. Follow-ups: getComputedStyle race, mobile sidebar overlap.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -668,7 +668,7 @@
     "status": "merged",
     "reviewed_at": "2026-06-06T00:37+08:00",
     "notes": "R1-R3: security hardening (PUBLIC_PATHS, DoS, XSS, BFF invariant). R4: 3/3 unanimous ready. Security checklist all-green. Merged 2026-06-06T02:32Z.",
-    "last_checked": "2026-06-09T02:26+08:00",
+    "last_checked": "2026-06-09T08:26+08:00",
     "ground_truth": {
       "human_reviewer": "daniyuu",
       "human_verdict": "approved",
@@ -718,7 +718,7 @@
     "reviewers": 2,
     "rounds": 2,
     "notes": "R1: guildless user stuck (2/2). R2: 2/2 ready. Merged 2026-06-06T04:30Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -740,7 +740,7 @@
     "reviewers": 3,
     "rounds": 1,
     "notes": "Clean refactor. 3/3 ready. Merged 2026-06-06T05:27Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -762,7 +762,7 @@
     "reviewers": 1,
     "rounds": 1,
     "notes": "Nova-only review. Wire format defaults. Merged 2026-06-06T06:13Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -789,7 +789,7 @@
     "reviewers": 3,
     "rounds": 2,
     "notes": "R1: GUILD_MEMBER presence mutation bug (Stella+Nova). R2: 3/3 ready. Merged 2026-06-06T07:05Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -812,7 +812,7 @@
     "reviewers": 1,
     "rounds": 2,
     "notes": "Vega-only + Kagura verification. Null propagation noted. Merged 2026-06-06T10:57Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -824,7 +824,7 @@
     "reviewers": 3,
     "rounds": 6,
     "notes": "R1-R6: RESUMED abort, REST retry, 204 parsing, POST idempotency, try/catch control flow. R5 caught R4 false-ready. 15 unit tests added. Merged 2026-06-07T02:09Z.",
-    "last_checked": "2026-06-09T02:26+08:00",
+    "last_checked": "2026-06-09T08:26+08:00",
     "ground_truth": {
       "human_reviewer": "daniyuu",
       "human_verdict": "approved",
@@ -861,7 +861,7 @@
     "reviewers": 3,
     "ground_truth": null,
     "notes": "R3: 3/3 needs_changes. POST retry escalated 🟡→🔴. sendTyping budget escalated. 204 fix confirmed. Stella dispatch.ts fallback paths finding.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -880,7 +880,7 @@
       "our_verdict": "ready",
       "notes": "R4 confirmed POST/PATCH retry fix. 3/3 ready. But R5 found try/catch control flow bug."
     },
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -899,7 +899,7 @@
       "our_verdict": "major_issues",
       "notes": "R5: 3/3 caught isIdempotent gate non-functional due to try/catch control flow. Critical find."
     },
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -921,7 +921,7 @@
       "noise": [],
       "calibration": "6-round marathon. R5 caught try/catch control flow bug that R4 missed — isIdempotent gate was non-functional. R6 confirmed fix + 15 unit tests. Human approved without comments."
     },
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -934,7 +934,7 @@
     "verdict": "needs_changes",
     "reviewers": 3,
     "ground_truth": null,
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -947,7 +947,7 @@
     "verdict": "needs_changes",
     "reviewers": 3,
     "ground_truth": null,
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -960,7 +960,7 @@
     "verdict": "needs_changes",
     "reviewers": 3,
     "ground_truth": null,
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -982,7 +982,7 @@
       "noise": [],
       "calibration": "4-round review. R1-R3 caught real bugs (retry duplication, WS fallback, token bucket debt, nonce ordering). Human approved R4 without comments."
     },
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -1004,7 +1004,7 @@
       "noise": [],
       "calibration": "Small perf PR. R1: broadcastToGuilds loop optimization (Nova+Vega). R2: fix confirmed, 3/3 Ready. Human approved quickly."
     },
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -1026,7 +1026,7 @@
       "noise": [],
       "calibration": "R2: 3/3 unanimous Ready. broadcastToGuilds fixed. Human approved without comments."
     },
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -1046,7 +1046,7 @@
       "accuracy": "correct",
       "notes": "R4: All R3 items unaddressed, correctly escalated. +OAuth non-atomic, backfill hardcode, bot footgun."
     },
-    "last_checked": "2026-06-09T02:26+08:00",
+    "last_checked": "2026-06-09T08:26+08:00",
     "notes": "R4: All R3 issues unaddressed → escalated to 🔴. +OAuth non-atomic, backfill hardcode, bot footgun. 3/3 needs_changes."
   },
   {
@@ -1070,7 +1070,7 @@
       "notes": "R5: All 7 R4 items fixed. Stale expires_at (Stella+Vega). WS session lifetime (Stella unique). Nova first to approve."
     },
     "notes": "R5: All 7 R4 items fixed! Near-approve. Stale expires_at return (Stella+Vega). WS session lifetime (Stella unique). Nova clean approve.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   },
   {
     "owner": "kagura-agent",
@@ -1100,6 +1100,6 @@
       "calibration": "6-round marathon. R1 caught critical data-loss (DELETE users instead of UPDATE). R3 Vega sliding threshold math. R4 escalation protocol enforced. R5 all 7 items fixed + Stella WS session lifetime. R6 final stale expires_at fixed, 3/3 unanimous. Human approved without comments — iterative review was the quality gate."
     },
     "notes": "R6: 3/3 APPROVE. stale expires_at fixed. 164 tests pass. Merged 2026-06-08T01:53Z.",
-    "last_checked": "2026-06-09T02:26+08:00"
+    "last_checked": "2026-06-09T08:26+08:00"
   }
 ]
