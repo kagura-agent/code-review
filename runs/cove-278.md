@@ -28,3 +28,14 @@
 - **Vega:** ⚠️ — escalated all R2 suggestions + dead code finding (cappedSetAdd unused)
 - **Dead code verified:** cappedSetAdd/SET_CAP/SET_EVICT in MessageList.tsx unused (LazyMessageItem has own eviction)
 - **Language:** English ✅
+
+## Round 4
+- **Date:** 2026-06-09
+- **Verdict:** ⚠️ Needs Changes (1 lint blocker)
+- **R3 cleanup:** Dead code removed ✅
+- **New work:** Shared IntersectionObserver + explicit root + Date.parse
+- **Stella:** ❌ — scrollContainerRef.current read during render (lint error, verified)
+- **Nova:** ✅ Approve — noted same issue as non-blocking perf concern
+- **Vega:** crashed (no output)
+- **Consolidator verdict:** lint error is blocking (same class as R2#2)
+- **Language:** English ✅
