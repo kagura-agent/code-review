@@ -51,17 +51,27 @@ for ext in $extensions; do
   fi
 done
 
-if [[ ${#included[@]} -eq 0 ]]; then
+# Even with no language-specific rules, still output universal AI failure modes
+if [[ ${#included[@]} -eq 0 && ! -f "$RULES_DIR/ai-failure-modes.md" ]]; then
   exit 0
 fi
 
 # Output combined rules
-echo "## Language-Specific Review Rules"
+echo "## Review Rules"
 echo ""
-echo "The following language-specific checklists apply to this PR based on the file types changed."
-echo "Use these as additional review criteria alongside the general review standard."
+echo "The following checklists apply to this PR."
+echo "Use these as review criteria alongside the general review standard."
 echo ""
 
+# Always include universal AI failure modes checklist
+if [[ -f "$RULES_DIR/ai-failure-modes.md" ]]; then
+  cat "$RULES_DIR/ai-failure-modes.md"
+  echo ""
+  echo "---"
+  echo ""
+fi
+
+# Language-specific rules
 for rule in "${!included[@]}"; do
   cat "$RULES_DIR/$rule.md"
   echo ""
