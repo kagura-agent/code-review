@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-10 08:51 (Asia/Shanghai)_
+_Last updated: 2026-06-10 14:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 118 | 114/118 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 54+ rounds ex-R2: 1 timeout |
-| 🌠 Nova | claude-opus-4.7 | 122 | 122/122 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 118 | 113/118 (96%) → | 1 crash (#278 R4). Last 60+ rounds before: 100%. Stable overall |
+| 🌟 Stella | gpt-5.5 | 120 | 116/120 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 55+ rounds ex-R2: 1 timeout |
+| 🌠 Nova | claude-opus-4.7 | 124 | 124/124 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 120 | 115/120 (96%) → | 1 crash (#278 R4). Last 61+ rounds before: 100%. Stable overall |
 
 ## Dimension Strengths (per reviewer)
 
@@ -157,6 +157,7 @@ _Last updated: 2026-06-10 08:51 (Asia/Shanghai)_
 | **#264** | **cove** | **2026-06-07** | **R1-R6** | **✅ Ready (merged)** | **session-ttl-data-loss, sliding-threshold-math, cookie-reissue, oauth-atomic, ws-session-lifetime** |
 | **#278** | **cove** | **2026-06-09** | **R1-R5** | **✅ Ready (merged)** | **scroll-listener-attachment, deep-history-restore, stale-cache-clobber, ref-in-render-lint, shared-observer** |
 | **#279** | **cove** | **2026-06-09** | **R1** | **✅ Ready (merged)** | **tuple-comparison-pagination** |
+| **#287** | **cove** | **2026-06-10** | **R1** | **⚠️ Needs Changes** | **resolver-throws-before-helper, guildId-leak-mapResolved, missing-tests** |
 
 ## Ground Truth Summary (36 merged PRs)
 
