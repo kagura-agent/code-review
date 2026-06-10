@@ -39,3 +39,32 @@
 ## Process
 - Vega crashed (3m29s runtime, 116k tokens) but review file was saved — FlowForge handled gracefully.
 - Plan-review correctly categorized 7/8 files as 🔴 High Risk (all server-side).
+
+---
+
+## Round 2
+
+**Verdict:** ⚠️ Needs Changes
+
+### R1 Issue Status
+| # | Issue | Status |
+|---|-------|--------|
+| 1 | FK violation | ✅ Fixed |
+| 2 | No rate limiting | ⚠️ Partial — limiter exists but pre-auth DoS + memory leak |
+| 3 | Validation | ⚠️ Partial — length checked, no URL scheme |
+| 4 | Token leak | ✅ Fixed |
+| 5 | Identity on reload | ⚠️ Partial — bot:true restored, avatar still null |
+| 6 | No tests | ✅ Fixed — 213 lines |
+| 7 | Permission model | ❌ Not fixed — ESCALATED |
+
+### New Findings
+- Client URL shows `/undefined` after reload (3/3 consensus)
+- Rate limiter pre-auth bucket filling → DoS vector (2/3)
+- ON DELETE SET NULL erases webhook message identity (2/3)
+
+### Reviewer Assessment R2
+| Reviewer | Rating | Notes |
+|----------|--------|-------|
+| Stella | ❌ | Rate limiter DoS analysis, permission escalation |
+| Nova | ⚠️ | Most detailed — client URL regression, bucket leak, scheme validation |
+| Vega | ❌ | Permission + client URL, concise |

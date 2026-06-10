@@ -1,25 +1,27 @@
-### Summary
-The PR successfully introduces the foundation for Discord-compatible webhooks, properly mapping the execute endpoints and aligning with the goal of cross-channel messaging without echoing. However, there are significant data-layer bugs related to database constraints and missing data persistence that will cause the execution endpoint to crash, as well as logic flaws that fail to retain webhook identities.
+# Code Review: PR #294 (Round 2)
 
-### Critical Issues
-1. **Foreign Key Violation on Execution**: In `MessagesRepo.createFromWebhook`, the `webhookId` is inserted into the `messages.sender` column. However, `sender` has a foreign key constraint referencing `users(id)`. Since the webhook is not in the `users` table, this will throw an `SQLITE_CONSTRAINT_FOREIGNKEY` error and crash the endpoint. You must insert `null` for `sender` and rely on `sender_name` and `webhook_id`.
-2. **Webhook Avatar Data Loss**: The execute endpoint accepts an `avatar_url` override and passes it to `createFromWebhook`. However, this avatar is never saved to the database. When historical messages are fetched via `MessagesRepo.list`, `toMessage()` hardcodes `avatar: null`. The webhook's avatar will vanish upon client refresh.
-3. **Missing Rate Limiting / Security**: The `POST /webhooks/:webhookId/:webhookToken` execute endpoint is completely unauthenticated (which is correct by design) but lacks rate limiting. Anyone with a webhook URL can spam the channel indefinitely.
+## R1 Issue Status
+1. **FK violation**: ✅ Fixed (null inserted instead of webhookId).
+2. **No rate limiting**: ✅ Fixed (in-memory rate limiting added).
+3. **`username`/`avatar_url` unvalidated**: ✅ Fixed (length constraints added).
+4. **Token leaked in list/get**: ✅ Fixed (token stripped from public responses).
+5. **Message identity lost on reload**: ⚠️ Partially fixed (bot flag and username restored, but avatar is still hardcoded to `null` because it is not saved in the messages table).
+6. **No tests**: ✅ Fixed (comprehensive test suite added).
+7. **No permission check on webhook creation**: ❌ Not fixed (ESCALATED). `requireGuildMember` only verifies guild membership, allowing any regular user to create, edit, or delete webhooks.
 
-### Product Impact
-- **Broken Execute Endpoint**: Webhook execution will fail completely due to the database crash until the foreign key issue is fixed.
-- **Incorrect Bot Flag in History**: When retrieving historical messages created by a webhook, `toMessage()` sets `bot: row.sender_bot === 1`. Because the webhook has no user record, `u.bot` will be `null` in the `LEFT JOIN`, making webhook messages incorrectly appear as `bot: false` to clients.
-- **Unvalidated Avatars**: Both the webhook creation and execution endpoints do not validate the length or format of the `avatar` payload. This allows users to pass massive strings (e.g., large base64 images) directly into the database, causing storage bloat.
+## Summary
+The second round introduces a solid test suite, fixes the database constraint crash, and properly redacts tokens from read endpoints. However, the permission model is still completely missing, and a new critical client bug was introduced when trying to construct webhook URLs using the now-redacted tokens.
 
-### Suggestions
-- **Fix the `bot` flag for history**: In `toMessage()`, explicitly set `bot: true` if `row.webhook_id` is present, bypassing the `row.sender_bot` check.
-- **Database Schema for Message Avatars**: Add a `sender_avatar` column to the `messages` table to permanently store the webhook's avatar at the time of execution.
-- **Validate Avatar Input**: Add URL format and length validation for `body.avatar` in both webhook creation and execution to prevent abuse.
-- **Permission Checking**: Currently, any guild member can create a webhook for any channel. Ensure there is a note to add "Manage Webhooks" permission checks once granular permissions are supported.
+## Critical Issues (Blocking)
+1. **Client URL Generation Broken**: The UI's `webhookUrl(wh)` function attempts to use `wh.token`, but the `GET /channels/:channelId/webhooks` endpoint explicitly (and correctly) strips the token. This results in the UI copying broken URLs ending in `/undefined`. The UI needs to handle the fact that tokens are only available immediately upon creation.
+2. **Missing Permissions (Escalated from R1)**: Endpoint handlers (`POST`, `PATCH`, `DELETE`) still only use `requireGuildMember`. Any user in the server can create, list, modify, and delete webhooks for any channel. This requires a proper authorization check (e.g., a `MANAGE_WEBHOOKS` permission or admin role requirement).
 
-### Positive Notes
-- The API interface maps perfectly to Discord's webhook structure, which is excellent for existing plugin compatibility.
-- Token generation correctly uses `crypto.randomUUID()`, providing strong entropy to prevent brute-forcing.
-- Relational integrity is well maintained with proper `ON DELETE CASCADE` cascades in the migration.
+## Suggestions
+1. **Avatar Persistence**: To fully fix R1 issue #5, consider adding a `sender_avatar` column to the `messages` table or storing it in the `metadata` JSON blob. Currently, custom webhook avatars are lost when clients fetch message history.
+2. **Rate Limiter Memory Leak**: The `buckets` Map in `webhookExecuteRoutes` never removes keys once they are added. Over time, this will leak memory for every unique webhook ID. Consider adding a periodic cleanup interval to delete keys that have no recent timestamps.
 
-Rate: ❌ Major Issues
+## Positive Notes
+- The new test suite in `webhooks.test.ts` is thorough and accurately catches the token omission and validation requirements.
+- The client-side integration in `ChannelSettings.tsx` provides a great user experience with good state management for loading and deleting webhooks.
+
+**Rate:** ❌ Major Issues

@@ -1,58 +1,61 @@
-# Review: kagura-agent/cove PR #294 — feat: add webhook support for cross-channel messaging
+# Stella Review — PR #294 Round 2
+
+## R1 Issue Status
+
+1. **FK violation in `createFromWebhook`** — ✅ Fixed. Webhook messages now insert `sender = null` and store the webhook identity in `messages.webhook_id`, avoiding the `users(id)` FK crash.
+2. **No rate limiting on unauthenticated execute endpoint** — ⚠️ Partially fixed. A local fixed-window limiter was added to `POST /webhooks/:id/:token`, but it runs before token validation and is keyed only by `webhookId`, so invalid-token traffic can exhaust a real webhook's quota; random IDs also grow the in-memory bucket map without cleanup.
+3. **`username` / `avatar_url` unvalidated on public endpoint** — ⚠️ Partially fixed. Length/type validation exists, but `avatar_url` is not validated as a URL and `username` can be an empty/whitespace override because it is optional and not trimmed/required when present.
+4. **Token leaked in list/get API responses to all guild members** — ✅ Fixed. `listByChannel`, `listByGuild`, and authenticated `GET /webhooks/:id` return token-stripped webhook objects.
+5. **Message identity lost on reload** — ⚠️ Partially fixed. Reloaded webhook messages now retain `bot: true`, username, `author.id`, and `webhook_id`, but avatar is still lost because only `sender_name` and `webhook_id` are persisted/read; additionally `ON DELETE SET NULL` on `messages.webhook_id` causes old webhook messages to lose webhook/bot identity after the webhook is deleted.
+6. **No tests for security-critical code** — ⚠️ Partially fixed. Webhook tests were added for create/execute/list/get/delete and some validation, but they do not cover permission/authorization boundaries, rate-limit behavior, invalid-token quota exhaustion, avatar URL validation, avatar persistence, or identity after webhook deletion.
+7. **No permission check on webhook creation beyond guild membership** — ❌ Not fixed. Creation still only checks `requireGuildMember`; patch/delete/list/get are also available to any guild member. Escalated because this was called out in R1 and remains unresolved.
 
 ## Summary
 
-This PR adds the right high-level abstraction for cross-channel messaging, but the current implementation has several merge-blocking issues in the webhook execution path. Most importantly, webhook sends appear to fail at runtime because messages still require `sender` to reference `users(id)` while `createFromWebhook()` inserts the webhook id there. The public no-auth execute endpoint is also mounted before the existing auth/rate-limit middleware, so it has no rate limiting, and several user-controlled fields are unvalidated. Given that this endpoint is intentionally public and token-protected, these need to be fixed and covered by tests before merge.
-
-**Rate: ❌ Major Issues**
+Round 2 addresses several core correctness issues from R1: the FK crash is fixed, tokens are no longer returned by list/get APIs, webhook messages mostly preserve identity on reload, and there is now a first pass at tests and client UI. However, the permission model is still too broad for a credential-creating feature, the unauthenticated rate limiter has abuseable edge cases, and webhook message identity is still incomplete around avatars and deletion. I would not merge yet; the remaining issues are concentrated in security/product correctness paths for the new public webhook capability.
 
 ## Critical Issues
 
-1. **Webhook execution likely fails due to `messages.sender` foreign key violation**
-   - `packages/server/src/repos/messages.ts:138-140`
-   - `packages/server/src/db/schema.ts:51`
-   - `createFromWebhook()` inserts `sender = webhookId`, but `messages.sender` is declared as `TEXT REFERENCES users(id) ON DELETE SET NULL`. Webhook ids are stored in the new `webhooks` table, not `users`, so with `foreign_keys = ON` this insert should throw instead of creating a message.
-   - This blocks the main feature: `POST /api/webhooks/:id/:token` will 500 for normal webhooks unless FK enforcement is disabled elsewhere.
-   - Fix options: make webhook-created messages use `sender = NULL` and `webhook_id = webhookId`, or introduce a separate author model/schema that does not overload `sender` as both user id and webhook id. Then update `toMessage()` to derive webhook author fields from `webhooks` / stored webhook metadata.
+### 1. Any guild member can create, modify, delete, and enumerate webhooks
 
-2. **The public execute endpoint bypasses all existing rate limiting**
-   - `packages/server/src/app.ts:39-52`
-   - `webhookExecuteRoutes()` is mounted before both global auth and `rateLimitMiddleware()`. Since Hono route handlers that return a response do not call later middleware, successful/failed webhook executions do not pass through the app’s rate limiter.
-   - This is high risk because the endpoint is intentionally unauthenticated and token-in-URL is the only secret. A leaked token can be abused to spam channels indefinitely; brute-force/credential-stuffing attempts also have no application-level throttle.
-   - Add a dedicated unauthenticated webhook rate limiter keyed by webhook id/token hash and/or IP before the execute route, or mount the route after a rate-limit middleware that can handle anonymous callers. Add tests for 429 behavior.
+**Where:** `packages/server/src/routes/webhooks.ts:16-102`
 
-3. **`username` and `avatar_url` overrides are unvalidated on the no-auth endpoint**
-   - `packages/server/src/routes/webhooks.ts:113-128`
-   - `content` is validated, but `username` and `avatar_url` are accepted as arbitrary JSON values and then bound into SQLite / returned over the API. Non-string values can trigger server errors; very large strings can bloat DB/API responses; invalid URLs can propagate to clients.
-   - For a public endpoint this is a security and robustness issue. Validate `username` as a string with Discord-compatible length (typically 1–80 chars) and validate `avatar_url` as string/null with a sane max length and URL scheme/format. Reject unknown invalid types with 400, not 500.
+The webhook management endpoints only check guild membership. This was an R1 finding for creation and remains unresolved, so it should be treated as blocking. A webhook URL is effectively a send credential for the channel; any guild member who can create one can mint an unauthenticated sender into that channel. Any guild member can also patch/delete existing webhooks and list webhook metadata across a channel/guild.
 
-4. **Webhook messages are not round-tripped correctly from storage**
-   - `packages/server/src/repos/messages.ts:17-45`, `packages/server/src/repos/messages.ts:134-165`
-   - The immediate response from `createFromWebhook()` has `author.bot = true` and `avatar = webhookAvatar`, but later `list()`/`getById()` reconstruct messages through `MSG_SELECT` joining only `users`. Because webhook ids are not users, `sender_bot` is `null`, so stored webhook messages come back with `author.bot = false`; the avatar is also lost.
-   - This will create inconsistent client behavior after reload/history fetch and can break webhook/agent echo-filter assumptions. Store enough webhook author metadata or join `webhooks` when `webhook_id` is present, and ensure list/get responses match create/dispatch responses.
+At minimum, gate create/patch/delete/list/get behind an explicit owner/admin/manage-webhooks policy once available, or use the repository's closest existing administrative model. Add tests proving an ordinary guild member cannot create/delete/manage webhooks.
 
-5. **No tests cover the new security-critical webhook behavior**
-   - PR adds public unauthenticated execution, token lookup, CRUD access control, migration, and message persistence behavior, but no tests are added.
-   - Required coverage before merge: successful execute, invalid token/id, content length validation, username/avatar validation, rate limiting, cross-guild CRUD denial, webhook message listing/getting, and migration from v7 including FK behavior.
+### 2. The unauthenticated execute rate limiter can be abused with invalid tokens and unbounded IDs
 
-## Product Impact
+**Where:** `packages/server/src/routes/webhooks.ts:111-132`
 
-- Cross-channel messaging may not work at all because webhook execution can fail on the message insert FK constraint.
-- Even if insertion is adjusted locally, users may see webhook messages change identity after reload/history fetch (`bot: true` becomes `bot: false`, avatar disappears).
-- A leaked webhook URL currently has no app-level abuse throttle, which can cause spam, DB growth, websocket fanout, and degraded channel UX.
-- Invalid webhook override payloads can turn user errors into 500s, making integrations brittle and harder to debug.
+The execute limiter consumes quota before `findByIdAndToken`. That means an attacker who knows or guesses a webhook ID can send invalid tokens and rate-limit the legitimate webhook without knowing the token. It is also keyed by arbitrary `webhookId` and never cleaned up, so random IDs can grow the `buckets` map indefinitely.
+
+Recommended fix: validate the webhook ID/token before charging the per-webhook bucket, add an IP/global bucket for invalid requests, and add cleanup/TTL for unauthenticated buckets. Add tests for invalid-token requests not exhausting a valid webhook and for 429 behavior on valid executions.
+
+### 3. Webhook identity is still not fully persistent
+
+**Where:** `packages/server/src/repos/messages.ts:48-57`, `packages/server/src/repos/messages.ts:142-173`, `packages/server/src/db/migrations/v8-webhooks.ts:18`
+
+`createFromWebhook` returns the execution avatar, but DB reloads always set `author.avatar: null`; neither the webhook avatar nor per-message `avatar_url` override is persisted. Also, `messages.webhook_id` uses `ON DELETE SET NULL`, so deleting a webhook turns historical messages into non-webhook messages on reload (`bot: false`, `webhook_id` gone, sender null). That reintroduces identity loss in a common lifecycle path.
+
+Recommended fix: persist the display avatar used for the message (or join to webhook avatar where appropriate), and preserve webhook message identity independently of the webhook row deletion. Add tests for avatar persistence and for messages fetched after deleting their webhook.
 
 ## Suggestions
 
-- Consider not returning webhook `token` from all authenticated list/get responses unless Discord compatibility explicitly requires it for Cove’s clients. If returned, document that these responses expose send capability and should be protected like credentials.
-- Add an index on `webhooks(guild_id)` because `listByGuild()` queries by guild id and orders by `created_at`.
-- Validate create/patch `avatar` with the same rules as execute `avatar_url`; currently create accepts arbitrary avatar values too.
-- Consider wrapping execute message creation + `last_message_id` update in a transaction so channel state cannot diverge if a later write fails.
-- Decide whether Cove wants Discord’s `?wait` semantics now or a documented divergence. Always returning the message is fine, but clients may rely on Discord-compatible behavior.
+- The client UI renders existing webhook URLs as `/api/v10/webhooks/:id/undefined` after refetch because list/get intentionally omit `token`, but `ChannelSettings.webhookUrl()` always uses `wh.token` (`packages/client/src/components/ChannelSettings.tsx:116-118`). Either only show/copy the URL immediately after creation, add a secure token reveal/regenerate flow, or make the UI explicit that the URL cannot be recovered.
+- `navigator.clipboard.writeText(...)` is a floating promise in `handleCopyUrl` (`ChannelSettings.tsx:121-124`). Await/catch it so failed clipboard writes do not show “Copied!” incorrectly and satisfy the floating-promises rule.
+- Validate `avatar` on create/patch and `avatar_url` on execute as a real allowed URL scheme/format, not only max length.
+- Consider trimming names/usernames before persisting/using them. Current validation accepts names with leading/trailing whitespace and optional username overrides that are all whitespace.
+- The new tests are useful, but add negative authorization tests and rate-limit tests before relying on this as security coverage.
+- I could not run the new webhook test file in the fresh clone without installing dependencies; `pnpm -F @cove/server test -- webhooks.test.ts` failed at import resolution for packages such as `hono` / `@cove/shared`, so this review is based on the diff/source inspection rather than a passing test run.
 
 ## Positive Notes
 
-- The route split between authenticated CRUD and public execute is clear and easy to audit.
-- Token generation with `crypto.randomUUID()` provides meaningful entropy for unguessable URLs.
-- CRUD routes consistently hide cross-guild/non-member access behind `Unknown Webhook` / `Unknown Guild` style responses, which avoids obvious resource enumeration through authenticated endpoints.
-- Content validation exists on execute and aligns with the existing message length limit.
+- The FK crash was fixed cleanly by avoiding fake user IDs in `messages.sender`.
+- Token stripping for list/get responses is a good improvement and aligns with least exposure.
+- The server test coverage is much better than R1 and covers create, execute, invalid token, missing content, list/get token omission, delete, and basic validation.
+- Client UI support is a solid start and gives users a straightforward creation/copy/delete workflow.
+
+## Rating
+
+❌ Major Issues
