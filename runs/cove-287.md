@@ -37,3 +37,28 @@
 ## Process
 - FlowForge ran smoothly. plan_review was auto-skipped (1 file PR).
 - All 3 reviewers completed within ~4 minutes.
+
+---
+
+## Round 2
+
+**Verdict:** ✅ Ready (3/3)
+
+### R1 Issue Status — All Fixed
+1. ✅ `resolveAccount` throw → new `readAccountConfig` (non-throwing)
+2. ✅ `mapResolved` guildId leak → gated by `entry.resolved`
+3. ✅ Missing tests → 7 test cases in `resolver.test.ts`
+4. ✅ `agentId` throw → `readAccountConfig` doesn't check it
+5. ✅ `getChannels` error → wrapped in try/catch
+
+### Non-blocking suggestions
+- `err: any` → `err instanceof Error ? err.message : String(err)` (Stella + Nova)
+- `cfg: any` could use minimal typed shape (Nova)
+- `mapResolved` drops `guildId` on resolved entries — check SDK contract (Nova)
+
+### Reviewer Assessment
+| Reviewer | Rating | Notes |
+|----------|--------|-------|
+| Stella | ✅ | Verified build+tests, caught err:any nit |
+| Nova | ✅ | Most detailed, 6 non-blocking suggestions |
+| Vega | ✅ | Concise, no issues found |

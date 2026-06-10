@@ -1,59 +1,29 @@
-# Review: kagura-agent/cove PR #287 — feat: add resolver.resolveTargets to Cove plugin
+## R1 Issue Status
+
+1. ✅ Fixed — `resolveAccount()` is no longer used by `resolver.resolveTargets`; the new `readAccountConfig()` reader allows missing token and missing agentId so `resolveTargetsWithOptionalToken` can return the configured `missingTokenNote` instead of throwing.
+2. ✅ Fixed — `mapResolved` now only populates `id` and `name` when `entry.resolved` is true, so unresolved channel misses no longer leak `guildId` into target identity fields.
+3. ✅ Fixed — resolver tests were added for ID lookup, case-insensitive name lookup, unknown channel, missing guildId, missing token, REST failure, and unsupported user targets.
+4. ✅ Fixed — Stella unique finding: missing `agentId` no longer affects target resolution because the resolver uses `readAccountConfig()` instead of `resolveAccount()`.
+5. ✅ Fixed — Nova/Vega unique finding: `getChannels()` is wrapped in `try/catch` and soft-fails each input with a diagnostic note.
 
 ## Summary
 
-This PR adds the expected `resolver.resolveTargets` surface for Cove group targets and follows the shared OpenClaw target resolver helper pattern. The channel lookup logic itself is straightforward and generally aligned with the existing REST client API, but there is a correctness bug in the configuration handling: the resolver calls the existing `resolveAccount()` helper before invoking `resolveTargetsWithOptionalToken()`, and `resolveAccount()` throws when the bot token or agent ID is missing. That means the new resolver does not actually provide the advertised graceful unresolved results for missing tokens, and it may fail in target-resolution contexts that should not need an agent ID. I would address that before merge and add tests for the resolver paths.
+Round 2 addresses the blocker class from Round 1: resolver configuration is now non-throwing, missing credentials are handled through the SDK helper, unresolved entries do not receive bogus IDs/names, and the new tests cover the major success and failure paths. I ran `pnpm -F openclaw-cove check`, `pnpm -F openclaw-cove test`, and `pnpm -F openclaw-cove run build`; all passed. I do not see merge-blocking correctness, security, or TypeScript issues in the updated diff.
 
 ## Critical Issues
 
-1. **Missing token handling is unreachable**
-
-   `resolveTargets` begins with:
-
-   ```ts
-   const account = resolveAccount(cfg, accountId);
-   ```
-
-   But `resolveAccount()` throws if no Cove token is configured:
-
-   ```ts
-   if (!token) {
-     throw new Error("cove: bot token is required ...");
-   }
-   ```
-
-   As a result, this code never reaches `resolveTargetsWithOptionalToken({ missingTokenNote: "missing Cove bot token", ... })` when the token is missing. The PR body says missing token is handled gracefully, but the runtime behavior will be a thrown exception instead of per-input unresolved results.
-
-   **Recommendation:** split account resolution for resolver use from strict runtime account validation. For example, introduce a lightweight resolver config reader that returns `{ token, baseUrl, guildId }` without throwing, then let `resolveTargetsWithOptionalToken()` produce unresolved results when `token` is absent. Keep the strict `resolveAccount()` behavior for gateway/outbound startup if those paths require it.
-
-2. **Target resolution unnecessarily requires `agentId`**
-
-   `resolveAccount()` also throws when `agentId` is missing. Resolving a channel name/ID via Cove REST does not use `agentId`, so this can make `openclaw message send --channel cove --target ...` fail during target resolution even when `baseUrl`, `token`, and `guildId` are sufficient to resolve the channel.
-
-   **Recommendation:** the resolver should only validate fields it needs for resolution. If `agentId` is required later for session routing or gateway dispatch, validate it there rather than in the target resolver.
-
-## Product Impact
-
-The intended user-facing improvement is important: users should be able to send to Cove channels by target through OpenClaw. However, on partially configured installations, target resolution may currently fail with a thrown configuration error instead of returning helpful unresolved entries like `missing Cove bot token` or `guildId not configured`. That creates a rough CLI experience and can make setup/debugging misleading, especially because the new helper is explicitly designed to return structured unresolved target results.
+None.
 
 ## Suggestions
 
-- Add focused tests for `resolver.resolveTargets` covering:
-  - missing token returns unresolved results with `missing Cove bot token`;
-  - missing `guildId` returns unresolved results with `guildId not configured`;
-  - channel ID match resolves;
-  - case-insensitive channel name match resolves;
-  - unknown channel returns `channel not found`;
-  - `kind: "user"` returns `user target resolution not supported`.
-- Consider normalizing common user input forms such as `#channel-name` if OpenClaw users are likely to enter channel-style names. Not required for the MVP if the intended contract is exact ID or bare name only, but documenting/handling it would reduce friction.
-- Consider whether duplicate channel names should produce an ambiguity note rather than silently selecting the first match. If Cove channel names are globally unique per guild, this is fine; otherwise it may send messages to an unexpected channel.
-- The inline comment `// User target resolution — not supported yet` is useful, but a small test for that branch would prevent it from regressing into accidental success/failure behavior.
+- Consider avoiding `catch (err: any)` and formatting unknown thrown values safely, e.g. `err instanceof Error ? err.message : String(err)`, so failure notes remain useful even for non-Error throws and align better with strict TypeScript hygiene.
+- The resolver tests currently mock `resolveTargetsWithOptionalToken`, which is useful for isolation but does not exercise the actual SDK helper behavior. A small integration-style test without mocking the helper would guard token trimming / missing-token behavior across SDK changes.
+- `accountId` is currently unused in `readAccountConfig()`. That is fine while Cove exposes only the default account, but if multi-account config is added later this resolver should be updated with the rest of the account-resolution path.
 
 ## Positive Notes
 
-- The implementation reuses `resolveTargetsWithOptionalToken`, which is the right shared abstraction for token-gated channel target resolution.
-- The group resolver performs one `getChannels(guildId)` call per batch and maps all inputs locally, avoiding an obvious N+1 request pattern.
-- Matching by both channel ID and case-insensitive channel name is a good MVP for CLI ergonomics.
-- Unsupported user resolution is explicit and returns a clear note rather than pretending to resolve users.
+- The R1 dead-code path is cleanly fixed without weakening outbound account validation.
+- Soft-failure behavior is now consistent for missing token, missing guildId, unsupported user targets, channel misses, and REST failures.
+- The new test coverage is focused and covers the regressions called out in Round 1.
 
-Rate: ⚠️ Needs Changes
+Rate: ✅ Ready
