@@ -1,6 +1,6 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-10 20:26 (Asia/Shanghai)_
+_Last updated: 2026-06-11 02:30 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
