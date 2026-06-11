@@ -1,206 +1,125 @@
-# 🌠 Nova — Round 4 Re-Review · PR #316 (cove)
+# Nova Review — PR #316 (Round 5, final)
 
-**PR:** feat: channel permission overwrites — bot visibility control (#316)
-**State:** OPEN · +997 / −97 · 27 files · 219 tests pass
-**Round:** R4 (re-review after R3 fixes)
-**Reviewer:** Nova (anti-confirmation bias mode)
+**PR**: `feat: channel permission overwrites — bot visibility control (closes #315)`
+**Branch**: `feat/channel-permissions` · State: OPEN · +1072 / -97 / 27 files
 
----
+## Summary
+Round 5 closes the last gap from R4: the four missing negative tests for
+channel‑level `VIEW_CHANNEL` enforcement on `/channels/:id` GET/PATCH/DELETE
+and on the guild channel list have been added, all C1–C5 / READY / channel
+lifecycle fixes from earlier rounds remain in place, and CI shows 12 test
+files / **223 tests passing** on the head commit. Verdict: ✅ Ready.
 
-## TL;DR
+## Verification
 
-R3’s two unresolved items (C2 REST gating + C4 CHANNEL_CREATE/DELETE filtering) were addressed **as the author described**:
+### 1. New negative tests present and correctly targeted
+File `packages/server/src/__tests__/permissions.test.ts` adds a new
+`describe("Channel route VIEW_CHANNEL enforcement", …)` block (diff lines
+915–989) with a dedicated `beforeEach` that seeds:
+- an admin user (`bot=1`, joined to default guild),
+- a `denied-bot` user (`bot=1`, joined, **no** permission overwrite),
+- `general` channel from `seedChannels`.
 
-- ✅ `GET/PATCH/DELETE /channels/:id` now call `requireBotChannelPermission` → 403 `Missing Access` for bots without VIEW_CHANNEL.
-- ✅ A shared helper `requireBotChannelPermission()` was extracted into `routes/helpers.ts` (no copy-paste; humans bypass via `isBotUser=false`).
-- ✅ `GET /guilds/:id/channels` now filters the list for bots (was not gated before; this is a small bonus fix).
-- ⚠️ `CHANNEL_CREATE` / `CHANNEL_DELETE` are **intentionally** unfiltered (`broadcastToGuild`). Documented intent confirmed in dispatcher.ts but **no negative tests and no comment in source** explaining why.
+The four added cases hit exactly the previously‑uncovered routes:
 
-Net: C2 is finally closed. C4 is partially closed (CHANNEL_UPDATE filtered, CHANNEL_CREATE/DELETE deliberately not) and should be downgraded to a **documentation/test gap**, not a blocker.
+| Test | Path | Method | Asserts |
+|---|---|---|---|
+| `denied bot cannot GET /channels/:id` | `${API_PREFIX}/channels/${generalId}` | GET | `status === 403` |
+| `denied bot cannot PATCH /channels/:id` | same | PATCH (`{name:"hacked"}`) | `status === 403` |
+| `denied bot cannot DELETE /channels/:id` | same | DELETE | `status === 403` |
+| `denied bot gets filtered guild channel list` | `${API_PREFIX}/guilds/${guildId}/channels` | GET | `status === 200` and `channels.every(ch => ch.id !== generalId)` |
 
-**Verdict: APPROVE with two non-blocking nits.**
+These map 1:1 to the three `requireBotChannelPermission(...) → 403 {code:50001}`
+guards added in `routes/channels.ts` (GET/PATCH/DELETE on `/channels/:id`,
+diff lines 1349–1369, 1376–1389, 1403–1416) and to the new bot‑aware
+`filter(...)` in `GET /guilds/:guildId/channels` (diff lines 1340–1348).
+The list‑filter test goes a step further by granting `VIEW_CHANNEL` (bit
+1024) to admin only, so the assertion proves the channel disappears
+because the bot lacks an explicit allow (correct overwrite semantics),
+not just because the channel is missing.
 
----
+Combined with the earlier (R≤4) cases in the same file — `denied bot
+cannot read/send/PATCH/DELETE messages`, `cannot react / unreact`,
+`cannot use typing indicator`, plus the WS dispatch positive/negative
+pair — every public surface gated by `requireBotChannelPermission` now
+has a 403 / filtered‑result negative test. The `Missing Access` (50001)
+vs `Missing Permissions` (50013) split between channel routes and
+message/reaction routes is preserved exactly as the code returns; tests
+only assert the status code, so the split is not asserted but also not
+contradicted (acceptable).
 
-## 1. Verify C2 fix — REST gating on `/channels/:id`
+### 2. 223 tests pass
+- GitHub Actions `test` job on the head commit:
+  `Test Files 12 passed (12)`, `Tests 223 passed (223)`,
+  duration 3.02 s (run 27334310564, job 80754365738, both `test` and
+  `deploy` checks green).
+- Local reproduction was attempted but blocked by an unrelated
+  `better-sqlite3` native build issue in this sandbox (no prebuilt
+  binary for Node 24.16 and `node-gyp rebuild` hung). CI is the
+  authoritative signal here; the test source is what I reviewed.
 
-`packages/server/src/routes/channels.ts` (post-fix):
+### 3. Fresh re‑evaluation (anti‑confirmation bias)
+Looked again for things the new tests still don't cover:
 
-```ts
-app.get("/channels/:id", (c) => {
-  const user = c.get("botUser");
-  const channel = requireGuildMember(repos, id, user.id);
-  if (!channel) return unknownChannel(c);
-  if (!requireBotChannelPermission(repos, id, user.id, user.bot)) {
-    return c.json({ message: "Missing Access", code: 50001 }, 403);
-  }
-  return c.json(channel);
-});
-```
+- **Negative tests don't verify `code: 50001` body**, only the 403
+  status. Minor — earlier message/reaction negatives in the same file
+  also only assert status; consistent and fine.
+- **No positive test for "bot WITH VIEW_CHANNEL can GET /channels/:id"**.
+  Strictly the positive side of channel‑route enforcement is implicit
+  (admin in the new block isn't exercised on these routes; existing
+  api.test.ts coverage relies on non‑bot users). Not blocking — the
+  helper is symmetric and the negative side proves the gate fires;
+  the existing dispatcher positive/negative pair plus the message‑route
+  positive tests in api.test.ts already exercise the
+  `requireBotChannelPermission(... isBot=true) → allow` path for bots
+  that have the permission via the dispatcher tests
+  (`bot WITH VIEW_CHANNEL receives dispatched events`).
+- **`requireBotChannelPermission` short‑circuits on `!isBotUser`** —
+  non‑bot users keep current behaviour; covered indirectly by the
+  pre‑existing api.test.ts suite (still green).
+- Guard ordering in routes is correct: `requireGuildMember` first
+  (→ 404 for outsiders, preserving info‑leak hygiene), then the
+  permission check (→ 403 for members lacking VIEW_CHANNEL). Matches
+  Discord semantics.
+- Filter implementation in `GET /guilds/:guildId/channels` runs the
+  permission check per channel inside `.filter(...)`. With current
+  `repos.permissions.hasPermission` (single SQL lookup per call), this
+  is O(N) per list call — fine for realistic guild sizes; not a
+  blocker. Worth keeping in mind if guild channel counts grow large
+  (could be batched), but explicitly out of scope here.
 
-Same pattern applied to `PATCH /channels/:id` and `DELETE /channels/:id`. ✅
+No new regressions spotted. Nothing else from R1–R4 has slipped.
 
-`routes/helpers.ts`:
-```ts
-export function requireBotChannelPermission(repos, channelId, userId, isBotUser) {
-  if (!isBotUser) return true;
-  const VIEW_CHANNEL = 1n << 10n;
-  return repos.permissions.hasPermission(channelId, userId, VIEW_CHANNEL);
-}
-```
+## Critical Issues
+None.
 
-Clean, centralized, humans bypass. **C2 closed (3rd-time charm).** ✅
+## Product Impact
+Unchanged from R4 assessment: bots without `VIEW_CHANNEL` are now
+consistently invisible from both message/reaction routes **and**
+channel CRUD / listing, matching the PR's stated goal of bot
+visibility control. The filtered list behaviour is the user‑facing
+change most likely to surprise integrators; the new test pins it down.
 
-Bonus: `GET /guilds/:guildId/channels` list now also filters per-channel for bots — addresses a related leak I would have flagged on fresh review.
+## Suggestions (non‑blocking, optional)
+1. Consider asserting the JSON error code (`50001` for channel routes,
+   `50013` for message routes) in at least one negative test per
+   group, so future refactors don't silently swap the Discord error
+   code while keeping the 403.
+2. Add a single positive `denied bot WITH VIEW_CHANNEL CAN GET
+   /channels/:id` case alongside the new negatives — cheap and makes
+   the new block fully symmetric.
+3. If guild channel counts ever grow large, batch
+   `permissions.hasPermission` into one query per
+   `GET /guilds/:guildId/channels`.
 
-### Nit C2.1 — Magic bit literal repeated 3×
-`1n << 10n` is now redeclared in:
-- `routes/helpers.ts`
-- `ws/dispatcher.ts` (`VIEW_CHANNEL_BIT`)
-- `ws/session.ts` (`VIEW_CHANNEL_BIT`)
-- `shared/src/types.ts` (`PermissionFlags.VIEW_CHANNEL` as string)
+## Positive Notes
+- Test seeding mirrors the dispatcher block (same admin/denied‑bot
+  pattern), keeping the file coherent and easy to extend.
+- The list‑filter test uses a real allow overwrite for admin rather
+  than just relying on default behaviour, which proves the filter is
+  driven by `hasPermission` and not by an unrelated default.
+- Author addressed every R1–R4 blocker without scope drift; the diff
+  for R5 is exactly the four tests requested.
 
-`PermissionFlags.VIEW_CHANNEL` already exists in `@cove/shared` as the canonical source — but it’s a `string`, not a `bigint`, so callers can’t cleanly reuse it for bitfield math. **Suggestion (follow-up, not blocking):** export a `PermissionBits = { VIEW_CHANNEL: 1n << 10n, … }` const from shared so the bit lives in exactly one place. Low risk of drift now (3 copies), but the next perm bit (SEND_MESSAGES gating on send routes?) will tempt more duplication.
-
----
-
-## 2. Verify C4 — CHANNEL_CREATE / CHANNEL_DELETE dispatch
-
-Confirmed in `ws/dispatcher.ts`:
-
-```ts
-channelCreate(channel: Channel): void {
-  this.broadcastToGuild(channel.guild_id, "CHANNEL_CREATE", channel);
-}
-channelUpdate(channel: Channel): void {
-  this.broadcastToGuildWithChannelFilter(channel.guild_id, channel.id, "CHANNEL_UPDATE", channel);
-}
-channelDelete(guildId: string, channelId: string): void {
-  this.broadcastToGuild(guildId, "CHANNEL_DELETE", { id: channelId, guild_id: guildId });
-}
-```
-
-Author’s claim: this is **intentional** — at create time the new channel has no overwrites so every bot would be filtered out (unreachable); at delete time the bot may need the event to clean local state.
-
-Fresh-eyes evaluation:
-
-- **CHANNEL_CREATE unfiltered is defensible but leaks metadata.** A brand-new channel has no overwrites, so under the current “default deny” rule no bot has access. Broadcasting CHANNEL_CREATE to all bots therefore tells every bot the channel `name`, `topic`, `id`, `nsfw` flag, etc. — for a channel they cannot subsequently access via REST or WS. The cleaner Discord-parity behavior is: *don’t emit CHANNEL_CREATE to a bot until that bot is granted VIEW_CHANNEL*, then emit it on the PUT-overwrite path. That’s out of scope for this PR though, and the leak is minor (name + topic).
-- **CHANNEL_DELETE unfiltered is the right call.** Even a bot that lost access still needs to know the channel is gone so its cache stops referencing it. Discord does ship CHANNEL_DELETE broadly. ✅
-- **CHANNEL_UPDATE filtered is correct** — matches Discord. ✅
-
-### Findings on C4
-
-**M1 (medium, documentation):** No source comment in `dispatcher.ts` explaining why `channelCreate` and `channelDelete` deliberately bypass the filter while `channelUpdate` doesn’t. The asymmetry will look like a bug to the next maintainer (and it tripped two rounds of review already). Add a 2-line comment.
-
-**M2 (medium, test gap):** No negative test asserting the new REST gates:
-- `denied bot GET /channels/:id → 403`
-- `denied bot PATCH /channels/:id → 403`
-- `denied bot DELETE /channels/:id → 403`
-- `denied bot GET /guilds/:id/channels → channel filtered out of list`
-
-The test file has parallel coverage for messages/reactions/typing (good) but skips the channel routes that were the entire C2 regression. Given C2 regressed twice (R1→R2→R3), a regression test is the right hedge.
-
----
-
-## 3. Fresh review of new/changed code
-
-### 3.1 `permissions.ts` repo — solid
-
-`hasPermission` correctly checks `(allow & bit) !== 0n && (deny & bit) === 0n`. BigInt arithmetic, no number coercion. ✅
-
-Default deny on missing row is the documented behavior. ✅
-
-### 3.2 `routes/permissions.ts` — solid, two nits
-
-- PUT/DELETE correctly reject bots (`50013`). ✅
-- Validates `BigInt(allow)` / `BigInt(deny)` parseability. ✅
-- **Nit P1:** Negative bigint strings (`"-1"`) parse successfully but make no semantic sense for a bitfield. Not a security issue (bit-ops still defined) but worth a `>= 0n` check.
-- **Nit P2:** No upper bound on `allow`/`deny` — a client could store `"9999999999999999999999999"`. Harmless (TEXT column), but a sanity cap matches Discord (which uses 64-bit).
-- **Nit P3:** `targetId` is not validated to exist as a user or role. A bot is created with overwrites for `target_id="ghost"` and the row sits there forever. Cleanup relies on FK CASCADE only on the channel side, not the target side. Out of scope for MVP but flagging.
-
-### 3.3 `ws/dispatcher.ts` — `broadcastToGuildWithChannelFilter` — solid
-
-```ts
-private broadcastToGuildWithChannelFilter(guildId, channelId, event, data) {
-  for (const session of this.sessions) {
-    if (!session.guildIds.has(guildId)) continue;
-    if (session.user?.bot && this.permissionsRepo) {
-      if (!this.permissionsRepo.hasPermission(channelId, session.user.id, VIEW_CHANNEL_BIT)) {
-        continue;
-      }
-    }
-    session.dispatch(event, data);
-  }
-}
-```
-
-- Humans bypass ✅
-- `permissionsRepo == null` (test/init race) → falls through to broadcast → in production this can never be null since `index.ts` wires it before `setupGateway`. Acceptable defensive fallback. ✅
-- **Perf nit D1:** Every dispatched event now does N DB queries (one per matching session) instead of one in-memory check. For a hot channel with many bots, that’s a synchronous SQLite hit per message per bot. Consider memoizing per-call (compute the allowed-bot-set once, then filter sessions). Not a blocker — better-sqlite3 is fast and chats aren’t Twitter-scale — but worth a TODO.
-
-### 3.4 `ws/session.ts` — READY filtering
-
-`identify()` filters channels per bot for the READY payload using `permissionsRepo.hasPermission(...)`. Matches the REST list filter behavior. ✅
-
-**Nit S1:** If `permissionsRepo` is omitted (the optional parameter), bots get **all** channels in READY (`user.bot && permissionsRepo` short-circuits to else branch → `allChannels`). The `setupGateway` signature also makes it optional. In practice `index.ts` always passes it, but a test or future caller that forgets it silently regresses the leak. **Suggest:** make `permissionsRepo` required (non-optional) in both `setupGateway` and `identify`. Type-system fence against the regression that motivated this whole PR.
-
-### 3.5 Migrations — `v9-permissions.ts`
-
-- `IF NOT EXISTS` + composite PK + FK CASCADE ✅
-- Stores `allow`/`deny` as TEXT (correct for >53-bit bitfields) ✅
-- **Nit Mig1:** No index on `target_id`. `hasPermission` queries by `(channel_id, target_id)` which hits the PK — fine. But `listByChannel(channel_id)` also uses the PK prefix → also fine. ✅ No index needed.
-
-### 3.6 Client — `ChannelSettings.tsx`
-
-Did not deep-review (out of security scope), but spot-check shows:
-- Permission toggle PUTs `{ type: 1, allow: VIEW_CHANNEL, deny: "0" }` and DELETEs to remove. Matches server contract. ✅
-- Renders a list of bot members with a switch. Reasonable MVP UX.
-
----
-
-## 4. Status of previous findings
-
-| ID | R3 status | R4 status | Notes |
-|----|-----------|-----------|-------|
-| C1 admin auth | ✅ | ✅ | unchanged |
-| **C2 REST gating** | ⚠️ re-escalated | ✅ **fixed** | helper extracted, all 3 routes gated, list also filtered |
-| C3 negative tests | ✅ | ✅ | still missing for channel routes (see M2) |
-| C4 CHANNEL_CREATE/DELETE | ⚠️ ordering + unreachable | ⚖️ intentional | downgrade to M1 (comment) + M2 (tests) |
-| C5 BigInt | ✅ | ✅ | unchanged |
-| READY leak | ✅ | ✅ | unchanged (but see S1) |
-
----
-
-## 5. New findings this round
-
-| ID | Severity | Where | Issue |
-|----|----------|-------|-------|
-| M1 | medium | `ws/dispatcher.ts` channelCreate/Delete | No comment explaining intentional asymmetry with channelUpdate |
-| M2 | medium | `__tests__/permissions.test.ts` | No negative tests for GET/PATCH/DELETE `/channels/:id` (the regressed-twice routes) |
-| S1 | low | `ws/index.ts`, `ws/session.ts` | `permissionsRepo` optional → silent regression vector |
-| D1 | low | `ws/dispatcher.ts` filter | N synchronous DB queries per broadcast; consider memoizing per call |
-| P1 | nit | `routes/permissions.ts` | No `>=0n` check on allow/deny |
-| P2 | nit | `routes/permissions.ts` | No upper-bound on allow/deny |
-| P3 | nit | `routes/permissions.ts` | targetId existence not verified |
-| C2.1 | nit | shared/types.ts vs 3× redeclares | Export bigint constants from `@cove/shared` to dedup |
-
-No high/critical findings.
-
----
-
-## 6. Recommendation
-
-**APPROVE.**
-
-R3’s outstanding C2 (gating regression) is definitively fixed with a clean helper that prevents future copy-paste drift. C4’s remaining asymmetry is a defensible design choice with minor metadata leak that should be tracked as a follow-up, not a blocker.
-
-**Before merge (cheap, ~10 min):**
-1. Add the 2-line comment in `dispatcher.ts` explaining channelCreate/Delete intentional broadcast (M1).
-2. Add 3–4 negative tests for `/channels/:id` REST gates (M2) — same pattern as existing `denied bot cannot read messages` test.
-
-**Follow-up issue (next PR):**
-- Make `permissionsRepo` required in gateway wiring (S1).
-- File issue for CHANNEL_CREATE metadata leak to bots-without-VIEW_CHANNEL (low priority).
-- Consider extracting `PermissionBits` bigint const from `@cove/shared` (C2.1).
-
-Ship it. 🌠
+## Verdict
+✅ **Ready** — merge.
