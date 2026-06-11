@@ -1,70 +1,29 @@
-# Run Record: cove#294
+# Run: cove-294
 
-**Date:** 2026-06-10
-**PR:** feat: add webhook support for cross-channel messaging
-**Verdict:** ❌ Major Issues
+**PR:** kagura-agent/cove#294 — feat: add webhook support for cross-channel messaging
+**Date:** 2026-06-11
 **Round:** 1
 
-## Consensus Critical (2+ reviewers)
-1. FK violation: `createFromWebhook` inserts webhookId into `messages.sender` → FK crash (Stella + Vega)
-2. No rate limiting on unauthenticated execute endpoint (3/3)
-3. `username`/`avatar_url` overrides unvalidated on public endpoint (Stella + Nova)
-4. Webhook messages lose identity on reload — `bot: false`, avatar null (Stella + Vega)
-5. No tests for any new code path (Stella + Nova)
+## Verdicts
+- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes
+- 🌠 Nova (Claude Opus 4.7): ✅ Ready
+- 💫 Vega (Gemini 3.1 Pro): ❌ Major Issues
+- **Consolidated:** ⚠️ Needs Changes
 
-## Nova Unique Critical
-6. Token exfiltration: list/get endpoints return raw `token` to any guild member
-7. Webhook creation has no permission check beyond guild membership
+## Key Findings
+1. Bot-only auth blocks client UI (consensus)
+2. Avatar persistence lost on reload (consensus)
+3. Webhook deletion corrupts message history (consensus)
+4. Missing negative auth tests (consensus)
+5. Missing avatar validation on create/PATCH (consensus)
+6. Rate-limiter O(N) cleanup per request (consensus)
+7. Echo-loop risk (Nova unique)
+8. Token shown once, no recovery (Nova unique)
 
-## Suggestions
-- Dead `dispatcher` param in `webhookRoutes` (Nova)
-- UUID tokens vs randomBytes for visual non-secret distinction (Nova)
-- Transaction for execute + updateLastMessageId (Stella)
-- Missing index on `webhooks(guild_id)` (Stella)
+## Reviewer Notes
+- Stella: thorough on persistence/identity issues, good catch on window.location.origin
+- Nova: most balanced verdict, unique echo-loop insight, good API parity observation
+- Vega: strictest rating, concise but identified all consensus issues
 
-## Reviewer Assessment
-| Reviewer | Rating | Unique Finds | Notes |
-|----------|--------|-------------|-------|
-| Stella | ❌ | 2 | Caught FK violation, transaction gap, missing index |
-| Nova | ⚠️ | 7 | Most thorough — token leak is a critical unique find, excellent security depth |
-| Vega | ❌ | 0 | Crashed but wrote review file — FK + avatar data loss. No unique finds this round |
-
-## Blind Spots
-- Nova's token exfiltration finding is critical and neither Stella nor Vega caught it — this is a "security model design" dimension, not just code-level. Worth monitoring if this pattern recurs.
-- None of the reviewers checked whether `parseJsonBody` has a max body size limit — defense in depth for the public endpoint.
-
-## Prompt Evolution
-- No prompt change needed. The "Key Security Concerns" section I added to this PR's reviewer prompt (token exposure, rate limiting, content validation) directly led to good coverage. Continue adding per-PR security hints.
-
-## Process
-- Vega crashed (3m29s runtime, 116k tokens) but review file was saved — FlowForge handled gracefully.
-- Plan-review correctly categorized 7/8 files as 🔴 High Risk (all server-side).
-
----
-
-## Round 2
-
-**Verdict:** ⚠️ Needs Changes
-
-### R1 Issue Status
-| # | Issue | Status |
-|---|-------|--------|
-| 1 | FK violation | ✅ Fixed |
-| 2 | No rate limiting | ⚠️ Partial — limiter exists but pre-auth DoS + memory leak |
-| 3 | Validation | ⚠️ Partial — length checked, no URL scheme |
-| 4 | Token leak | ✅ Fixed |
-| 5 | Identity on reload | ⚠️ Partial — bot:true restored, avatar still null |
-| 6 | No tests | ✅ Fixed — 213 lines |
-| 7 | Permission model | ❌ Not fixed — ESCALATED |
-
-### New Findings
-- Client URL shows `/undefined` after reload (3/3 consensus)
-- Rate limiter pre-auth bucket filling → DoS vector (2/3)
-- ON DELETE SET NULL erases webhook message identity (2/3)
-
-### Reviewer Assessment R2
-| Reviewer | Rating | Notes |
-|----------|--------|-------|
-| Stella | ❌ | Rate limiter DoS analysis, permission escalation |
-| Nova | ⚠️ | Most detailed — client URL regression, bucket leak, scheme validation |
-| Vega | ❌ | Permission + client URL, concise |
+## Outcome
+Posted consolidated review to PR. Awaiting author response.
