@@ -1315,5 +1315,17 @@
     "rounds": 1,
     "notes": "R1: 3/3 unanimous Ready. Clean CSS fix. as any cast cosmetic.",
     "last_checked": "2026-06-11T14:27+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 314,
+    "reviewed_at": "2026-06-11T14:50+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 3/3 unanimous Ready. Permission model correct. PR desc stale (Nova)."
   }
 ]
