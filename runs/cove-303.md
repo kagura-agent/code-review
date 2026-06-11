@@ -2,24 +2,26 @@
 
 **PR:** kagura-agent/cove#303 — fix: prevent sidebar UserBar from stretching with input box
 **Date:** 2026-06-11
-**Round:** 1
 
-## Verdicts
-- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes (mobile double-fixed positioning)
-- 🌠 Nova (Claude Opus 4.7): ✅ Ready
-- 💫 Vega (Gemini 3.1 Pro): ✅ Ready
-- **Consolidated:** ✅ Ready
+## Round 1
+### Verdicts
+- 🌟 Stella: ⚠️ Needs Changes (mobile double-fixed)
+- 🌠 Nova: ✅ Ready
+- 💫 Vega: ✅ Ready
+- **Consolidated:** ✅ Ready (2/3, verify mobile)
 
-## Key Findings
-1. Mobile `.sidebar-panel` double-fixed positioning — Stella flags as critical, Nova as suggestion, Vega says preserved (1/3 vs 2/3)
-2. PR description stale (consensus — all 3)
-3. Dead grid CSS rule (Stella, Nova)
-4. `--footer-height` 52→54 unexplained (Nova)
+## Round 2
+### Verdicts
+- 🌟 Stella: ✅ Ready
+- 🌠 Nova: ✅ Ready
+- 💫 Vega: ✅ Ready
+- **Consolidated:** ✅ Ready (3/3 unanimous)
 
-## Reviewer Notes
-- Stella: strictest, caught real mobile concern but may be over-flagging
-- Nova: balanced, thorough mobile analysis, confirmed it renders correctly despite redundancy
-- Vega: concise, correct architectural assessment
+### Status
+- Mobile double-fixed: ✅ Fixed
+- PR description: ✅ Updated
+- Dead grid CSS: ⚠️ `.app-layout` rule still present (cosmetic)
+- Footer height: ✅ Explained
 
-## Outcome
-Posted to PR. Results sent back to #cove-dev via webhook (caller requested).
+### Outcome
+✅ Ready to merge. Posted to PR. Results sent to #cove-dev via webhook.

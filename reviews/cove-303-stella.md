@@ -1,32 +1,29 @@
-# Review: kagura-agent/cove PR #303
+# Review: kagura-agent/cove PR #303 (Round 2) — Stella
 
 ## Summary
-This PR replaces the shared grid row with separate flex columns so the sidebar UserBar no longer stretches when the message input grows. The desktop direction looks sound, and the client build passes, but the mobile sidebar still has the old `.sidebar-panel` fixed-position rules applied inside the new fixed `.sidebar-column`, which breaks the UserBar/sidebar layout on small screens. **Rating: ⚠️ Needs Changes**
+This PR restructures the app shell from a shared 2-row grid into independent flex columns so the sidebar `UserBar` no longer stretches when the chat input grows. The claimed Round 2 fixes are mostly addressed: the mobile double-fixed sidebar positioning is removed, the PR description now matches the current approach, and the `--footer-height` change is explained. I found no functional blockers in the current diff, and the client build passes. One Round 1 cleanup item remains: stale grid-specific mobile CSS is still present even though `.app-layout` is now flex.
+
+**Rating: ✅ Ready**
 
 ## Critical Issues
+None.
 
-1. **Mobile sidebar now double-applies fixed slide-out layout and removes the Sidebar from the column flow**  
-   - Files: `packages/client/src/App.tsx:263-267`, `packages/client/src/index.css:480-511`, `packages/client/src/components/Sidebar.tsx:12`  
-   - The new structure wraps both `<Sidebar />` and `<UserBar />` in `.sidebar-column`, which is the right shape for a flex column. However, the old mobile rules for `.sidebar-panel` are still active: on mobile, the Sidebar root is also `position: fixed`, `top: 0`, `bottom: 0`, `transform: translateX(...)`, and `z-index: 30`. Because `.sidebar-panel` is fixed, it no longer participates as the flex body inside `.sidebar-column`; it also spans the full viewport height and can overlay the sibling `.sidebar-footer-cell`. The in-flow footer is no longer naturally pinned below the sidebar body, so the mobile UserBar can be hidden/overlapped or positioned incorrectly.  
-   - Fix by making only the outer `.sidebar-column` responsible for the mobile fixed/slide behavior, and remove or override the mobile `.sidebar-panel` fixed positioning/transform rules so the Sidebar remains the flex body inside that column.
+## Previous Round Findings Check
+- ✅ **Mobile `.sidebar-panel` double-fixed positioning**: Addressed. On mobile, `.sidebar-panel` is now static and the fixed slide-in behavior moved to `.sidebar-column` (`packages/client/src/index.css:483-507`). This avoids competing fixed/transform rules between the panel and footer.
+- ✅ **PR description stale**: Addressed. The description now accurately says the layout was changed to Discord-style flex columns and notes the mobile CSS update.
+- ⚠️ **Dead grid CSS rule**: Still present. `packages/client/src/index.css:479-482` still says “Grid collapses to single column” and sets `grid-template-columns` on `.app-layout`, but `.app-layout` is now `display: flex` (`packages/client/src/App.tsx:53`). Escalated from Round 1 because it was left unaddressed, but it is maintainability-only and not a merge blocker.
+- ✅ **`--footer-height` 52→54 unexplained**: Addressed in the PR description with the MessageInput height calculation. The value also matches the current textarea minimum height + vertical margins + border (`packages/client/src/index.css:11`, `packages/client/src/components/MessageInput.tsx:16-27`).
 
 ## Product Impact
-
-- Desktop behavior should improve as intended: the chat input can grow without stretching the sidebar UserBar.
-- Mobile users are at risk of losing usable access to the sidebar footer/UserBar/settings entry, because the old fixed Sidebar panel conflicts with the new parent column layout.
+The main user-facing behavior should improve: expanding the message input now grows only the chat footer instead of coupling that height to the sidebar footer. Desktop member list layout still works with the flex row, and the mobile sidebar should continue sliding as one unit because `.sidebar-column` owns both the channel list and `UserBar`.
 
 ## Suggestions
-
-1. **Remove stale grid-era mobile CSS/comments**  
-   - File: `packages/client/src/index.css:475-478`  
-   - `.app-layout { grid-template-columns: 1fr !important; }` no longer affects the flex layout, and the “Grid collapses” comment is now misleading. Cleaning this up will make future layout changes safer.
-
-2. **Consider using an explicit height for the sidebar footer**  
-   - File: `packages/client/src/App.tsx:56`  
-   - `minHeight: var(--footer-height)` works as long as `UserBar` content remains exactly footer-sized, but `UserBar` itself uses `height: 100%`. If the goal is a fixed footer height, `height: var(--footer-height)` plus `flexShrink: 0` would encode that more directly.
+1. **Remove stale mobile grid CSS** (`packages/client/src/index.css:479-482`). Since `.app-layout` is flex now, this rule is inert and the comment is misleading. Suggested cleanup:
+   - remove the `.app-layout { grid-template-columns: 1fr !important; }` block, or
+   - replace it with a flex-relevant mobile comment if there is an intended mobile layout rule.
 
 ## Positive Notes
-
-- The desktop flex-column split is a good fit for the problem: sidebar and chat footers are now decoupled structurally instead of sharing a grid row.
-- `chatColumn`, `chatBody`, and `chatFooter` preserve the important `minHeight: 0`/`minWidth: 0` constraints needed for nested scroll areas.
-- `pnpm -F @cove/client build` passes successfully. The only build output is the existing Vite chunk-size warning.
+- The flex-column split in `App.tsx` is a good fit for the product behavior: sidebar and chat footer heights are now independently managed while keeping the default shared `--footer-height` alignment.
+- Moving the mobile slide transform to `.sidebar-column` is cleaner than separately positioning the sidebar body and footer.
+- The PR description is now much clearer and explains the otherwise non-obvious `--footer-height` adjustment.
+- Verification run: `pnpm -F @cove/client build` passes.
