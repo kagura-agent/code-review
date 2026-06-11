@@ -126,6 +126,14 @@ nodes:
 
       Commit and push any changes with `evolve: <what changed and why>`
       Push is mandatory — local-only commits are invisible to reviewers.
+    next: reflection_gate
+
+  reflection_gate:
+    task: |
+      Structural gate: verify reflection was written (skip-reflection pattern, 4d recidivist).
+      Run: `bash code-review/reflection-gate.sh <repo> <pr_number>`
+      If it exits 1 → go back and write the reflection. Do not proceed.
+      If it exits 0 → continue to register_tracking.
     next: register_tracking
 
   register_tracking:
