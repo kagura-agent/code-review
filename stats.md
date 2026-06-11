@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-11 20:26 (Asia/Shanghai)_
+_Last updated: 2026-06-12 02:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 141 | 137/141 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 60+ rounds: clean |
-| 🌠 Nova | claude-opus-4.7 | 145 | 145/145 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 141 | 131/141 (93%) ↓ | 1 crash (#278 R4), 1 crash (#294 R1), 1 timeout (#294 R4), 1 stale (#294 R5), 1 timeout (#316 R5), 1 timeout (#322 R1). **Accelerating decline** |
+| 🌟 Stella | gpt-5.5 | 142 | 138/142 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 60+ rounds: clean |
+| 🌠 Nova | claude-opus-4.7 | 146 | 146/146 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 142 | 132/142 (93%) ↓ | 1 crash (#278 R4), 1 crash (#294 R1), 1 timeout (#294 R4), 1 stale (#294 R5), 1 timeout (#316 R5), 1 timeout (#322 R1). **Accelerating decline** |
 
 ## Dimension Strengths (per reviewer)
 
@@ -103,7 +103,7 @@ _Last updated: 2026-06-11 20:26 (Asia/Shanghai)_
 |----------|----------------------|------------|-------------|
 | 🌟 Stella | 80% | 15% (WS scoping, build-order, same-ms monotonicity) | 5% |
 | 🌠 Nova | 95% | 3% | 2% |
-| 💫 Vega | 81% | 12% (#290 pre-existing flagged, #191 over-severity) | 7% (#261 R3 premature Ready) |
+| 💫 Vega | 81% | 12% (#290 pre-existing flagged, #191 over-severity) | 8% (#261 R3 premature Ready, #327 R4 under-flag) |
 
 ## False Positive Rate (Critical flagged → later proven non-issue)
 
@@ -172,6 +172,8 @@ _Last updated: 2026-06-11 20:26 (Asia/Shanghai)_
 | #314 | cove | 2026-06-11 | R1 | ✅ Ready (merged) | bot-creation-deletion, permission-model |
 | #316 | cove | 2026-06-11 | R1-R5 | ✅ Ready (merged) | permission-self-grant, rest-view-channel, ready-payload-leak, channel-lifecycle |
 | #322 | cove | 2026-06-11 | R1 | ✅ Ready (merged) | underscore-italic-word-boundary, markdown-parser |
+| #326 | cove | 2026-06-11 | R1 | ✅ Ready (open) | underscore-italic-closing-delimiter |
+| #327 | cove | 2026-06-11 | R1-R4 | ⚠️ Needs Changes (open) | guild-scoping, session-persistence, send-race, shutdown-respawn |
 
 ## Ground Truth Summary (42 merged PRs)
 
@@ -181,7 +183,7 @@ _Last updated: 2026-06-11 20:26 (Asia/Shanghai)_
 - **Iterative review as quality gate:** In 41/45 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 2 (#100 — verdict too conservative; #281 — stale PR description led all 3 reviewers astray)
 - **Multi-round PRs:** 35/45 PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190)
-- **Total review rounds:** ~150 across 45 merged PRs
+- **Total review rounds:** ~155 across 45 merged PRs + 2 open
 - **False-ready detection:** 1 case (#255 R4→R5) — R4 said Ready but R5 found the fix was non-functional. Self-correcting system working.
 - **Escalation protocol validated:** 4 cases (#255 R2→R3, #264 R3→R4, #294 R1→R2 permission model, **#316 C2 across R1→R2→R3** — REST gating escalated three times) — all led to fixes.
 
@@ -192,6 +194,7 @@ _Last updated: 2026-06-11 20:26 (Asia/Shanghai)_
 2. **Vega's calibration weakening slightly.** Two new data points:
    - #290: Over-flagged pre-existing abort behavior as a regression (Needs Changes when Stella+Nova correctly approved). This is a "regression vs pre-existing" misjudgment — Vega didn't verify whether the behavior existed before the PR.
    - #287: Missed Critical #1 severity (flagged resolveAccount throw as Ready when it was blocking).
+   - #327 R4: Approved Ready when Stella and Nova both caught real blockers (guild scoping ineffective, shutdown respawn race). Third under-flag in recent history.
    - **Action:** Monitor. If this pattern continues (3+ more calibration misses in next 10 PRs), consider adding "verify whether flagged behavior is pre-existing or newly introduced" to Vega's prompt.
 
 3. **Nova's security model design dimension is emerging.** #294 R1 token exfiltration find is the strongest unique security find since #248 PUBLIC_PATHS. Neither Stella nor Vega caught it. Nova reasons about security *model* (how the system's security design works) vs security *code* (individual bug). Consider emphasizing security model analysis in all reviewer prompts.
