@@ -17,3 +17,9 @@
 
 ## Outcome
 ✅ Ready. Posted to PR. Results sent to #cove-dev via webhook.
+
+## Ground Truth
+- **Human reviewer:** daniyuu (APPROVED, no findings)
+- **Our verdict:** ready (3/3 unanimous)
+- **Accuracy:** correct
+- **Calibration:** Clean CSS-only fix. Human approved quickly.

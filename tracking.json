@@ -1236,9 +1236,33 @@
     "repo": "cove",
     "pr": 294,
     "reviewed_at": "2026-06-10T10:15:00Z",
-    "status": "open",
-    "ground_truth": null,
-    "last_checked": "2026-06-11T10:50+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "needs_changes",
+      "our_verdict_r4": "needs_changes",
+      "our_verdict_r5": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "webhook-fk-violation",
+        "token-exfiltration",
+        "rate-limiter-dos",
+        "permission-model",
+        "bot-auth-blocks-ui",
+        "avatar-persistence",
+        "sender-name-fallback"
+      ],
+      "noise": [
+        "Vega R5 stale — reviewed old diff, identical to R3 output"
+      ],
+      "calibration": "5-round deep review. Nova unique token exfiltration find (R1). R3-R5 iterative fixes. Vega stale in R5 (reviewed old diff). Human approved without comments — iterative review was the quality gate."
+    },
+    "last_checked": "2026-06-11T14:27+08:00",
     "rounds": 5,
     "reviewers": 3,
     "verdict": "ready",
@@ -1249,24 +1273,47 @@
     "repo": "cove",
     "pr": 303,
     "reviewed_at": "2026-06-11T12:45+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "ready",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "mobile-double-fixed-detection"
+      ],
+      "noise": [],
+      "calibration": "R1: Stella caught mobile double-fixed (unique). R2: 3/3 unanimous. Human approved without comments."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "notes": "R1: 2/3 Ready (Stella mobile concern). R2: 3/3 unanimous Ready. Mobile fixed, PR desc updated.",
-    "last_checked": "2026-06-11T12:55+08:00"
+    "last_checked": "2026-06-11T14:27+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 308,
     "reviewed_at": "2026-06-11T13:44+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Clean 3/3 unanimous Ready. CSS-only fix. Human approved quickly."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
-    "notes": "R1: 3/3 unanimous Ready. Clean CSS fix. as any cast cosmetic."
+    "notes": "R1: 3/3 unanimous Ready. Clean CSS fix. as any cast cosmetic.",
+    "last_checked": "2026-06-11T14:27+08:00"
   }
 ]

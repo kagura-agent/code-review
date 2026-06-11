@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-11 08:26 (Asia/Shanghai)_
+_Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 126 | 122/126 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 60+ rounds ex-R2: 1 timeout |
-| 🌠 Nova | claude-opus-4.7 | 130 | 130/130 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 126 | 120/126 (95%) → | 1 crash (#278 R4), 1 crash (#294 R1 — review saved). Stable overall |
+| 🌟 Stella | gpt-5.5 | 134 | 130/134 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 60+ rounds ex-R2: 1 timeout |
+| 🌠 Nova | claude-opus-4.7 | 138 | 138/138 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 134 | 126/134 (94%) ↓ | 1 crash (#278 R4), 1 crash (#294 R1), 1 timeout (#294 R4), 1 stale (#294 R5 — reviewed old diff). Declining slightly |
 
 ## Dimension Strengths (per reviewer)
 
@@ -78,14 +78,14 @@ _Last updated: 2026-06-11 08:26 (Asia/Shanghai)_
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 14 | ~120 | ~12% | → Stable |
-| 🌠 Nova | 19 | ~120 | ~16% | ↑ Improving (token exfil #294, empty guilds #261) |
-| 💫 Vega | 11 | ~120 | ~9% | ↓ Slightly declining |
+| 🌟 Stella | 15 | ~130 | ~12% | → Stable |
+| 🌠 Nova | 19 | ~130 | ~15% | ↑ Improving (token exfil #294, empty guilds #261) |
+| 💫 Vega | 11 | ~130 | ~8% | ↓ Declining |
 
 **Notable unique finds (last 10 PRs: #264-#294):**
-- Stella: **cookie reissue gap** (#264 R3), **WS session outlives expired token** (#264 R5), **ref mutation during render** (#278 R2+R4), **resolveAccount agentId throw** (#287 R1), rate limiter pre-auth DoS (#294 R2)
+- Stella: **cookie reissue gap** (#264 R3), **WS session outlives expired token** (#264 R5), **ref mutation during render** (#278 R2+R4), **resolveAccount agentId throw** (#287 R1), rate limiter pre-auth DoS (#294 R2), **mobile double-fixed detection** (#303 R1)
 - Nova: **non-sliding session flaw** (#264 R2), **bot footgun** (#264 R4), **backfill hardcode** (#264 R4), **token exfiltration** (#294 R1 — security model, not just code), **webhook permission model missing** (#294 R1), getChannels error (#287 R1)
-- Vega: **sliding threshold math bug** (#264 R3), **stale expires_at return** (#264 R5), **scroll listener not attached** (#278 R1), FK violation surface (#294 R1)
+- Vega: **sliding threshold math bug** (#264 R3), **stale expires_at return** (#264 R5), **scroll listener not attached** (#278 R1), FK violation surface (#294 R1). **⚠️ Stale output in #294 R5 (reviewed old diff)**
 
 ## Consensus Participation
 
@@ -117,9 +117,9 @@ _Last updated: 2026-06-11 08:26 (Asia/Shanghai)_
 
 | Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#294) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 102/106 (96%) | → (timeout #176 R1, late #190 R5, miss #255 R2, timeout #278 R5) |
-| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 110/110 (100%) | → |
-| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 101/104 (97%) | → (crash #278 R4, crash #294 R1. Otherwise 100% since #168) |
+| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 110/114 (96%) | → (timeout #176 R1, late #190 R5, miss #255 R2, timeout #278 R5) |
+| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 118/118 (100%) | → |
+| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 106/112 (95%) | ↓ (crash #278 R4, crash #294 R1, timeout #294 R4, stale #294 R5) |
 
 ## Review History
 
@@ -164,23 +164,25 @@ _Last updated: 2026-06-11 08:26 (Asia/Shanghai)_
 | **#281** | **cove** | **2026-06-10** | **R1** | **⚠️ False positive** | **stale-description-driven false positives (all 3 reviewers)** |
 | **#287** | **cove** | **2026-06-10** | **R1-R2** | **✅ Ready (merged)** | **resolver-throws-before-helper, guildId-leak-mapResolved, readAccountConfig-split** |
 | **#290** | **cove** | **2026-06-10** | **R1** | **✅ Ready (merged)** | **dispatch-timeout-removal, isCurrent-guard-pattern** |
-| **#294** | **cove** | **2026-06-10** | **R1-R2** | **⏳ Open (R2 fixes pushed, awaiting R3)** | **webhook-fk-violation, token-exfiltration, rate-limiting, permission-model** |
+| #294 | cove | 2026-06-10 | R1-R5 | ✅ Ready (merged) | webhook-fk-violation, token-exfiltration, rate-limiting, permission-model, bot-auth-blocks-ui, sender-name-fallback |
+| #303 | cove | 2026-06-11 | R1-R2 | ✅ Ready (merged) | mobile-double-fixed-detection, css-layout |
+| #308 | cove | 2026-06-11 | R1 | ✅ Ready (merged) | scrollbar-reflow, css-only |
 
-## Ground Truth Summary (39 merged PRs)
+## Ground Truth Summary (42 merged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 97% — human approved without findings in 37/39 cases. Exceptions: #174 (design questions), #281 (false positive — stale description)
-- **Iterative review as quality gate:** In 35/39 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
+- **Human rubber-stamp rate:** 95% — human approved without findings in 40/42 cases. Exceptions: #174 (design questions), #281 (false positive — stale description)
+- **Iterative review as quality gate:** In 38/42 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 2 (#100 — verdict too conservative; #281 — stale PR description led all 3 reviewers astray)
-- **Multi-round PRs:** 30/39 PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190)
-- **Total review rounds:** ~130 across 39 merged PRs + 1 open PR
+- **Multi-round PRs:** 33/42 PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190)
+- **Total review rounds:** ~140 across 42 merged PRs
 - **False-ready detection:** 1 case (#255 R4→R5) — R4 said Ready but R5 found the fix was non-functional. Self-correcting system working.
 - **Escalation protocol validated:** 3 cases (#255 R2→R3, #264 R3→R4, #294 R1→R2 permission model) — unaddressed items correctly escalated. All led to fixes.
 
 ## Actionable Notes
 
-1. **All 3 reviewers near or above 10% unique find rate.** Stella 12%, Nova 16% (↑), Vega 9% (↓). Vega dipping below 10% — monitor over next 5 PRs. Not yet at replacement threshold (needs 10+ reviews below 10%).
+1. **Vega unique find rate below 10% threshold.** Stella 12%, Nova 15% (↑), Vega 8% (↓). Vega has been below 10% for 2 consecutive tracking periods. Additionally, Vega had 2 failures on #294 alone (timeout R4, stale R5). Monitor closely over next 5 PRs — approaching replacement consideration threshold.
 
 2. **Vega's calibration weakening slightly.** Two new data points:
    - #290: Over-flagged pre-existing abort behavior as a regression (Needs Changes when Stella+Nova correctly approved). This is a "regression vs pre-existing" misjudgment — Vega didn't verify whether the behavior existed before the PR.
@@ -195,7 +197,7 @@ _Last updated: 2026-06-11 08:26 (Asia/Shanghai)_
 
 6. **Nova continues zero false positives across 130 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker.
 
-7. **Throughput sustained.** PRs #281, #287, #290, #294 — 4 PRs in 1 day with ~7 review rounds total. Service scaling well.
+7. **Throughput sustained.** PRs #294, #303, #308 all merged. 42 total merged PRs. Service scaling well.
 
 8. **Escalation protocol robust.** #294 R1→R2 permission model escalation (3/3 consensus) joins #255 and #264 as successful escalation cases. Working as designed.
 

@@ -50,3 +50,11 @@
 
 ### Outcome
 ✅ Ready to merge. Posted to PR.
+
+## Ground Truth
+- **Human reviewer:** daniyuu (APPROVED, no findings)
+- **Our verdict progression:** R3 needs_changes → R4 needs_changes → R5 ready
+- **Accuracy:** correct
+- **Effective dimensions:** webhook-fk-violation, token-exfiltration, rate-limiter-dos, permission-model, bot-auth-blocks-ui, avatar-persistence, sender-name-fallback
+- **Noise:** Vega R5 stale (reviewed old diff, identical to R3)
+- **Calibration:** 5-round deep review. Iterative review was the quality gate.

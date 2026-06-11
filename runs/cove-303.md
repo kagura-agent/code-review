@@ -25,3 +25,10 @@
 
 ### Outcome
 ✅ Ready to merge. Posted to PR. Results sent to #cove-dev via webhook.
+
+## Ground Truth
+- **Human reviewer:** daniyuu (APPROVED, no findings)
+- **Our verdict progression:** R1 ready (2/3) → R2 ready (3/3 unanimous)
+- **Accuracy:** correct
+- **Effective dimensions:** mobile-double-fixed-detection
+- **Calibration:** Stella caught mobile double-fixed in R1 (unique). R2 unanimous. Human approved without comments.
