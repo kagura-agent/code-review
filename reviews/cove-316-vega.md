@@ -1,24 +1,34 @@
-1. **Summary**: This is Round 2 of the PR #316 review. The author has made good progress on addressing R1 findings: bot self-granting is blocked (C1), BigInt validation is in place (C5), dispatcher events are filtered appropriately (C4), and basic negative auth tests have been added (C3). However, the restriction of REST endpoints (C2) is incomplete. Several channel-specific endpoints remain completely ungated, allowing unauthorized bots to edit/delete messages, trigger typing indicators, or fetch channel metadata. Due to the unaddressed aspects of C2 from R1, this is escalated to a blocking failure.
+# Code Review for PR #316 (Round 3)
 
-2. **Critical Issues**:
-   - **[ESCALATED from R1] Incomplete REST Endpoint Gating (C2)**: While `GET /messages`, `POST /messages`, and webhook endpoints now properly check `VIEW_CHANNEL`, several other channel-specific routes in `routes/messages.ts` and `routes/channels.ts` remain ungated. An unauthorized bot can still:
-     - `PATCH /channels/:id/messages/:msgId`
-     - `DELETE /channels/:id/messages/:msgId`
-     - `POST /channels/:id/typing`
-     - `PUT /channels/:id/messages/:msgId/ack`
-     - `GET /channels/:id` (in `channels.ts`)
-     You must apply `requireBotChannelPermission` to ALL routes that operate on a specific channel ID.
-   - **Incomplete Negative Tests (C3)**: While negative tests were added for GET/POST messages, the lack of negative tests for PATCH, DELETE, typing, and ack endpoints is exactly why those endpoints were missed. You need negative tests for ALL channel-specific endpoints asserting that a bot without `VIEW_CHANNEL` receives a 403.
+## 1. Summary
+This is Round 3. While significant progress was made (the `READY` payload is now filtered, channel lifecycle events are filtered, and many REST routes are properly gated with negative tests), the core C2 issue is still not fully resolved. Several critical channel-scoped REST routes were missed again, meaning a bot without `VIEW_CHANNEL` can still read, edit, and delete the channel itself. Additionally, some newly added security gates lack the mandatory negative tests.
 
-3. **Product Impact**: 
-   - A bot that is ostensibly blocked from a channel can still interact with it in disruptive ways (deleting messages, showing typing indicators perpetually) because the REST API doesn't fully enforce the permissions model.
+## 2. Critical Issues
 
-4. **Suggestions**:
-   - Consider creating a route middleware or a helper wrapper for `channels/:id/*` routes that automatically validates the `VIEW_CHANNEL` permission for bots, reducing the risk of missing it on individual endpoint handlers.
+### ⚠️ ESCALATED: C2 - REST routes missing `VIEW_CHANNEL` gate
+You added `requireBotChannelPermission` to messages, reactions, and webhooks, but completely missed the individual channel management endpoints. A bot without `VIEW_CHANNEL` can still fetch, edit, or delete the channel!
+- **Missing Check**: `GET /channels/:id`
+- **Missing Check**: `PATCH /channels/:id`
+- **Missing Check**: `DELETE /channels/:id`
+*Fix: Add `requireBotChannelPermission` to these three routes in `packages/server/src/routes/channels.ts`.*
 
-5. **Positive Notes**:
-   - The BigInt validation and the database schema migration look solid.
-   - The dispatcher channel filtering logic is clean and handles the complex conditional effectively.
-   - The React UI changes look excellent and integrate well.
+### ❌ Missing Negative Tests for Security Gates
+The review standard strictly requires: *"Security/auth paths without tests = Critical. Any new permission check, auth gate, or access control MUST have both positive and negative test cases."* You added tests for messages/reactions, but missed tests for several other newly gated paths:
+- **Webhooks**: `POST /channels/:id/webhooks` and `GET /channels/:id/webhooks` now have the auth gate in `webhooks.ts`, but no tests verify that a denied bot gets a 403.
+- **REST Channel List**: `GET /guilds/:guildId/channels` filters channels for bots, but there is no test proving a denied bot sees a filtered list.
+- **READY Payload**: You correctly implemented filtering for `READY` in `session.ts`, but there is no test verifying that the `channels` array in the `READY` payload actually omits denied channels.
+- **Channel Endpoints**: Once you add the missing gates to `GET/PATCH/DELETE /channels/:id`, you MUST add negative tests for them.
 
-Rate the PR: ❌ Major Issues
+## 3. Product Impact
+Currently, a bot denied from a private channel can still delete the entire channel via `DELETE /channels/:id`. This is a massive product security risk.
+
+## 4. Suggestions
+- The implementation of `broadcastToGuildWithChannelFilter` correctly handles checking if `permissionsRepo` exists, which is good defensive programming.
+- Consider adding a helper test utility to assert a 403 response for a given authenticated request, which might make it faster to cover all these negative test cases.
+
+## 5. Positive Notes
+- **C4 Fixed**: Channel lifecycle events (`CHANNEL_CREATE`, `CHANNEL_UPDATE`, `CHANNEL_DELETE`) are now properly filtered via `broadcastToGuildWithChannelFilter`.
+- **READY Payload Fixed**: `session.ts` correctly filters the channel list in the `READY` dispatch for bot sessions.
+- Great job adding the bulk of the missing tests in `permissions.test.ts`. The structure of the negative test suite is clean and explicit.
+
+**Verdict:** ❌ Major Issues

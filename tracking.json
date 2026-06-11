@@ -1337,8 +1337,8 @@
     "ground_truth": null,
     "verdict": "major_issues",
     "reviewers": 3,
-    "rounds": 2,
-    "notes": "R1: Major Issues (5 criticals). R2: C1/C5 fixed, C2 escalated (2/10 routes gated). NEW: READY payload leak. Needs one more round.",
-    "last_checked": "2026-06-11T16:10+08:00"
+    "rounds": 3,
+    "notes": "R1: 5 criticals. R2: C1/C5 fixed, C2 partial. R3: C2 re-escalated (GET/PATCH/DELETE /channels/:id), NEW lifecycle bugs. Still needs changes.",
+    "last_checked": "2026-06-11T16:30+08:00"
   }
 ]

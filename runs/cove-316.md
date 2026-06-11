@@ -4,31 +4,25 @@
 **Date:** 2026-06-11
 
 ## Round 1
-### Verdicts
-- 🌟 Stella: ❌ Major Issues
-- 🌠 Nova: ⚠️ Needs Changes
-- 💫 Vega: ❌ Major Issues
-- **Consolidated:** ❌ Major Issues
-
-### Key Findings
-1. Self-grant (3/3), REST bypass (3/3), missing tests (3/3), event leak (2/3), BigInt crash (2/3)
+- Stella ❌ | Nova ⚠️ | Vega ❌ → **❌ Major Issues**
+- 5 criticals: self-grant, REST bypass, missing tests, event leak, BigInt crash
 
 ## Round 2
-### Verdicts
-- 🌟 Stella: ❌ Major Issues
-- 🌠 Nova: ⚠️ Needs Changes
-- 💫 Vega: ❌ Major Issues
-- **Consolidated:** ⚠️ Needs Changes (escalated)
+- Stella ❌ | Nova ⚠️ | Vega ❌ → **⚠️ Needs Changes**
+- C1 ✅ C5 ✅ | C2 escalated (2/10 routes) | NEW: READY leak
 
-### Status
-- C1 ✅ | C2 ⚠️ escalated (only 2/10 routes gated) | C3 🟡 partial | C4 🟡 mostly | C5 ✅
-- NEW: READY payload leaks full channel list to bots (Nova)
+## Round 3
+- Stella ❌ | Nova ⚠️ | Vega ❌ → **⚠️ Needs Changes**
+- C1 ✅ C3 ✅ C5 ✅ READY ✅
+- C2 re-escalated: GET/PATCH/DELETE /channels/:id still ungated (3rd time same class)
+- NEW: CHANNEL_DELETE cascade ordering (authorized bots never receive delete)
+- NEW: CHANNEL_CREATE unreachable for bots (no overwrites on new channel)
 
-### Notes
-- Nova's READY payload find is excellent — nobody caught this in R1
-- Stella most thorough on enumeration of unprotected routes
-- All 3 agree: C2 fix is mechanical (one line per route), not architectural
-- Core design is sound
+## Notes
+- Nova finding new lifecycle issues (CHANNEL_DELETE/CREATE) shows deep understanding
+- Stella most thorough on route enumeration, caught webhook resource routes too
+- C2 has been the same class of issue for 3 rounds — different routes each time
+- Core design is sound, implementation incomplete
 
-### Outcome
+## Outcome
 ⚠️ Needs Changes. Posted to PR. Results sent to #cove-dev.
