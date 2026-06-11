@@ -1337,7 +1337,8 @@
     "ground_truth": null,
     "verdict": "major_issues",
     "reviewers": 3,
-    "rounds": 1,
-    "notes": "R1: 2/3 Major Issues, 1/3 Needs Changes. Self-grant, REST bypass, event leak, BigInt crash."
+    "rounds": 2,
+    "notes": "R1: Major Issues (5 criticals). R2: C1/C5 fixed, C2 escalated (2/10 routes gated). NEW: READY payload leak. Needs one more round.",
+    "last_checked": "2026-06-11T16:10+08:00"
   }
 ]

@@ -2,25 +2,33 @@
 
 **PR:** kagura-agent/cove#316 — feat: channel permission overwrites (bot visibility)
 **Date:** 2026-06-11
-**Round:** 1
 
-## Verdicts
+## Round 1
+### Verdicts
 - 🌟 Stella: ❌ Major Issues
 - 🌠 Nova: ⚠️ Needs Changes
 - 💫 Vega: ❌ Major Issues
 - **Consolidated:** ❌ Major Issues
 
-## Key Findings (consensus)
-1. Permission routes lack admin auth — bots can self-grant (3/3)
-2. REST endpoints not gated by VIEW_CHANNEL (3/3)
-3. Missing negative auth tests (3/3)
-4. Dispatcher only filters 3 event types, others leak (2/3)
-5. BigInt validation missing — malformed values crash dispatcher (2/3)
+### Key Findings
+1. Self-grant (3/3), REST bypass (3/3), missing tests (3/3), event leak (2/3), BigInt crash (2/3)
 
-## Reviewer Notes
-- Stella: most thorough, caught all 5 critical issues with file references
-- Nova: balanced severity, excellent suggestions (N+1, fail-open, PK collision)
-- Vega: concise, correctly identified the 3 core consensus issues
+## Round 2
+### Verdicts
+- 🌟 Stella: ❌ Major Issues
+- 🌠 Nova: ⚠️ Needs Changes
+- 💫 Vega: ❌ Major Issues
+- **Consolidated:** ⚠️ Needs Changes (escalated)
 
-## Outcome
-❌ Major Issues. Posted to PR. Results sent to #cove-dev via webhook.
+### Status
+- C1 ✅ | C2 ⚠️ escalated (only 2/10 routes gated) | C3 🟡 partial | C4 🟡 mostly | C5 ✅
+- NEW: READY payload leaks full channel list to bots (Nova)
+
+### Notes
+- Nova's READY payload find is excellent — nobody caught this in R1
+- Stella most thorough on enumeration of unprotected routes
+- All 3 agree: C2 fix is mechanical (one line per route), not architectural
+- Core design is sound
+
+### Outcome
+⚠️ Needs Changes. Posted to PR. Results sent to #cove-dev.

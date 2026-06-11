@@ -1,48 +1,55 @@
-# Review: kagura-agent/cove PR #316 — feat: channel permission overwrites
+# PR #316 Round 2 Review — Stella
 
 ## Summary
+This PR adds channel permission overwrites and the Round 2 fixes do address part of the Round 1 feedback: bots can no longer call the permission overwrite routes, list/send message routes are gated, dispatcher filtering was expanded for message/typing/reaction events, and malformed non-BigInt `allow`/`deny` values are rejected on the permission route. However, the core default-deny guarantee is still incomplete. Several channel-bound REST routes and channel gateway events still bypass `VIEW_CHANNEL`, so denied bots can still learn about hidden channels and interact with messages if they know IDs. Because these are repeated Round 1 access-control findings, I’m escalating them as blocking.
 
-This PR adds channel permission overwrite storage, exposes PUT/DELETE APIs, surfaces per-bot visibility toggles in Channel Settings, and filters some gateway message events for bot sessions. The migration/build/test path is healthy (`pnpm -r test`: 210 passed; `pnpm -r build`: passed), but the access-control model is not ready yet: denied bots can still discover/read/write hidden channels through REST/READY, can self-grant visibility, and malformed overwrite bitfields can crash permission evaluation. **Rating: ❌ Major Issues**
+**Rating: ❌ Major Issues**
 
 ## Critical Issues
 
-1. **Default-deny visibility is only applied to a subset of gateway message events; REST and READY still expose hidden channels/messages.**  
-   - `packages/server/src/ws/session.ts:48-51` sends every `channelsRepo.list(g.id)` channel in READY, including `permission_overwrites`, to every guild member/bot. A denied bot still learns the hidden channel exists immediately on connect.  
-   - `packages/server/src/routes/channels.ts:11-26` and `packages/server/src/routes/messages.ts:11-42` only require guild membership, so a denied bot can still list channels, fetch a hidden channel, and read its message history over REST.  
-   - `packages/server/src/routes/messages.ts:45-88`, `208-237`, and related reaction/delete routes similarly do not check `VIEW_CHANNEL`, so denied bots can post messages, ack messages, type, react, and perform message operations in channels they should not see.  
-   - `packages/server/src/ws/dispatcher.ts:94-115` and `220-230` still broadcast `MESSAGE_DELETE_BULK`, `TYPING_START`, and reaction events to all guild bot sessions, leaking hidden channel IDs/message IDs/activity even though single-message create/update/delete events are filtered at `dispatcher.ts:76-91`.
+### 1. [Escalated R1 C2] `VIEW_CHANNEL` is still missing from many channel-bound REST endpoints
+The fixes added `requireBotChannelPermission` to channel list, message list/send, and webhook create/list, but most other channel-scoped routes still only check guild membership. A bot with no overwrite can still access or mutate resources in a channel it should not be able to see.
 
-   **Fix:** centralize a `canViewChannel(user, channelId)` check and apply it consistently to bot REST reads/writes and all channel-scoped gateway events. For READY/channel list, either omit channels lacking `VIEW_CHANNEL` for bots or include only channels the bot can view. Add positive and negative tests for each API/event class.
+Examples:
+- `packages/server/src/routes/channels.ts:29-36` — `GET /channels/:id` returns the channel object, including metadata/overwrites, without checking `VIEW_CHANNEL`.
+- `packages/server/src/routes/channels.ts:74-118` and `121-134` — denied bots can patch/delete channels as guild members.
+- `packages/server/src/routes/messages.ts:32-45` — `GET /channels/:id/messages/:msgId` returns a specific message if the bot knows/guesses the ID.
+- `packages/server/src/routes/messages.ts:97-160`, `164-194`, `198-211`, `214-230`, `233-243` — edit/delete/bulk-delete/clear/ack/typing all bypass the new permission check.
+- `packages/server/src/routes/reactions.ts:11-91` — add/remove/list reactions all bypass the new permission check.
 
-2. **Any guild member, including a denied bot, can create/delete overwrites and grant itself `VIEW_CHANNEL`.**  
-   - `packages/server/src/routes/permissions.ts:13-27` authorizes overwrite mutation with only `requireGuildMember(...)`. A bot token that is a guild member can call `PUT /channels/:channelId/permissions/:itsOwnId` with `allow=VIEW_CHANNEL` and bypass the default-deny model.  
-   - `permissions.ts:31-39` has the same issue for deletion; any guild member can remove another bot's overwrite.
+This directly violates the PR’s stated default of “no overwrites = bot cannot see the channel.” Please centralize the channel access check so every route that takes a channel id either rejects denied bots with `403 Missing Permissions` or intentionally documents a human/admin-only bypass.
 
-   **Fix:** restrict permission overwrite management to a real administrator/owner/MANAGE_CHANNELS-equivalent path. If role permissions are not available yet, at minimum block bot users from these routes and require the guild owner or an explicit server-side admin concept. Add negative tests proving denied bots and ordinary members cannot mutate overwrites.
+### 2. [Escalated R1 C4] Dispatcher filtering is still incomplete for channel events
+`MESSAGE_*`, `TYPING_START`, and reaction events now use `broadcastToGuildWithChannelFilter`, but channel lifecycle events still go through the unfiltered guild broadcast:
 
-3. **`allow`/`deny` bitfields are accepted as arbitrary strings and later parsed with `BigInt`, enabling runtime crashes.**  
-   - `packages/server/src/routes/permissions.ts:23-27` only checks that `allow` and `deny` are strings before persisting them. Strings such as `"not-a-number"`, `""`, `"1.5"`, or enormous values are accepted.  
-   - `packages/server/src/repos/permissions.ts:61-62` calls `BigInt(row.allow)` / `BigInt(row.deny)` during dispatch filtering; malformed stored values will throw inside `messageCreate`/`messageUpdate`/`messageDelete` and can break gateway delivery.  
-   - The client also does `BigInt(o.allow)` while rendering (`packages/client/src/components/ChannelSettings.tsx:327-329`), so malformed data can crash the Permissions tab.
+- `packages/server/src/ws/dispatcher.ts:98-107` — `CHANNEL_CREATE`, `CHANNEL_UPDATE`, and `CHANNEL_DELETE` are sent to every bot session in the guild.
 
-   **Fix:** validate route input as canonical non-negative integer bitfield strings, optionally bounded to the supported Discord permission width; reject invalid JSON/body values before DB writes. Consider hardening `hasPermission` defensively so one bad row cannot crash dispatch. Add tests for invalid `allow`/`deny` values.
+For denied bots this leaks hidden channel IDs, names/topics on create/update, and deletion activity. `CHANNEL_UPDATE` is especially sensitive now that channel responses include permission overwrites. These events need the same `VIEW_CHANNEL` filtering semantics as message events, with a deliberate policy for newly-created channels that have no overwrite yet.
+
+### 3. [Escalated R1 C3] Negative auth tests only cover the newly-fixed happy subset, not the remaining protected surface
+The added tests are a good start, but they only assert denied bots cannot list/send messages and cannot manage overwrites. They would not catch the leaks above. Given this PR is implementing access control, each channel-bound API/event path needs negative tests for a bot without `VIEW_CHANNEL`, especially:
+
+- `GET /channels/:id`
+- message get/edit/delete/bulk-delete/clear/ack/typing
+- reaction add/remove/list
+- webhook create/list if intended to stay gated
+- `CHANNEL_CREATE`, `CHANNEL_UPDATE`, `CHANNEL_DELETE` dispatcher delivery
+
+This is blocking under the review standard because the missing auth coverage allowed repeated Round 1 issues to remain in Round 2.
 
 ## Product Impact
-
-- The UI suggests “Bots without access will not receive messages from this channel,” but as implemented a denied bot can still get the channel in READY/channel list, fetch message history, and interact with the channel over REST. That is a substantial mismatch for bot visibility/privacy and could lead users to believe a bot is isolated when it is not.
-- Self-granting means the main security control is bypassable by the exact actor it is meant to restrict.
-- Partial event filtering can create inconsistent bot behavior: a bot may miss `MESSAGE_CREATE` but still receive typing/reaction/bulk-delete events for the same hidden channel.
+Denied bots will still be able to discover and interact with channels that the UI/admin has not granted them. That undermines the feature’s main user-facing promise: using the Permissions tab to control which bots can see a channel. In practice, bot authors could still read specific messages by ID, mutate channel/message state via REST, and observe hidden-channel metadata through gateway events.
 
 ## Suggestions
 
-- **Add target validation/foreign keys.** `channel_permission_overwrites.target_id` currently has no FK to `users`/roles and the route does not verify that `targetId` exists or is a member of the channel's guild. The UI only sends current bot members, but the API can store stale or nonsensical overwrites. Validate member targets for `type: 1`; defer or explicitly reject `type: 0` until role support exists.
-- **Return or dispatch overwrite changes.** After PUT/DELETE, connected clients do not receive a `CHANNEL_UPDATE`, so multiple settings tabs/sessions can show stale permission state until a refresh/reopen.
-- **Avoid N+1 overwrite loading for guild channel lists.** `ChannelsRepo.list()` now calls `permissionsRepo.listByChannel()` once per channel. That is probably fine for small guilds, but a batched query by guild/channel IDs would scale better and avoid repeated prepared statement execution.
-- **Test REST authorization, not only dispatcher filtering.** The new tests cover CRUD and selected dispatch behavior, but this is an access-control feature; add explicit positive/negative tests for channel list, channel get, message list/get/post, typing/reactions, READY payload filtering, and overwrite mutation authorization.
+- `packages/server/src/routes/permissions.ts:31-38` now catches non-BigInt strings, which fixes the crash class, but bitfields should probably be validated as non-negative decimal strings, with tests for values like `"abc"`, `""`, and `"-1"`. Discord permission bitfields are not signed integers, and accepting negative values can make future `hasPermission` checks behave unexpectedly.
+- Consider validating overwrite targets before upsert: `type: 1` should reference an existing guild member/user, and `type: 0` should reference an existing role once roles exist. Otherwise the API can store inert or confusing overwrites.
+- To avoid future missed gates, consider a helper that resolves `(channel, user)` and enforces bot visibility in one call, rather than repeating `requireGuildMember` plus optional permission checks route-by-route.
 
 ## Positive Notes
 
-- The schema/migration shape is simple and compatible with Discord-style overwrite objects, and channel delete cascade is covered by tests.
-- The UI is small and understandable: per-bot switches map directly to a member overwrite for `VIEW_CHANNEL`.
-- The dispatcher filter for `MESSAGE_CREATE`, `MESSAGE_UPDATE`, and single `MESSAGE_DELETE` is clear and covered by positive/negative tests.
-- The existing suite passes, and the full workspace build succeeds after the changes.
+- The previous self-grant path for bots is closed: permission routes now reject `user.bot` with `50013`.
+- Channel list and message list/send now enforce `VIEW_CHANNEL`, matching the default-deny model for the most common read/write paths.
+- Dispatcher filtering was meaningfully expanded for message, typing, and reaction events.
+- Route-level parsing now prevents invalid non-integer `allow`/`deny` values from crashing `BigInt()`.
+- I ran the test suite entrypoint used by the workspace (`pnpm test -- --run packages/server/src/__tests__/permissions.test.ts`); it completed successfully with the server suite reporting 214 passing tests, though the workspace script ran broader tests than just the single file.
