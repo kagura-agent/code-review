@@ -1,61 +1,65 @@
-# Review: kagura-agent/cove PR #294 — feat: add webhook support for cross-channel messaging
+# Review: kagura-agent/cove PR #294 — Round 4 re-review
 
 ## Summary
 
-This PR adds the core webhook model, CRUD/execute routes, migration, client settings UI, plugin echo-filter adjustment, and server tests. The overall direction is solid and the execute path is close, but I do **not** think it is ready as-is: the new client UI is currently blocked by the server's bot-only CRUD checks, new access-control paths lack required negative tests, and webhook message identity is not fully preserved after reload/delete.
+This PR adds Cove webhook CRUD/execute support plus a client UI and tests. Round 4 fixed C1 (client-cookie auth works for webhook CRUD) and the route-level C5 validation is now present for `avatar`/`avatar_url`, but C3 is not actually fixed and C4 is only partially covered. Because C3/C4 were called out last round and remain unresolved, this still needs changes before merge.
 
-**Rating: ⚠️ Needs Changes**
+**Verdict: ⚠️ Needs Changes**
 
 ## Critical Issues
 
-1. **Client webhook UI cannot work for normal logged-in users**  
-   `packages/server/src/routes/webhooks.ts:16-20`, `36-40`, `49-53`, `63-67`, `80-84`, `111-115`; `packages/client/src/lib/api.ts:86-95`; `packages/client/src/components/ChannelSettings.tsx:85-124`, `284-348`  
-   The client UI calls the webhook CRUD endpoints using the browser session cookie (`credentials: "include"` in `api.ts`), but every CRUD endpoint immediately rejects `!user.bot` with 403. OAuth/session users are human users (`bot: false`), so the Integrations panel will fail to list/create/delete webhooks for the users who can actually open it. If Cove does not yet have a permissions model, these endpoints should likely be member-gated (or owner/admin-gated if such roles exist), not bot-only; alternatively, the UI should not expose this flow to human sessions.
+### C3 — Deleting a webhook still destroys historical webhook identity
 
-2. **New access-control paths are missing required negative tests**  
-   `packages/server/src/__tests__/webhooks.test.ts:64-190`; `packages/server/src/routes/webhooks.ts:16-127`  
-   The new webhook CRUD routes introduce authorization and guild-membership checks, but the tests only cover successful bot-member access plus execute-token failure. There are no tests for unauthenticated requests returning 401, non-bot users returning 403, non-members receiving 404, cross-guild webhook access, or PATCH authorization. Per the review standard, new auth/permission gates need both positive and negative tests before merge.
+- `packages/server/src/db/migrations/v8-webhooks.ts:18`
+- `packages/server/src/repos/messages.ts:23-31`, `packages/server/src/repos/messages.ts:41-49`
+- `packages/server/src/routes/webhooks.ts:106-118`
 
-3. **Webhook avatar identity is lost after persistence/reload**  
-   `packages/server/src/repos/messages.ts:48-56`, `142-173`; `packages/server/src/routes/webhooks.ts:185-195`  
-   `createFromWebhook` returns/broadcasts the supplied `webhookAvatar`, including `avatar_url` overrides, but the DB only stores `sender_name` and `webhook_id`. When the message is later read through `toMessage`, webhook messages always get `avatar: null`. That means `avatar_url`/webhook avatar support works only for the immediate response/gateway event and silently disappears on history reload. If avatar identity is part of the Discord-compatible contract, store a sender/avatar snapshot in message metadata or a dedicated column and restore it in `toMessage`.
+The attempted fix stores `sender_name` for webhook messages, but `messages.webhook_id` is declared `REFERENCES webhooks(id) ON DELETE SET NULL`. When `DELETE /webhooks/:webhookId` runs, SQLite nulls `messages.webhook_id`. After that, `toMessage()` no longer enters the webhook branch and falls through to the generic deleted-sender branch, returning author id `"0"` and username `"Deleted Webhook"` instead of the original webhook identity.
 
-4. **Deleting a webhook mutates historical message identity into an invalid/non-webhook author**  
-   `packages/server/src/db/migrations/v8-webhooks.ts:18`; `packages/server/src/repos/messages.ts:21-59`  
-   The migration adds `messages.webhook_id ... ON DELETE SET NULL`. Because webhook messages are inserted with `sender = null` (`messages.ts:146-148`), deleting a webhook clears `webhook_id`; later reads fall back to the normal author path with `author.id = row.sender` (null at runtime) and `bot: false`. This changes old webhook messages after deletion and can produce an invalid `Message.author.id`. Consider preserving a webhook/message identity snapshot and avoiding `ON DELETE SET NULL` for the value clients need to render history, or explicitly handle `sender === null` rows even after webhook deletion.
+This means historical messages still lose their author identity after webhook deletion. The new persistence test only covers reload before webhook deletion, so it misses the original failure mode.
+
+Suggested fix: snapshot enough webhook author fields directly on the message row and keep using them after deletion. At minimum, if `sender` is null and `sender_name` exists, preserve `sender_name` instead of `"Deleted Webhook"`; ideally also avoid nulling the historical author id, e.g. remove the FK/`ON DELETE SET NULL` from `messages.webhook_id` or add a separate immutable `webhook_author_id` snapshot column.
+
+Add a regression test that creates a webhook message, deletes the webhook, then fetches channel messages and asserts the historical author name/id and `webhook_id` behavior are intentional.
+
+### C4 — Negative auth/authorization tests are still incomplete for the new CRUD surface
+
+- `packages/server/src/routes/webhooks.ts:48-118`
+- `packages/server/src/__tests__/webhooks.test.ts:149-190`, `packages/server/src/__tests__/webhooks.test.ts:214-266`
+
+The new tests cover unauthenticated channel-list, non-member channel-list, bad execute token, and cross-guild create. They do not cover negative authorization for several newly introduced protected routes:
+
+- `GET /guilds/:guildId/webhooks`
+- `GET /webhooks/:webhookId`
+- `PATCH /webhooks/:webhookId`
+- `DELETE /webhooks/:webhookId`
+
+The review standard requires both positive and negative tests for new auth gates/access-control paths. This is especially important here because the route-specific checks differ by route: channel routes use `requireGuildMember()`, while webhook-id routes first load the webhook then check guild membership. Add unauthorized/no-session and cross-guild/non-member cases for each protected route, plus positive coverage for PATCH and guild-list.
 
 ## Product Impact
 
-- The PR advertises a user-facing Channel Settings → Integrations webhook flow, but current server checks make that flow unusable for normal Cove UI users.
-- Webhook messages may look correct when first sent but degrade after page reload or webhook deletion, which is especially risky for cross-channel messaging where identity clarity is the whole point.
-- Existing plugin echo filtering (`packages/plugin/src/channel.ts:333`) now lets webhook bot-authored messages through, which matches the goal. The correctness of that flow depends on `webhook_id` being preserved consistently in message history/events.
+- C1 status: addressed. `requireAuth()` accepts session cookies, the client API uses `credentials: "include"`, and webhook CRUD routes use the authenticated user from context instead of requiring bot-only credentials.
+- C2 status: still deferred/unresolved. Webhook/avatar identity is still not fully durable across reloads: `createFromWebhook()` receives `webhookAvatar`, but only persists `sender_name`/`webhook_id`; `toMessage()` returns `avatar: null` for webhook rows. Per-execution `avatar_url` and stored webhook avatars are visible in the live response/event, then disappear when fetched from DB.
+- C3 status: not fixed, and still user-visible. Deleting a webhook changes historical message authors to `Deleted Webhook`.
+- C4 status: partially fixed, but not enough for the new access-control surface.
+- C5 status: addressed in route code. `avatar` is validated on create/PATCH and `avatar_url` is validated on execute.
+- C6 status: still deferred. The webhook execute cleanup still scans buckets on each execute request (`packages/server/src/routes/webhooks.ts:151-160`), though the cap makes the worst case bounded.
 
 ## Suggestions
 
-1. **Validate `avatar` on create/update.**  
-   `packages/server/src/routes/webhooks.ts:26-32`, `94-105` accepts `avatar` without a type or length check. A non-string/object value can cause DB binding errors or bad data. Add `validateString(body.avatar, "avatar", { maxLength: ... })` for create and patch, similar to `avatar_url` on execute.
-
-2. **Trim stored webhook names consistently.**  
-   `packages/server/src/routes/webhooks.ts:29-32`, `97-104` validates `name.trim()` indirectly but stores the original string. Other routes (for example channel create) trim before storing. Store `body.name.trim()` for create/update to avoid names with accidental leading/trailing whitespace.
-
-3. **Use the configured API base when showing webhook URLs.**  
-   `packages/client/src/components/ChannelSettings.tsx:120-124` always builds URLs from `window.location.origin`. In deployments where `VITE_COVE_API_URL` points to a separate API host, the copied webhook URL will be wrong. Consider exposing a helper based on the same API base used by `api.ts`, or return an execute URL from the server.
-
-4. **Consider hashing webhook tokens at rest.**  
-   `packages/server/src/repos/webhooks.ts:28-34`, `48-51` stores tokens in plaintext even though list/get already hide them. Since execute only needs token verification, storing a hash would reduce blast radius if the DB leaks. This is not required for Discord parity, but it is worth considering because webhook URLs are bearer credentials.
-
-5. **Test PATCH and rate-limit behavior.**  
-   The new tests do not cover PATCH success/validation/token hiding or the execute endpoint's 429 path. These would be useful regression tests for the API surface added here.
+- Add tests for create/PATCH `avatar` validation specifically. The code now validates these fields, but the current validation tests only cover execute-time `avatar_url`.
+- Consider not charging the webhook execute rate-limit bucket before request-body validation (`packages/server/src/routes/webhooks.ts:139-166`). As written, malformed JSON or invalid content consumes quota for a valid webhook token.
+- The PR adds a `skills/cove-webhook` proposal under the Cove repo. If this repository is intended to contain app code only, consider moving durable agent-skill artifacts into the proper skill-workshop flow/repo instead of shipping them with the server/client feature.
 
 ## Positive Notes
 
-- The route split between authenticated CRUD and unauthenticated token-based execute is clear, and registering execute before global auth in `app.ts` makes the public boundary explicit.
-- Token leakage is avoided on list/get/update responses via `stripToken`/public repo mapping, while create returns the token once for UI copy flow.
-- Execute input validation covers content, username length, avatar URL length, invalid JSON, and invalid token cases.
-- The plugin echo-filter change is small and targeted: bot messages are still ignored unless they are webhook messages.
-- The tests cover the core happy execute path, invalid token, missing content, token hiding on list/get, delete behavior, and persisted webhook author name/id.
+- The execute route is correctly registered before global auth, so token-in-URL webhook execution is not blocked by the browser/client auth path.
+- Token leakage is handled well for list/get/update responses via `stripToken()`/public webhook mapping; creation still returns the one-time token as expected.
+- The route-level string validation is much improved: webhook names, content, username overrides, and avatar fields now have type/length checks.
+- The new tests cover the main happy path, token secrecy on list/get, invalid execute token, missing content, and basic membership isolation.
 
 ## Verification
 
-- Pulled PR metadata and diff with `gh pr view 294 --repo kagura-agent/cove --json title,body,state,additions,deletions,files` and `gh pr diff 294 --repo kagura-agent/cove`.
-- Attempted the advertised typecheck in a temporary checkout, but the workspace lacked installed dependencies/TypeScript (`pnpm -r exec tsc --noEmit` failed with `Command "tsc" not found` in `packages/shared`). No full test/typecheck result is available from this environment.
+- `pnpm -F @cove/server run build` ✅
+- `pnpm -F @cove/client run build` ✅
+- `pnpm -F @cove/server test -- webhooks.test.ts` ✅ (Vitest also ran the server suite due project matching behavior; output was truncated by the tool, but the visible summary showed the webhook tests passing.)
