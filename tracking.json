@@ -1340,5 +1340,17 @@
     "rounds": 5,
     "notes": "R1-R4: Major→Changes (5 criticals progressively fixed). R5: ✅ Ready 2/2. 5-round journey complete.",
     "last_checked": "2026-06-11T17:00+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 322,
+    "reviewed_at": "2026-06-11T17:30+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 2,
+    "rounds": 1,
+    "notes": "R1: Nova ✅, Stella ⚠️ (closing delimiter), Vega failed. Approved with caveat."
   }
 ]
