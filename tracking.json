@@ -1393,5 +1393,17 @@
     "rounds": 1,
     "notes": "R1: Nova ✅, Stella ⚠️ (closing delimiter), Vega failed. Approved with caveat. Merged 2026-06-11T09:37Z.",
     "last_checked": "2026-06-11T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 326,
+    "reviewed_at": "2026-06-11T21:05+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 3/3 unanimous Ready. Clean regex fix, symmetric with #322."
   }
 ]
