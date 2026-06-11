@@ -1,6 +1,6 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-11 02:30 (Asia/Shanghai)_
+_Last updated: 2026-06-11 08:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -164,7 +164,7 @@ _Last updated: 2026-06-11 02:30 (Asia/Shanghai)_
 | **#281** | **cove** | **2026-06-10** | **R1** | **⚠️ False positive** | **stale-description-driven false positives (all 3 reviewers)** |
 | **#287** | **cove** | **2026-06-10** | **R1-R2** | **✅ Ready (merged)** | **resolver-throws-before-helper, guildId-leak-mapResolved, readAccountConfig-split** |
 | **#290** | **cove** | **2026-06-10** | **R1** | **✅ Ready (merged)** | **dispatch-timeout-removal, isCurrent-guard-pattern** |
-| **#294** | **cove** | **2026-06-10** | **R1-R2** | **⏳ Open (Needs Changes)** | **webhook-fk-violation, token-exfiltration, rate-limiting, permission-model** |
+| **#294** | **cove** | **2026-06-10** | **R1-R2** | **⏳ Open (R2 fixes pushed, awaiting R3)** | **webhook-fk-violation, token-exfiltration, rate-limiting, permission-model** |
 
 ## Ground Truth Summary (39 merged PRs)
 
