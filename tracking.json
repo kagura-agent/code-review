@@ -1243,5 +1243,17 @@
     "reviewers": 3,
     "verdict": "ready",
     "notes": "R3: 6 consensus findings. R4: C1/C4/C5 resolved, C3 partial. R5: C3 resolved (sender_name fallback). 2/3 Ready (Vega stale). Awaiting merge."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 303,
+    "reviewed_at": "2026-06-11T12:45+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 2/3 Ready. Stella mobile concern (double-fixed). All flag stale PR description."
   }
 ]
