@@ -1321,36 +1321,77 @@
     "repo": "cove",
     "pr": 314,
     "reviewed_at": "2026-06-11T14:50+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Clean 3/3 unanimous Ready. Nova caught stale PR description (same pattern as #281 but non-blocking). Human approved without comments."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
-    "notes": "R1: 3/3 unanimous Ready. Permission model correct. PR desc stale (Nova)."
+    "notes": "R1: 3/3 unanimous Ready. Permission model correct. PR desc stale (Nova).",
+    "last_checked": "2026-06-11T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 316,
     "reviewed_at": "2026-06-11T15:35+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "major_issues",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "needs_changes",
+      "our_verdict_r4": "needs_changes",
+      "our_verdict_r5": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "permission-self-grant",
+        "rest-view-channel-gating",
+        "ready-payload-leak",
+        "channel-lifecycle-events",
+        "bigint-validation",
+        "negative-auth-tests"
+      ],
+      "noise": [],
+      "calibration": "5-round deep review. C2 (REST gating) persisted across 3 rounds — different routes missed each time. Nova unique READY payload leak (R2) and CHANNEL_CREATE unreachable (R3). Stella most persistent on test requirements. Vega failed R5. Human approved without comments — iterative review was the quality gate."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 5,
     "notes": "R1-R4: Major→Changes (5 criticals progressively fixed). R5: ✅ Ready 2/2. 5-round journey complete.",
-    "last_checked": "2026-06-11T17:00+08:00"
+    "last_checked": "2026-06-11T20:26+08:00"
   },
   {
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 322,
     "reviewed_at": "2026-06-11T17:30+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "R1: Stella raised closing delimiter concern (valid but out of scope for this fix). Nova correctly scoped to the reported issue. Vega failed (timeout). Human approved without comments."
+    },
     "verdict": "ready",
     "reviewers": 2,
     "rounds": 1,
-    "notes": "R1: Nova ✅, Stella ⚠️ (closing delimiter), Vega failed. Approved with caveat."
+    "notes": "R1: Nova ✅, Stella ⚠️ (closing delimiter), Vega failed. Approved with caveat. Merged 2026-06-11T09:37Z.",
+    "last_checked": "2026-06-11T20:26+08:00"
   }
 ]

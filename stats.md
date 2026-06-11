@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
+_Last updated: 2026-06-11 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 134 | 130/134 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 60+ rounds ex-R2: 1 timeout |
-| 🌠 Nova | claude-opus-4.7 | 138 | 138/138 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 134 | 126/134 (94%) ↓ | 1 crash (#278 R4), 1 crash (#294 R1), 1 timeout (#294 R4), 1 stale (#294 R5 — reviewed old diff). Declining slightly |
+| 🌟 Stella | gpt-5.5 | 141 | 137/141 (97%) → | Stable — 1 timeout (#176 R1), 1 late (#190 R5), 1 miss (#255 R2), 1 timeout (#278 R5). Last 60+ rounds: clean |
+| 🌠 Nova | claude-opus-4.7 | 145 | 145/145 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 141 | 131/141 (93%) ↓ | 1 crash (#278 R4), 1 crash (#294 R1), 1 timeout (#294 R4), 1 stale (#294 R5), 1 timeout (#316 R5), 1 timeout (#322 R1). **Accelerating decline** |
 
 ## Dimension Strengths (per reviewer)
 
@@ -29,6 +29,7 @@ _Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
 | Session/Auth Lifecycle | ⭐⭐⭐ | **Cookie reissue gap** (#264 R3 — sliding refresh updates DB but browser cookie keeps old maxAge), **OAuth non-atomic** (#264 R4 — two UPDATEs can leave stale expires_at on crash). Persistent escalation across 5 rounds. |
 | React Hooks Hygiene | ⭐⭐⭐ | **Ref mutation during render** (#278 R2 — unique find, verified by eslint), **scrollContainerRef.current read during render** (#278 R4 — unique find from shared observer refactor). Caught same lint class twice in one PR. |
 | Config/Resolver Design | ⭐⭐ | **`resolveAccount` throws on missing agentId** (#287 R1 — unique Critical, not needed for target resolution), transaction gap in webhook execute (#294 R1), rate limiter pre-auth DoS (#294 R2). |
+| Test Requirements | ⭐⭐⭐ | Most persistent on negative auth tests (#316 R4 — blocked until channel route tests added when Nova approved). Correctly enforced — those were the routes that regressed across 3 rounds. |
 
 **Stella's superpower:** Runs actual builds + reproduces bugs locally. Catches things that pure code reading misses. Deepest lifecycle analysis. Most persistent on escalation rules. Protocol-level reasoning. Control flow verification. Session lifecycle depth. React hooks hygiene.
 **Stella's weakness:** Sometimes over-scopes (flags out-of-PR architectural concerns as blocking). Strictest on escalation — same-ms monotonicity (#192 R4) flagged when practically harmless.
@@ -50,6 +51,7 @@ _Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
 | Optimistic UI | ⭐⭐⭐ | **WS-only reconcile gap** (#261 R2 — REST reconciliation path), **empty guilds READY crash** (#261 R3 — unique find), nonce validation ordering (#261 R3), sidebar loading state diagnosis (#261 R2). Core contributor to #261's 4-round resolution. |
 | Session TTL/Auth | ⭐⭐⭐ | **Non-sliding session design flaw** (#264 R2 — fixed-window expiry without user activity renewal), **bot footgun** (#264 R4 — `opts.bot !== false` makes undefined=bot), **backfill hardcode** (#264 R4 — migration ignores SESSION_TTL_MS). Best calibration in #264: first to approve in R3 and R5. |
 | Security Model Design | ⭐⭐⭐ | **Token exfiltration** (#294 R1 — unique Critical: list/get endpoints return raw token to any guild member, breaking URL-token security model), **webhook permission model** (#294 R1 — unique: no permission check beyond guild membership). Strongest at identifying systemic security model flaws, not just code-level bugs. |
+| Information Leakage | ⭐⭐⭐ | **READY payload leaks full channel list to denied bots** (#316 R2 — unique find), **CHANNEL_CREATE unreachable for bots** (#316 R3 — unique lifecycle gap: new channels have no overwrites → default-deny → bot never sees them). Both found during permission feature review — complementary to security model dimension. |
 
 **Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security, accessibility, async lifecycle, retry semantics, session/auth design, and security model design. Zero false positives across 130 rounds. **#294 standout** — unique token exfiltration find that neither Stella nor Vega caught.
 **Nova's weakness:** None significant. Occasionally verbose but content is consistently high quality.
@@ -78,21 +80,21 @@ _Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 15 | ~130 | ~12% | → Stable |
-| 🌠 Nova | 19 | ~130 | ~15% | ↑ Improving (token exfil #294, empty guilds #261) |
-| 💫 Vega | 11 | ~130 | ~8% | ↓ Declining |
+| 🌟 Stella | 16 | ~140 | ~11% | → Stable (closing delimiter #322) |
+| 🌠 Nova | 21 | ~140 | ~15% | ↑ Improving (READY payload leak #316, CHANNEL_CREATE #316) |
+| 💫 Vega | 11 | ~140 | ~8% | ↓ Declining (2 more failures #316 R5, #322 R1) |
 
-**Notable unique finds (last 10 PRs: #264-#294):**
-- Stella: **cookie reissue gap** (#264 R3), **WS session outlives expired token** (#264 R5), **ref mutation during render** (#278 R2+R4), **resolveAccount agentId throw** (#287 R1), rate limiter pre-auth DoS (#294 R2), **mobile double-fixed detection** (#303 R1)
-- Nova: **non-sliding session flaw** (#264 R2), **bot footgun** (#264 R4), **backfill hardcode** (#264 R4), **token exfiltration** (#294 R1 — security model, not just code), **webhook permission model missing** (#294 R1), getChannels error (#287 R1)
-- Vega: **sliding threshold math bug** (#264 R3), **stale expires_at return** (#264 R5), **scroll listener not attached** (#278 R1), FK violation surface (#294 R1). **⚠️ Stale output in #294 R5 (reviewed old diff)**
+**Notable unique finds (last 10 PRs: #278-#322):**
+- Stella: **ref mutation during render** (#278 R2+R4), **resolveAccount agentId throw** (#287 R1), rate limiter pre-auth DoS (#294 R2), **mobile double-fixed detection** (#303 R1), **closing delimiter boundary** (#322 R1 — valid but out of scope)
+- Nova: **token exfiltration** (#294 R1 — security model, not just code), **webhook permission model missing** (#294 R1), getChannels error (#287 R1), stale PR desc pattern (#314), **READY payload leak** (#316 R2 — unique), **CHANNEL_CREATE unreachable** (#316 R3 — unique)
+- Vega: **scroll listener not attached** (#278 R1), FK violation surface (#294 R1). **⚠️ 2 new failures: #316 R5 timeout, #322 R1 timeout**
 
 ## Consensus Participation
 
 | Reviewer | Part of 2/3+ consensus | Solo dissent (correct) | Solo dissent (noise) |
 |----------|----------------------|----------------------|---------------------|
-| 🌟 Stella | 86% | 10 (WS scoping, presences, build-order, WS disconnect #176 R3, auto-ack dedup #192 R4, RESUMED abort semantics #255 R1, dispatch.ts fallback paths #255 R3, **try/catch control flow #255 R5**, **WS session lifetime #264 R5**, rate limiter DoS #294 R2) | 1 (WS scoping over-scope #168) |
-| 🌠 Nova | 93% | 6 (ready when others flag, PUBLIC_PATHS #248 R1, POST retry idempotency #255 R2, **empty guilds READY #261 R3**, **non-sliding session #264 R2**, **token exfiltration #294 R1**) | 0 |
+| 🌟 Stella | 86% | 11 (WS scoping, presences, build-order, WS disconnect #176 R3, auto-ack dedup #192 R4, RESUMED abort semantics #255 R1, dispatch.ts fallback paths #255 R3, **try/catch control flow #255 R5**, **WS session lifetime #264 R5**, rate limiter DoS #294 R2, **closing delimiter #322 R1**) | 1 (WS scoping over-scope #168) |
+| 🌠 Nova | 93% | 8 (ready when others flag, PUBLIC_PATHS #248 R1, POST retry idempotency #255 R2, **empty guilds READY #261 R3**, **non-sliding session #264 R2**, **token exfiltration #294 R1**, **READY payload leak #316 R2**, **CHANNEL_CREATE unreachable #316 R3**) | 0 |
 | 💫 Vega | 84% | 7 (#125 R1, gen ID reuse #190 R4, own-message-unread #192 R2, parseCookies DoS #248 R1, localStorage XSS #248 R2, 204 JSON parsing #255 R2, **sliding threshold math #264 R3**) | 2 (#261 R3 premature Ready; **#290 over-flagged pre-existing as regression**) |
 
 ## Severity Calibration
@@ -107,9 +109,9 @@ _Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
 
 | Reviewer | False Positives | Total Criticals | FP Rate |
 |----------|----------------|-----------------|---------|
-| 🌟 Stella | 1 (WS scoping as blocker for #168) | ~32 | 3% |
-| 🌠 Nova | 0 | ~32 | 0% |
-| 💫 Vega | 2 (#168 R2 oversized; **#290 pre-existing as regression**) | ~26 | 8% |
+| 🌟 Stella | 1 (WS scoping as blocker for #168) | ~34 | 3% |
+| 🌠 Nova | 0 | ~35 | 0% |
+| 💫 Vega | 2 (#168 R2 oversized; **#290 pre-existing as regression**) | ~27 | 7% |
 
 **Note:** #281 false positive was systemic (all 3 reviewers compared against stale PR description) — counted separately as a process issue, not individual reviewer weakness.
 
@@ -117,9 +119,9 @@ _Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
 
 | Reviewer | Early (PRs #96-#145) | Mid (#155-#167) | Recent (#168-#294) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 110/114 (96%) | → (timeout #176 R1, late #190 R5, miss #255 R2, timeout #278 R5) |
-| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 118/118 (100%) | → |
-| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 106/112 (95%) | ↓ (crash #278 R4, crash #294 R1, timeout #294 R4, stale #294 R5) |
+| 🌟 Stella | 12/12 (100%) | 8/8 (100%) | 117/121 (97%) | → (timeout #176 R1, late #190 R5, miss #255 R2, timeout #278 R5) |
+| 🌠 Nova | 12/12 (100%) | 8/8 (100%) | 125/125 (100%) | → |
+| 💫 Vega | 8/12 (67%) | 6/8 (75%) | 111/119 (93%) | ↓ (crash #278 R4, crash #294 R1, timeout #294 R4, stale #294 R5, **timeout #316 R5, timeout #322 R1**) |
 
 ## Review History
 
@@ -167,22 +169,25 @@ _Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
 | #294 | cove | 2026-06-10 | R1-R5 | ✅ Ready (merged) | webhook-fk-violation, token-exfiltration, rate-limiting, permission-model, bot-auth-blocks-ui, sender-name-fallback |
 | #303 | cove | 2026-06-11 | R1-R2 | ✅ Ready (merged) | mobile-double-fixed-detection, css-layout |
 | #308 | cove | 2026-06-11 | R1 | ✅ Ready (merged) | scrollbar-reflow, css-only |
+| #314 | cove | 2026-06-11 | R1 | ✅ Ready (merged) | bot-creation-deletion, permission-model |
+| #316 | cove | 2026-06-11 | R1-R5 | ✅ Ready (merged) | permission-self-grant, rest-view-channel, ready-payload-leak, channel-lifecycle |
+| #322 | cove | 2026-06-11 | R1 | ✅ Ready (merged) | underscore-italic-word-boundary, markdown-parser |
 
 ## Ground Truth Summary (42 merged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 95% — human approved without findings in 40/42 cases. Exceptions: #174 (design questions), #281 (false positive — stale description)
-- **Iterative review as quality gate:** In 38/42 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
+- **Human rubber-stamp rate:** 96% — human approved without findings in 43/45 cases. Exceptions: #174 (design questions), #281 (false positive — stale description)
+- **Iterative review as quality gate:** In 41/45 merged PRs, our multi-round review was the actual quality gate (human approved final state without independent analysis)
 - **Over-flagging instances:** 2 (#100 — verdict too conservative; #281 — stale PR description led all 3 reviewers astray)
-- **Multi-round PRs:** 33/42 PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190)
-- **Total review rounds:** ~140 across 42 merged PRs
+- **Multi-round PRs:** 35/45 PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190)
+- **Total review rounds:** ~150 across 45 merged PRs
 - **False-ready detection:** 1 case (#255 R4→R5) — R4 said Ready but R5 found the fix was non-functional. Self-correcting system working.
-- **Escalation protocol validated:** 3 cases (#255 R2→R3, #264 R3→R4, #294 R1→R2 permission model) — unaddressed items correctly escalated. All led to fixes.
+- **Escalation protocol validated:** 4 cases (#255 R2→R3, #264 R3→R4, #294 R1→R2 permission model, **#316 C2 across R1→R2→R3** — REST gating escalated three times) — all led to fixes.
 
 ## Actionable Notes
 
-1. **Vega unique find rate below 10% threshold.** Stella 12%, Nova 15% (↑), Vega 8% (↓). Vega has been below 10% for 2 consecutive tracking periods. Additionally, Vega had 2 failures on #294 alone (timeout R4, stale R5). Monitor closely over next 5 PRs — approaching replacement consideration threshold.
+1. **⚠️ Vega unique find rate below 10% threshold for 3 consecutive periods.** Stella 11%, Nova 15% (↑), Vega 8% (↓). Additionally, Vega had 4 failures in last 6 PRs: #294 (timeout R4, stale R5), #316 R5 (timeout), #322 R1 (timeout). **Reliability 93% and declining. Approaching replacement threshold.** Consider: (a) try gemini-2.5-pro-preview if available, (b) adjust timeout, (c) replace with different model.
 
 2. **Vega's calibration weakening slightly.** Two new data points:
    - #290: Over-flagged pre-existing abort behavior as a regression (Needs Changes when Stella+Nova correctly approved). This is a "regression vs pre-existing" misjudgment — Vega didn't verify whether the behavior existed before the PR.
@@ -203,4 +208,8 @@ _Last updated: 2026-06-11 14:27 (Asia/Shanghai)_
 
 9. **Reviewer model versions stable.** No model changes since launch. Performance trends are attributable to prompt tuning, not model upgrades.
 
-10. **Ground truth: 39 merged PRs, human rubber-stamps 97%.** Our iterative review IS the quality gate. This validates the service but means limited external validation.
+10. **Ground truth: 45 merged PRs, human rubber-stamps 96%.** Our iterative review IS the quality gate. This validates the service but means limited external validation.
+
+11. **#316 is the most complex single-PR review to date.** 5 rounds, 5 criticals in R1, C2 (REST gating) persisted across 3 rounds with different routes missed each time. Nova found unique READY payload leak (R2) and CHANNEL_CREATE unreachable (R3). Demonstrates the value of persistent multi-round review for security features.
+
+12. **Vega reliability is now a concrete concern.** 4 failures in last 6 PRs (#294 R1 crash, #294 R4 timeout, #316 R5 timeout, #322 R1 timeout). The 2/2 fallback works, but missing Vega means losing its edge-case detection strength (config-math, input sanitization). Decision point approaching.
