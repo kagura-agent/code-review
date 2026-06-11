@@ -1256,5 +1256,17 @@
     "rounds": 2,
     "notes": "R1: 2/3 Ready (Stella mobile concern). R2: 3/3 unanimous Ready. Mobile fixed, PR desc updated.",
     "last_checked": "2026-06-11T12:55+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 308,
+    "reviewed_at": "2026-06-11T13:44+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 3/3 unanimous Ready. Clean CSS fix. as any cast cosmetic."
   }
 ]
