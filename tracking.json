@@ -1238,10 +1238,10 @@
     "reviewed_at": "2026-06-10T10:15:00Z",
     "status": "open",
     "ground_truth": null,
-    "last_checked": "2026-06-11T10:45+08:00",
-    "rounds": 4,
+    "last_checked": "2026-06-11T10:50+08:00",
+    "rounds": 5,
     "reviewers": 3,
-    "verdict": "needs_changes",
-    "notes": "R3: 6 consensus findings. R4: C1/C4/C5 resolved. C3 partially fixed (identity still lost on delete). Vega timed out R4. One more fix needed."
+    "verdict": "ready",
+    "notes": "R3: 6 consensus findings. R4: C1/C4/C5 resolved, C3 partial. R5: C3 resolved (sender_name fallback). 2/3 Ready (Vega stale). Awaiting merge."
   }
 ]

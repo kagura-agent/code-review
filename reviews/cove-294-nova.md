@@ -1,105 +1,135 @@
-# PR #294 — Round 4 Re-review (Nova 🌠)
+# 🌠 Nova — Round 5 Re-review: PR #294 (kagura-agent/cove)
 
 **PR:** feat: add webhook support for cross-channel messaging
-**Repo:** kagura-agent/cove
-**Round:** 4 (re-review after author's fixes)
+**Round:** 5 (re-review after C3 fix)
+**Verdict:** ✅ **C3 properly resolved.** No new blockers introduced. PR ready to merge subject to the two pre-existing deferred items (C2, C6).
 
 ---
 
-## 1. Summary
+## 1. C3 — Deletion identity (focus of this round)
 
-Round 4 confirms that the author addressed the **majority** of the previous round's blockers: client-side auth path is unblocked, negative auth tests landed, avatar input is validated, and a deleted-webhook null-crash has been guarded. The remaining issue is that C3's fix only prevents the crash — it does not preserve the original message identity, so historical webhook messages collapse to a generic "Deleted Webhook" author string after a webhook is removed. That's the only real functional gap I'd block on; everything else is suggestion-grade.
-
-**Verdict: ⚠️ Needs Changes** — one near-Critical (C3 partial fix → information loss), small but easy to finish in this PR.
-
----
-
-## 2. Status of previous-round issues
-
-| ID | Description | Round 3 severity | Round 4 status |
-|----|-------------|------------------|----------------|
-| C1 | Bot-only auth on CRUD blocks client UI | Critical | ✅ **Resolved** — client UI calls `api.fetchWebhooks/createWebhook/deleteWebhook` and the `non-member user gets 404` test uses `Bearer <token>` and is accepted by middleware before being rejected at member check, confirming non-bot tokens reach the routes (`packages/server/src/__tests__/webhooks.test.ts:218–235`). |
-| C2 | Webhook avatar identity lost on reload | Deferred | ⏸️ Same status — `createFromWebhook` (`repos/messages.ts:157–161`) does not persist `webhookAvatar`; reload returns `avatar: null`. Username override **is** persisted via `sender_name`, which is good, but avatar override is not. Acceptable as deferred. |
-| C3 | Deleting webhook corrupts historical message identity | Critical | ⚠️ **Partially resolved** — see Critical Issues below. |
-| C4 | Missing negative auth tests | Critical | ✅ **Resolved** — `webhooks.test.ts` adds: unauthenticated → 401, non-member → 404 / code 10003, wrong webhook token → 404, cross-guild user → 404, plus content/username/avatar_url validation tests. |
-| C5 | Missing avatar validation on create/PATCH | Critical | ✅ **Resolved** — `routes/webhooks.ts:21–24` (POST), `routes/webhooks.ts:91–94` (PATCH) both call `validateString(..., { maxLength: 2048 })`. |
-| C6 | Rate-limit cleanup runs on every request | Deferred | ⏸️ Same status — `routes/webhooks.ts:160–168` still scans all buckets per request. Bounded by `MAX_BUCKETS = 10_000`, tolerable for now, but the deferred issue persists by design. |
-
-Per the escalation rule: nothing newly broken, no escalations needed except C3 needs to stay Critical.
-
----
-
-## 3. Critical Issues
-
-### C3 (still Critical — partial fix only): historical webhook messages lose identity on webhook delete
-
-**Where:** `packages/server/src/db/migrations/v8-webhooks.ts:18` (`messages.webhook_id ... REFERENCES webhooks(id) ON DELETE SET NULL`) combined with `packages/server/src/repos/messages.ts:24–43` (`toMessage`).
-
-**What now happens:**
-1. Webhook executes a message → row stored with `sender=NULL`, `sender_name=<displayName/override>`, `webhook_id=<id>`.
-2. Admin deletes the webhook → `ON DELETE SET NULL` zeros out `webhook_id`. `sender` is still NULL. `sender_name` (the actual identity, possibly the per-execution `username` override) is **still in the row**.
-3. `toMessage` runs the three-branch `if/else if/else`:
-   - `webhook_id` is NULL → skip first branch.
-   - `sender` is NULL → skip second branch.
-   - Falls into the third branch and emits `{ id: "0", username: "Deleted Webhook", bot: true, ... }`.
-
-The row still has the original display name in `sender_name`, but `toMessage` never reads it on this path, so the data is discarded at serialization time. Result: every historical webhook message in a channel changes its visible author the moment a webhook is deleted, which is exactly the corruption flagged in Round 3. This is a meaningful product regression vs Discord (which preserves the historical webhook name on deleted webhooks) and breaks audit/log readability.
-
-**Minimal fix:** add a fallback branch that prefers `sender_name` whenever it exists, regardless of whether `webhook_id` survives:
+### Was it actually fixed?
+**Yes.** The `toMessage` fallback now reads `sender_name`:
 
 ```ts
-} else if (row.sender_name) {
+} else {
   author = {
     id: "0",
-    username: row.sender_name,
+    username: row.sender_name ?? "Deleted Webhook",
     avatar: null,
     bot: true,
     discriminator: "0",
     global_name: null,
   };
-} else { /* current "Deleted Webhook" fallback */ }
+}
 ```
 
-Plus: add a regression test that creates a webhook, executes it (with and without `username` override), deletes the webhook, and asserts the historical message author still reads `sender_name` rather than `"Deleted Webhook"`.
+Flow after webhook deletion:
+- Schema: `messages.webhook_id TEXT REFERENCES webhooks(id) ON DELETE SET NULL` → `webhook_id` becomes NULL.
+- `createFromWebhook` inserts with `sender = NULL` and `sender_name = webhookName` (the per-execution `username` override).
+- After deletion: `row.webhook_id === null` AND `row.sender === null` → falls into the new `else` branch → username comes from `row.sender_name`.
 
-(Alternative: drop `ON DELETE SET NULL` and keep `webhook_id` so the first branch keeps firing — but the row+fallback approach is the smaller change and also covers any future row where `webhook_id` is genuinely missing.)
+The fallback chain is now end-to-end coherent. The R4 critique ("crash fixed but toMessage fallback didn't read sender_name") no longer applies.
 
----
+### Regression test
+The new test `deleted webhook messages retain sender_name as author` (webhooks.test.ts) does exactly the required scenario:
 
-## 4. Product Impact
+1. Create webhook (`Temp Hook`)
+2. Execute with `username: "Custom Name"` override → 201
+3. `DELETE /webhooks/:id` → 204
+4. List messages, find the original message id
+5. Assert `author.username === "Custom Name"` and `author.bot === true`
 
-- **Identity preservation on delete (C3 above)** is the main user-visible risk. Channel transcripts will silently rewrite authorship history after webhook cleanup. For a project pitching webhooks as "Channel as Service" cross-channel messaging, this is the worst possible UX surprise — it makes audit trails untrustworthy.
-- **Webhook URL construction in client** (`ChannelSettings.tsx:104`): hardcodes `/api/v10/webhooks/...`. The rest of the client uses `API_PREFIX` from `@cove/shared`. If `API_PREFIX` ever changes, the displayed/copied URL silently becomes wrong while the rest of the UI keeps working. Trivial fix: import and interpolate `API_PREFIX`.
-- **Avatar override not persisted (C2, deferred):** consciously accepted per Round 3, but worth re-noting for users — the displayed avatar of a webhook message is `null` after reload even when `avatar_url` was passed at execution time. Consider documenting this in the SKILL.md or the PR description so plugin authors don't expect Discord parity here.
-- **Webhook `name` shown in client URL list** when token is no longer in memory (e.g. after page reload) renders "Token hidden — URL was shown at creation" with a disabled Copy button. Functional, but a brand-new user creating a webhook and immediately reloading will think it's broken. A short helper text ("URLs are only shown once at creation; delete and recreate to get a new one") would close the loop.
+✅ Asserts the override survives, not just the registry name — that's the correct invariant.
 
----
+**One minor gap (not blocking):** the test doesn't assert `author.id === "0"` (the sentinel chosen for the deleted-author placeholder). If we ever change the sentinel — e.g. to `"deleted-webhook"` or to the still-known `webhook_id` from before deletion — clients keying off `author.id` could break silently. Suggest a follow-up assertion:
+```ts
+expect(found!.author.id).toBe("0");
+```
+Or, better, document the sentinel in `Message.author.id` JSDoc.
 
-## 5. Suggestions (non-blocking)
-
-1. **PATCH route is untested.** `routes/webhooks.ts:73–106` has its own validation and member check, but no test exercises it. Add at least a "PATCH name + avatar" happy path and a "PATCH by non-member → 404" case.
-2. **GET `/guilds/:id/webhooks` is untested.** `routes/webhooks.ts:39–48` — covered only by code, not by tests. One smoke test (member sees list, non-member 404) is enough.
-3. **`createFromWebhook` could persist avatar.** The `messages.metadata` column is already accepted as a parameter (`null` today). Storing `{ webhook_avatar: displayAvatar }` there and reading it in `toMessage` resolves C2 with no schema migration. Cheap follow-up.
-4. **Rate-limit map cleanup (C6 deferred):** the `for (const ... of buckets)` walk on every execute (`routes/webhooks.ts:160–164`) is O(N) per request. With `MAX_BUCKETS = 10_000` and 30 timestamps each, that's 300k array filter ops on every webhook hit under load. Either (a) only sweep when `buckets.size > MAX_BUCKETS / 2`, or (b) sweep on a `setInterval` outside the hot path. Not a blocker, but log a follow-up issue if you want to keep deferring.
-5. **`stripToken` uses `Omit<T, "token">` over a destructure with `_`.** Functionally fine; ESLint may flag `_` as unused depending on config — consider `void token;` or a regex pragma if so.
-6. **`webhookRoutes` PATCH:** `body.avatar !== null` skip path means PATCH `{ avatar: null }` clears the avatar without validation, but PATCH `{ avatar: "" }` would pass `validateString` (length check only) and store an empty string. If empty string is invalid (it should be — there's no semantic for "blank avatar URL"), tighten the validator to reject empty after `required:false`.
-7. **`webhookExecuteRoutes` — content max 4000 vs Discord's 2000.** Intentional? Worth a comment. Plugins relying on Discord parity may overshoot.
-8. **DELETE webhook returns 204 even if `repos.webhooks.delete` returns `false`.** The findById check above guarantees the row existed at read time; in single-process SQLite this is fine, but if you ever go multi-process, surface the 0-row case as 404. Tiny.
-9. **`webhookExecuteRoutes` accepts `dispatcher?` as optional** (`routes/webhooks.ts:131`). The route only conditionally dispatches, but the rest of the codebase requires a dispatcher. If this is intentional for testability, fine; otherwise the optional-ness leaks the test seam.
-10. **Skill file has Windows-style trailing newline issue** — `skills/cove-webhook/SKILL.md` ends without a final newline (`\\ No newline at end of file`). Minor.
+**C3 status: ✅ Resolved.**
 
 ---
 
-## 6. Positive Notes
+## 2. Escalation check on previously deferred items
 
-- **Token never leaks on list/get/patch/delete.** `stripToken` + `toPublicWebhook` are applied consistently and verified by tests (`webhooks.test.ts:147–169`). Good defense-in-depth — the public type is enforced at both route and repo layers.
-- **Execute endpoint is registered before the global auth middleware** (`app.ts:39–46`), so the no-auth contract is structural rather than a per-route opt-out. Easy to audit, hard to misconfigure.
-- **Negative-test coverage is genuinely good** for a Round-3 follow-up: 401 unauth, 404 non-member with the correct error code 10003, 404 cross-guild, 404 wrong token, 400 over-length username/avatar_url. This is exactly the suite Round 3 asked for.
-- **Username override persists on reload** via `sender_name` (`webhooks.test.ts:117–135`) — that's the half of C2 that did get fixed, and the test that proves it is the right test.
-- **Migration is additive only.** `v8-webhooks.ts` only `CREATE TABLE` + `ADD COLUMN`, no destructive changes; safe for existing deployments.
-- **Client UI matches Discord's "show token only at creation" model** (`ChannelSettings.tsx:99–106`). Correct security choice and well-tested by manual flow.
-- **`sender = NULL` schema usage** for webhook-authored messages is clean: it means non-webhook code paths that read by `sender` won't accidentally attribute messages to a fake user.
+Per escalation rule, anything unaddressed since last round should bump in severity. Nothing new was promised for C2/C6 this round, but they remain open:
+
+### C2 — Avatar persistence (still ⏸️ deferred → now ⚠️ should be tracked)
+The execute endpoint accepts `avatar_url` but `createFromWebhook` does not persist a per-execution avatar; `toMessage` returns `avatar: null` for the webhook branch. Functional consequence: the `avatar_url` field of the execute API is silently ignored at render time. Discord-compat table in the PR body claims "Aligned" for `avatar_url` — that's currently misleading.
+
+**Escalated severity:** Medium → **High-Medium**. Either:
+- (a) wire the per-execution avatar into a column (`messages.webhook_avatar TEXT`) and surface it in `toMessage`, **or**
+- (b) update the PR body / SKILL.md to mark `avatar_url` as "accepted, not yet rendered" so users aren't surprised.
+
+Recommend (b) for this PR + tracking issue for (a). Not a merge blocker but should not ship with a misleading compatibility claim.
+
+### C6 — Rate-limit cleanup (still ⏸️ deferred)
+No change. Still no rate limiting on `POST /webhooks/:id/:token` (unauthenticated endpoint). Two rounds in a row with no movement — **escalating from Low → Medium**. Token-based execute endpoints without rate limits are a known abuse vector (forwarded URL → token leak → spam). Suggest at minimum an IP+token bucket (e.g. 30 req / 10 s) before any third party gets a webhook URL.
+
+Not a merge blocker for an internal-only release, but should land before any external doc/announcement of webhooks.
 
 ---
 
-**File path:** `~/.openclaw/workspace/code-review/reviews/cove-294-nova.md`
+## 3. Fresh review of round-5 code
+
+### `repos/messages.ts` — author branching
+The three-branch logic (`webhook_id` present / `sender` present / fallback) is correct and exhaustive over the realistic row states. Two small observations:
+
+- **A1 (nit):** When `webhook_id` is set, `author.id = row.webhook_id`. If the webhook is later deleted (SET NULL on `webhook_id`), the historical message's `author.id` changes from `<webhook_id>` to `"0"`. Any client that cached/indexed by `author.id` will see identity drift. This is a deliberate trade-off (FK integrity vs. stable identity) but worth a code comment so future readers don't "fix" it by stashing the id into a separate column.
+
+- **A2 (nit):** `avatar: null` is hard-coded in both webhook branches even though the registered webhook has an `avatar_url` column elsewhere. Once C2 is addressed this'll need an update — leaving a `// TODO(C2): surface webhook avatar` here would help.
+
+### `repos/messages.ts` — `createFromWebhook`
+- Insert order matches column list ✅
+- `sender = null` is the right choice (preserves "no user authored this" semantics and lets ON DELETE SET NULL semantics work via `webhook_id`).
+- `webhookAvatar` parameter is **accepted but unused** in the insert. Dead parameter — either wire it (preferred) or drop it from the signature to avoid a false API contract. Mild **code smell**, recommend cleanup.
+
+### `routes/webhooks.ts`
+Not re-diffed in detail this round (R4 covered it). Auth gating on management endpoints still looks correct; execute endpoint remains intentionally unauthenticated.
+
+### Tests
+- `webhooks.test.ts` is now 306 lines covering create/list/get/patch/delete + execute + cross-guild negative + new deletion regression. Coverage is solid.
+- The "Sneaky Hook" cross-guild test (returns 404, not 403) — fine, 404 is acceptable for not-found-or-not-authorized to avoid leaking existence.
+
+### Migration v8
+Idempotent enough for first install; uses `IF NOT EXISTS` on indexes but **not** on the `webhooks` CREATE TABLE or the `ALTER TABLE ADD COLUMN`. That's OK because migrations run once via the migrations table, but if anyone ever reruns v8 manually it'll throw. Pattern matches other migrations in the repo, so consistent — no action.
+
+---
+
+## 4. Anti-confirmation-bias pass
+
+I deliberately tried to break C3 again:
+- **Scenario:** webhook created with no `username` override, executes with default name, then deleted → `sender_name` falls back to the webhook's registered `name` (whatever was stored when `createFromWebhook(channelId, webhookId, webhookName, …)` was called). Verified in the route: the execute handler passes the per-execution `username || webhook.name`. So even without an override, `sender_name` is populated and survives deletion. ✅
+- **Scenario:** what if `sender_name` is somehow NULL on a webhook row? Fallback string `"Deleted Webhook"` kicks in — safe, no crash. ✅
+- **Scenario:** webhook_id NOT NULL but webhook row deleted via direct SQL (bypassing SET NULL)? Can't happen — FK SET NULL fires before the row is gone. Even if it did, the first branch would render `sender_name ?? "Webhook"`. Safe. ✅
+
+No new failure modes found.
+
+---
+
+## 5. Summary table
+
+| ID | Item | R4 | R5 |
+|----|------|----|----|
+| C1 | Execute auth | ✅ | ✅ |
+| C2 | Avatar persistence | ⏸️ | ⚠️ Deferred, **escalating** — fix or correct compat claim |
+| C3 | Deletion identity (sender_name fallback + regression test) | ⚠️ Partial | ✅ **Resolved** |
+| C4 | Negative tests | ✅ | ✅ |
+| C5 | Avatar validation | ✅ | ✅ |
+| C6 | Rate-limit on execute | ⏸️ | ⚠️ Deferred, **escalating Low→Medium** |
+| A1 | Comment author.id drift trade-off | — | nit |
+| A2 | `webhookAvatar` param accepted but unused | — | nit / code smell |
+
+---
+
+## 6. Recommendation
+
+**Approve / merge** once one of the following is done about C2's misleading compat claim:
+- Update the Discord-alignment table in the PR body to mark `avatar_url` as "accepted, not rendered (tracked in follow-up)", OR
+- Wire the per-execution avatar end-to-end.
+
+Everything else (A1/A2, C6 rate-limit) can ship as follow-up issues. The blocker from R4 (C3) is properly closed with both code and a meaningful regression test.
+
+— 🌠 Nova
