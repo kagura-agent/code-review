@@ -1,42 +1,48 @@
-# Stella Review — kagura-agent/cove PR #327
+# Review: kagura-agent/cove PR #327 — Round 5 (Stella)
 
-## Summary
+## Verdict: ❌ Major Issues
 
-This PR adds a new `@cove/claude-bridge` daemon that connects Cove Gateway events to local Claude Code CLI invocations and posts responses back through Cove REST. The overall shape is promising for a personal self-hosted bridge, but it is not ready as-is: the current implementation ignores the configured guild scope while running Claude with skipped permissions, does not actually implement the documented Claude session continuity, has a race that can drop final responses, and ignores the discovered Gateway URL. Verdict: ⚠️ Needs Changes.
+The three specific Round 4 implementation asks were mostly applied mechanically: the `guild_id` check is now default-deny, drain timers are tracked/cleared, and the esbuild banner produces a shebang. However, the new strict `guild_id` check appears incompatible with Cove's current gateway payload shape: `MESSAGE_CREATE` events do not include `guild_id`, so the bridge will now ignore every normal guild message.
 
-## Critical Issues
+I verified with `pnpm --filter @cove/claude-bridge run check` and `pnpm --filter @cove/claude-bridge run build`; both pass, and the built `dist/index.js` starts with `#!/usr/bin/env node`.
 
-1. **Guild scoping is required but never enforced, exposing the local Claude Code bridge outside the intended scope**  
-   `BridgeConfig.guildId` is stored in `packages/claude-bridge/src/bridge.ts:24` / `:52`, and `COVE_GUILD_ID` is required in `src/index.ts:17-35`, but `messageCreate` handles every non-bot message it receives (`src/bridge.ts:94-103`) without checking the guild/channel belongs to that guild. Because Claude is launched with `--dangerously-skip-permissions` (`src/claude-process.ts:73-78`), any unintended channel/guild the bot can see becomes a path to execute a local agent with broad file/tool access. Please enforce the configured guild boundary before calling `handleUserMessage` (for example by using event `guild_id` if available, or resolving/caching channel → guild and rejecting non-matching channels). Given the danger flag, I would also strongly consider an explicit channel/user allowlist or mention/prefix gate.
+## Round 4 follow-up
 
-2. **Documented per-channel Claude session persistence is not implemented**  
-   The README says each channel gets a deterministic session ID and the CLI is spawned with `--session-id <deterministic-uuid>` (`README.md:62-81`), and `sendMessage` says it uses `--resume` (`src/claude-process.ts:48-51`). The actual spawn creates a fresh `randomUUID()` (`src/claude-process.ts:70`), never passes `--session-id` or `--resume` (`src/claude-process.ts:71-78`), and the `channelSessions` map plus `deterministicUUID()` helper are unused (`src/claude-process.ts:35`, `:174-192`). As a result, every message starts a new Claude session and channel conversation context is lost across turns/restarts. Please either wire the intended session/resume flags correctly or update the product behavior/docs and remove the dead persistence code.
+1. **guild_id fails open** — **security issue fixed, but product is now broken**
+   - PR changed the bridge to `if ((message as any).guild_id !== this.guildId) return;` (`packages/claude-bridge/src/bridge.ts:100-101`).
+   - That is default-deny, but Cove's shared `Message` type has no `guild_id`, `toMessage()` does not populate one, and `GatewayDispatcher.messageCreate()` broadcasts the raw `message` without adding the resolved guild id (`packages/server/src/ws/dispatcher.ts:76-79`).
+   - Result: for normal `MESSAGE_CREATE` dispatches, `message.guild_id` is `undefined`, so the bridge returns before handling the message.
 
-3. **Fast final results can be lost before the initial send resolves**  
-   In `handleClaudeText`, the first text chunk starts `rest.sendMessage(...)` and only fills `active.messageId` in the async callback (`src/bridge.ts:156-173`). If Claude emits `result` before that REST request resolves, `handleClaudeResult` hits the `active && !active.messageId` branch, updates `active.content`, then immediately deletes `activeResponses` (`src/bridge.ts:190-215`). When `sendMessage` later resolves, the callback finds no active response and cannot edit to the final result. This can leave users with only a partial first chunk (or stale content). Keep the active record until the initial send resolves, await/chain the final edit, or use a per-channel response state machine so finalization cannot race the first send.
+2. **drainPending timeout survives destroyAll()** — **fixed**
+   - `ClaudeProcessManager` now tracks `drainTimers`, has a `destroyed` guard, clears timers in `destroyAll()`, and checks `!this.destroyed` before dispatching the queued message (`packages/claude-bridge/src/claude-process.ts:47-48`, `130-140`, `180-184`).
 
-4. **The bridge fetches the canonical Gateway URL but never uses it**  
-   `start()` calls `this.rest.getGatewayUrl()` and logs the returned URL (`src/bridge.ts:68-70`), but the `GatewayClient` was already constructed from a derived `${baseUrl}/gateway` URL in the constructor (`src/bridge.ts:56-58`), and `gwUrl` is discarded. If Cove serves a different gateway URL (common behind proxies, path prefixes, or separate WS hosts), startup will still connect to the wrong endpoint. Please construct/connect the `GatewayClient` using the discovered URL when available, or remove the discovery path if derived URLs are the supported contract.
+3. **Missing shebang** — **fixed**
+   - `package.json` build script adds `--banner:js='#!/usr/bin/env node'` (`packages/claude-bridge/package.json:11`).
+   - Verified built output: first line is `#!/usr/bin/env node`.
 
-## Product Impact
+## Blocking finding
 
-- Users will expect Cove channels to feel like persistent Claude Code conversations, but current behavior is closer to stateless one-shot prompts. This is especially confusing because the README explicitly promises persistence/resume.
-- The permission model is risky: a chat message can drive a local Claude Code process with skipped permissions. In a personal deployment that may be acceptable only if the bridge is tightly scoped to known channels/users.
-- Long answers are likely to fail or be silently degraded. `editMessageSafe()` truncates edits (`src/bridge.ts:229-237`), but the initial `sendMessage(channelId, text)` (`src/bridge.ts:164`) and no-streaming final `sendMessage(channelId, resultText || ...)` (`src/bridge.ts:206-208`) send raw content. If the first/final payload exceeds Cove/Discord limits, the API can reject the response instead of delivering the documented truncation.
+### [High] Bridge ignores all messages because gateway `MESSAGE_CREATE` payloads do not include `guild_id`
 
-## Suggestions
+The Round 4 default-deny fix depends on a field that Cove does not currently send on message create events.
 
-- Add tests around the bridge state machine: first-chunk send race, queued messages while a process is active, long output truncation, and gateway URL selection. These are the paths most likely to regress.
-- Parse Claude Code `stream-json` output against the real event shape. `handleStreamEvent` currently only reads `event.text` on `assistant` events (`src/claude-process.ts:128-136`), while Claude Code stream output commonly nests assistant message content in structured blocks and emits final text on `result`. If streaming is a feature, add a fixture captured from the real CLI.
-- Consider truncating/splitting consistently in `RestClient.sendMessage` or a shared bridge helper, not only in edits. The unused `overflowIds` field suggests splitting was planned but not completed (`src/bridge.ts:36-40`).
-- Clear `pendingMessages` in `destroyAll()` so queued prompts cannot outlive shutdown state (`src/claude-process.ts:153-160`).
-- Avoid swallowing malformed Claude stdout silently (`src/claude-process.ts:90-97`); at least debug-log the first parse failure so CLI format changes are diagnosable.
-- I attempted `pnpm -F @cove/claude-bridge check` after applying the diff locally. It failed because the new package had not been installed/linked in local `node_modules` (`Cannot find module '@cove/shared'`). That may be an artifact of the local checkout rather than the PR, but CI should run after a fresh `pnpm install` to confirm the package builds.
+Evidence:
+- Bridge filter: `if ((message as any).guild_id !== this.guildId) return;` in `packages/claude-bridge/src/bridge.ts:100-101`.
+- Shared `Message` interface has `id`, `channel_id`, `content`, `author`, etc., but no `guild_id` (`packages/shared/src/types.ts`).
+- Server message conversion returns no `guild_id` (`packages/server/src/repos/messages.ts`).
+- Dispatcher resolves the guild for routing but broadcasts the original message unchanged: `this.broadcastToGuildWithChannelFilter(guildId, message.channel_id, "MESSAGE_CREATE", message);` (`packages/server/src/ws/dispatcher.ts:76-79`).
 
-## Positive Notes
+Impact: with current server behavior, every incoming guild message has `guild_id === undefined`, so this bridge never calls `handleUserMessage()` and the Claude bridge is non-functional.
 
-- The bridge keeps REST retry behavior conservative for non-idempotent methods, matching the existing plugin client pattern.
-- Gateway reconnect/heartbeat handling follows the existing Cove plugin structure, which is a good reuse point.
-- The code is small and readable for an MVP daemon; the main fixes are around boundaries, real Claude CLI semantics, and async state correctness rather than broad architecture.
+Recommended fix options:
+1. Add `guild_id` to guild `MESSAGE_CREATE` gateway payloads server-side, matching Discord semantics, and update the shared `Message` type/tests accordingly; or
+2. Have the bridge maintain allowed channel IDs from READY/guild channel data or a REST channel lookup, then default-deny by channel membership rather than by a missing message field.
 
-**Rating:** ⚠️ Needs Changes
+Given this is a daemon whose core behavior is responding to messages, this should block merge.
+
+## Non-blocking notes
+
+- README still documents `--dangerously-skip-permissions` but does not explain the security implications or recommend a dedicated sandbox/workspace. This is important for an MVP bridge that executes local Claude Code from chat input.
+- Username is still injected into the prompt without newline/control-character sanitization (`[${username}]: ${content}`). If Cove usernames can contain newlines/brackets, sanitize or escape before prompt construction.
+- `sanitizedEnv()` remains very restrictive and may break real Claude Code setups that need `TMPDIR`, proxy env, or provider-specific variables. This may be acceptable for security, but should be documented or made configurable.
+- No tests were added. At minimum, add a focused test for guild filtering/message dispatch shape so this exact regression is caught.
