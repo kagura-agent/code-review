@@ -2,25 +2,28 @@
 
 - **PR:** kagura-agent/cove#346 — feat: NEW separator line and unread banner
 - **Date:** 2026-06-13
-- **Rounds:** 2
+- **Rounds:** 3
 
 ## Round 1
 - **Verdict:** ⚠️ Needs Changes (unanimous)
 - **Blockers:** 4 critical (NEW line unreachable, null lastReadId, banner persistence, Mark as Read no ack)
-- **Consensus rate:** High — all 3 found C1
 
 ## Round 2
-- **Verdict:** ⚠️ Needs Changes (Stella ⚠️, Nova ⚠️, Vega ❌)
-- **All R1 criticals fixed:** Case A/B/C separator, null lastReadId, Mark as Read acks, spec doc committed
-- **New blocker:** O(N²) render regression — `messages.some()` inside `.map()` (all 3 found)
-- **Other new findings:** Unread count lies for Case B/C (Nova), pill positioning (Nova escalated from R1)
-- **Spec doc commit** is excellent — resolves C3 banner timing by defining it as documented behavior
+- **Verdict:** ⚠️ Needs Changes (unanimous, Vega ❌)
+- **R1 criticals all fixed.** New blocker: O(N²) render regression (all 3 found)
+- **Other new:** Unread count lies (Nova), pill positioning (Nova)
+
+## Round 3
+- **Verdict:** ✅ Ready (2-1: Nova ✅, Vega ✅, Stella ⚠️)
+- **R2 blockers all fixed:** O(N²) hoisted, pill repositioned, "+" suffix added
+- **Stella's remaining concern:** Stale cache freezing unread computation — valid edge case but recoverable, not blocking
+- **Nova N3-1:** "+" suffix disappears after loading older history — good catch, low priority
 
 ## Reviewer Notes
-- **Nova:** Most thorough across both rounds. Found 8 new issues in R2 including the count accuracy problem and pill positioning. Best at distinguishing "bug vs documented design choice" (C3 resolution).
-- **Stella:** Solid verification of fixes, correctly identified partial C3 fix and O(N²). Good at tracing code paths.
-- **Vega:** Correctly escalated O(N²) to ❌ Major Issues — appropriate severity for a perf regression. Good at spotting no-scrollbar edge case.
+- **Nova:** Consistently most thorough. Found unique issues in every round. Good at distinguishing blocker vs follow-up.
+- **Stella:** Solid at tracing code paths and edge cases. Tends to block on theoretical concerns that others find acceptable.
+- **Vega:** Clean and decisive. Correctly escalated O(N²) in R2, correctly downgraded in R3.
 
 ## Process Notes
-- Re-review protocol effective — all reviewers verified claimed fixes with code evidence
+- 3 rounds is the most for any cove PR so far. Spec doc commitment in R2 was a turning point.
 - Human feedback: Pending

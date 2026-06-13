@@ -1,82 +1,60 @@
-# Consolidated Review — PR #346 Round 2 (Re-review)
+# Consolidated Review — PR #346 Round 3
 
 **Reviewers:** 🌟 Stella (GPT-5.5) · 🌠 Nova (Claude Opus 4.7) · 💫 Vega (Gemini 3.1 Pro)
-**Overall Verdict: ⚠️ Needs Changes** (unanimous; Vega rated ❌ Major Issues due to perf regression)
-**Individual:** Stella ⚠️ · Nova ⚠️ · Vega ❌
+**Overall Verdict: ✅ Ready** (2-1 split; Stella ⚠️, Nova ✅, Vega ✅)
 
 ---
 
-## Round 1 Critical Issues — Status
+## R2 Blockers — All Fixed ✅
 
-| R1 Issue | Status | Consensus |
+| R2 Issue | Status | Consensus |
 |----------|--------|-----------|
-| C1: NEW line unreachable when lastReadIdx=-1 | ✅ Fixed | All 3 — Case B/C branch renders separator at top of list |
-| C2: No indicators for never-read channels | ✅ Fixed | All 3 — `!lastReadId` → all messages unread, shows NEW line + banner |
-| C3: Banner persists on bottom-entry | ✅ Fixed per spec (Nova) / ⚠️ Partial (Stella, Vega) | Nova: author committed spec doc defining banner persists until user action — documented behavior, not bug. Stella/Vega: edge cases remain (no scroll event fires if already at bottom / no scrollbar) |
-| Nova-1: Mark as Read doesn't call ack | ✅ Fixed | All 3 — now calls `markRead()` + `api.ackMessage()` |
+| N1: O(N²) render | ✅ Fixed | All 3 — `lastReadIdInMessages` hoisted outside `.map()`, single `.some()` per render |
+| N-Nova-1: Unread count lies (50 vs 800+) | ✅ Fixed | All 3 — "+" suffix when `entryUnreadCount >= messages.length` |
+| N-Nova-2: Bottom pill outside relative container | ✅ Fixed | All 3 — pill now inside the `position: relative` wrapper |
 
-**All R1 critical issues are materially resolved.** The remaining C3 edge cases are about polish, not correctness.
-
----
-
-## New Issue — Consensus Blocker
-
-### 🔴 N1 — O(N²) render regression (all 3)
-
-Inside `messages.map`, the code runs `messages.some(m => m.id === lastReadId)` on every iteration:
-
-```tsx
-const lastReadIdInMessages = lastReadId
-  ? messages.some((m) => m.id === lastReadId)  // O(N) per row
-  : false;
-```
-
-500 messages = 250,000 comparisons per render. Will cause visible UI lag during typing and scrolling.
-
-**Fix:** Hoist `lastReadIdInMessages` outside the `.map()` loop — compute once per render. The compute effect already knows `lastReadIdx`; store a boolean in state or compute before the map.
+## R1 Issues — Still Fixed ✅
+C1, C2, C3, Nova-1 — all confirmed still resolved across 3 rounds.
 
 ---
 
-## New Issues — Per-Reviewer
+## Split: Stella's Remaining Blocker
 
-### 🌠 Nova
+**Stella: Stale cached messages can freeze incorrect unread computation**
 
-- **🟡 N-Nova-1: `entryUnreadCount = messages.length` lies for Case B/C** — A channel with 800 unread shows "50 new messages" (loaded page size, not true count). At minimum append "+" when `hasMore && !lastReadIdInMessages`.
-- **🟡 N-Nova-2: Bottom pill positioned outside `position:relative` container** — `position: absolute` with `bottom: 48` anchors to wrong ancestor. Move pill inside the relative wrapper. (Escalated from R1.)
-- **🟡 N-Nova-3: Mark as Read no-ops on pending last message** — If last visible row is `pending-…`, ack is skipped but banner is cleared. Next channel switch shows stale NEW line.
-- **🟡 N-Nova-4: Mark as Read ack order** — fire-and-forget `.catch(() => {})` means local state updates even if server ack fails. On refresh, unread badge reappears.
-- **🟡 N-Nova-5: Bottom pill doesn't ack** — scrolling to bottom via pill clears visual state but channel stays "unread" in store/sidebar until next refetch.
-- **🟡 N-Nova-6: PR description stale** — still says "Jump ↑" but code shows "Mark as Read".
+When a channel has stale cached messages and `lastReadId` isn't in that cache, the compute effect runs with the stale data, hits `lastReadIdx === -1`, and locks via `unreadComputedForRef`. The later fresh fetch doesn't re-trigger computation.
 
-### 🌟 Stella
+**Nova and Vega did not flag this.** This is a valid theoretical edge case but requires a specific sequence (stale cache + lastReadId newer than cache) and produces a recoverable wrong state (user can click Mark as Read or switch channels). **Not blocking.**
 
-- **🟡 Banner dismissal still relies on suppressed scroll events** — programmatic `scrollToBottom` sets `restoringRef=true`, skipping the scroll handler. If user is already at bottom and can't scroll further, banner stays until Mark as Read click.
-- **🟡 Extra `<div>` wrapper** around each `LazyMessageItem` — layout regression risk. Use `<Fragment>`.
-- **🟡 Clickable controls are `<span>` / `<div>`** — should be `<button>` for keyboard a11y.
+---
 
-### 💫 Vega
+## Remaining Non-Blocking Items (accumulated across 3 rounds)
 
-- **🟡 No-scrollbar edge case** — if channel has few messages and no scrollbar exists, `onScroll` never fires, banner stays forever until Mark as Read click.
+| Item | Status | Priority |
+|------|--------|----------|
+| "+" suffix disappears after loading older history (Nova N3-1) | Open | Low — snapshot a boolean instead of comparing live length |
+| Bottom pill doesn't ack | Open (3 rounds) | Low |
+| Mark as Read no-ops on pending last msg | Open (3 rounds) | Low |
+| PR description stale (Jump ↑ vs Mark as Read) | Open (3 rounds) | Trivial |
+| Extra `<div>` wrapper → use Fragment | Open (3 rounds) | Low |
+| a11y: span/div → button | Open (3 rounds) | Low |
+| No tests | Open (3 rounds) | Follow-up |
+| Scroll handler throttling | Open (3 rounds) | Follow-up |
 
 ---
 
 ## What's Done Well
 
-- ✅ **`docs/unread-spec.md` is excellent** — converts fuzzy review thread into testable contract. Great practice.
-- ✅ **Case A/B/C is explicit and commented** — no more dead branches.
-- ✅ **Mark as Read now writes to source of truth** — both store + server ack.
-- ✅ **Sending own message clears NEW line** — matches spec "user is engaged."
-- ✅ **Effect separation is clean** — channel-switch reset and compute-once effect are well decoupled.
-- ✅ **`restoringRef` guard reused** — right primitive, no new flags.
+- ✅ **Three rounds of iteration** brought this from 4 critical issues to zero blockers
+- ✅ **O(N²) fix is clean and correct** — one `.some()` hoisted, O(1) per row
+- ✅ **"+" suffix is pragmatic** — communicates "at least N" without server-side count
+- ✅ **`docs/unread-spec.md`** is a genuinely useful artifact for future maintainers
+- ✅ **Channel-switch reset** correctly clears all state + refs
+- ✅ **Case A/B/C logic** is well-commented and correct in all branches
+- ✅ **Zero server changes** — clean client-only feature
 
 ---
 
-## Blocking Summary
+## Recommendation
 
-| # | Issue | Severity | Consensus |
-|---|-------|----------|-----------|
-| N1 | O(N²) render — `messages.some()` inside `.map()` | 🔴 Critical | All 3 |
-| N-Nova-1 | Unread count lies (50 vs 800+) | 🟡 Medium | Nova |
-| N-Nova-2 | Bottom pill positioned against wrong ancestor | 🟡 Medium | Nova (escalated from R1) |
-
-**Must fix N1 (trivial one-line hoist). Recommend also fixing N-Nova-1 (append "+") and N-Nova-2 (move pill inside relative wrapper).** The rest are non-blocking follow-ups.
+**✅ Merge.** File a `unread-followups` tracking issue covering: pill ack, "+" freezing, Fragment wrapper, a11y buttons, tests, PR description update.

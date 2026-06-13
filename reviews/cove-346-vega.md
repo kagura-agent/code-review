@@ -1,33 +1,26 @@
-# Code Review: PR #346 (Round 2)
+# Review: PR #346 - Round 3 (Vega)
 
 ## 1. Summary
-The fixes in this round successfully implement the Unread Spec rules for edge cases (never-read channels, missing last-read messages) and correctly bind the "Mark as Read" button to the API. However, a **critical performance regression** was introduced during the rendering of the `NEW` separator. Because of this $O(N^2)$ bug, I am marking this PR as **❌ Major Issues** requiring immediate changes before merge.
+The major O(N²) performance blocker has been fully resolved, and the medium severity issues regarding unread count display and bottom pill positioning have been fixed. The PR is functionally sound and safely implements the unread indicators spec. Several low-severity suggestions (Fragment wrapper, a11y, bottom pill ack) remain unaddressed but do not block the core functionality. This PR is ready to merge.
 
 ## 2. Previous Issues Status
+- ✅ **[Blocker] O(N²) render**: Fixed. `messages.some()` was successfully moved outside the `map()` loop, restoring O(N) performance.
+- ✅ **[Medium] Inaccurate unread count on partial load**: Fixed. Appending the '+' sign (`entryUnreadCount >= messages.length`) correctly communicates to the user that there are more unread messages than currently loaded.
+- ✅ **[Medium] Bottom pill positioning**: Fixed. Moved inside the correct relative container and appropriately absolute-positioned.
+- ⚠️ **[Low] Mark as Read no-ops on pending last message**: Partially Fixed. You added a guard against acking `pending-` IDs, which avoids errors, though it skips acking altogether if the last message is pending. Since a pending message implies the current user just typed (and thus read the channel), the real-world impact is minimal.
+- ❌ **[Low] Bottom pill doesn't ack**: Not Fixed. Clicking the bottom pill scrolls to the bottom but does not trigger `markRead`/`ackMessage`.
+- ❌ **[Low] Extra div wrapper per message**: Not Fixed. Still wrapping every message and its potential separator in a `<div>` instead of `<React.Fragment>`.
+- ❌ **[Low] a11y (span/div onClick)**: Not Fixed. Still using `onClick` on non-interactive elements without keyboard support.
 
-* **C1: NEW line unreachable when lastReadIdx=-1** — ✅ **Fixed**. The logic now properly falls back to showing the line before the first message (`i === 0`) if `lastReadId` is not found in the loaded messages.
-* **C2: No indicators for never-read channels** — ✅ **Fixed**. Explicitly handles `!lastReadId` by treating all messages as unread and setting the separator at `i === 0`.
-* **C3: Top banner persists forever on bottom-entry** — ⚠️ **Partially Fixed**. Scrolling to the bottom now successfully clears the banner via `handleScroll`. However, if the channel has very few messages and **no scrollbar exists**, `onScroll` will never fire. The user is stuck with the banner until they manually click "Mark as Read".
-* **Nova-1: "Mark as Read" doesn't actually call ack** — ✅ **Fixed**. It now correctly invokes `useReadStateStore.getState().markRead()` and `api.ackMessage()`.
+## 3. New Issues
+None.
 
-## 3. New Issues (Introduced in Fixes)
-
-* ❌ **Major Performance Regression ($O(N^2)$ Render)**
-  In `MessageList.tsx`, inside the `messages.map` loop, you added:
-  ```typescript
-  const lastReadIdInMessages = lastReadId ? messages.some((m) => m.id === lastReadId) : false;
-  ```
-  `messages.some` traverses the array. Because it is inside `messages.map`, it runs $N$ times, resulting in $O(N^2)$ operations on *every single render*. For a channel with 500 messages, this is 250,000 checks per render frame, which will cause massive UI lag during typing.
-  **Fix**: Hoist `lastReadIdInMessages` computation *outside* the `messages.map` loop so it only runs once per render.
-
-## 4. Remaining Suggestions
-
-* **No-scrollbar Banner Persistence**: To fix the C3 edge case, consider checking `isNearBottom(container)` inside the `useEffect` that runs on channel entry or messages update. If the user is already at the bottom and all unread messages are visible without scrolling, immediately clear the top banner.
-* **Wrapper Divs**: Wrapping `LazyMessageItem` in a `div` might slightly impact flex layouts depending on the parent CSS. Using `<React.Fragment key={msg.id}>` is generally safer for injecting sibling elements like the separator.
+## 4. Remaining Suggestions (Non-blocking)
+1. **Use React.Fragment**: Consider changing `<div key={msg.id}>` to `<React.Fragment key={msg.id}>` inside your `messages.map()`. This avoids adding hundreds of unnecessary wrapper divs to the DOM, which could eventually interfere with CSS layout or nth-child selectors.
+2. **Bottom Pill Ack**: Consider adding the `api.ackMessage` and local store `markRead` logic to the bottom pill `onClick` handler, similar to what you did for the top banner.
+3. **Accessibility**: For the "Mark as Read" span and the bottom pill div, consider changing them to `<button>` elements (using CSS to reset default button styles) to make them accessible via keyboard.
 
 ## 5. Positive Notes
-* The entry state computation logic using `unreadComputedForRef` is very clean and accurately reflects the freeze-on-entry requirement from the spec.
-* Good job thoroughly reading the spec and mapping out the three conditions (Case A, B, C) for the separator!
+Great job cleanly addressing the O(N²) bottleneck! The fix is clean. The '+' indicator on the top banner is also a very elegant way to handle the partial-load edge case without over-complicating the data fetching logic. 
 
-## Rating
-**❌ Major Issues** (O(N^2) render loop must be fixed).
+**Rating:** ✅ Ready
