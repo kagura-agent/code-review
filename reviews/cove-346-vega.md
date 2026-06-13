@@ -1,44 +1,33 @@
-# Code Review: PR #346 (cove) - NEW separator line and unread banner
-
-**Reviewer:** Vega 💫
-**Verdict:** ⚠️ Needs Changes
+# Code Review: PR #346 (Round 2)
 
 ## 1. Summary
-This PR implements Discord-style unread message indicators, including a frozen "NEW" separator line, a top unread banner, and a bottom pill for real-time messages. The core design correctly separates entry indicators (frozen snapshot) from real-time indicators (live updates). However, there are a few critical bugs regarding batch message handling, partial data loading, and potential race conditions that need to be addressed before merging.
+The fixes in this round successfully implement the Unread Spec rules for edge cases (never-read channels, missing last-read messages) and correctly bind the "Mark as Read" button to the API. However, a **critical performance regression** was introduced during the rendering of the `NEW` separator. Because of this $O(N^2)$ bug, I am marking this PR as **❌ Major Issues** requiring immediate changes before merge.
 
-## 2. Critical Issues (Must Fix)
+## 2. Previous Issues Status
 
-- **Batch Message Pill Counter Bug:** 
-  When new messages arrive while the user is scrolled up, `setNewMessagesBelowCount((c) => c + 1)` only increments the pill counter by 1. If multiple messages arrive in a single React batch (e.g., `messages.length` jumps by 3), the counter will be inaccurate.
-  *Fix:* Increment by the actual delta: `setNewMessagesBelowCount((c) => c + (messages.length - prevCountRef.current))`.
+* **C1: NEW line unreachable when lastReadIdx=-1** — ✅ **Fixed**. The logic now properly falls back to showing the line before the first message (`i === 0`) if `lastReadId` is not found in the loaded messages.
+* **C2: No indicators for never-read channels** — ✅ **Fixed**. Explicitly handles `!lastReadId` by treating all messages as unread and setting the separator at `i === 0`.
+* **C3: Top banner persists forever on bottom-entry** — ⚠️ **Partially Fixed**. Scrolling to the bottom now successfully clears the banner via `handleScroll`. However, if the channel has very few messages and **no scrollbar exists**, `onScroll` will never fire. The user is stuck with the banner until they manually click "Mark as Read".
+* **Nova-1: "Mark as Read" doesn't actually call ack** — ✅ **Fixed**. It now correctly invokes `useReadStateStore.getState().markRead()` and `api.ackMessage()`.
 
-- **NEW Line Missing on Partial Load:**
-  If a channel has many unread messages and `lastReadId` is older than the currently loaded `messages` chunk (i.e., `lastReadIdx === -1`), the `isFirstUnread` condition (`prev.id === lastReadId`) will never be true. The NEW line fails to render entirely.
-  *Fix:* If `lastReadIdx === -1`, the NEW line should render at the very top of the visible message list.
+## 3. New Issues (Introduced in Fixes)
 
-- **Frozen Incorrect Unread Count:**
-  In the same scenario where `lastReadIdx === -1`, `entryUnreadCount` defaults to `messages.length` and the computation is permanently locked (`unreadComputedForRef.current = channelId`). When the user scrolls up and loads older messages, the top banner will still display the initial partial count (e.g., "50 new messages" instead of 100).
-  *Fix:* Do not lock `unreadComputedForRef` if `lastReadIdx === -1`, or explicitly update `entryUnreadCount` when older messages are prepended and the last read cursor is still not found.
+* ❌ **Major Performance Regression ($O(N^2)$ Render)**
+  In `MessageList.tsx`, inside the `messages.map` loop, you added:
+  ```typescript
+  const lastReadIdInMessages = lastReadId ? messages.some((m) => m.id === lastReadId) : false;
+  ```
+  `messages.some` traverses the array. Because it is inside `messages.map`, it runs $N$ times, resulting in $O(N^2)$ operations on *every single render*. For a channel with 500 messages, this is 250,000 checks per render frame, which will cause massive UI lag during typing.
+  **Fix**: Hoist `lastReadIdInMessages` computation *outside* the `messages.map` loop so it only runs once per render.
 
-- **Race Condition on Channel Switch:**
-  The `useEffect` computing the initial unread count triggers when `channelId` or `messages` changes. If the `messages` array doesn't update completely synchronously with `channelId` (e.g., during a React transition or query caching), the effect might compute the unread count using the *new* `channelId` snapshot against the *old* channel's `messages`, freezing a completely corrupted state.
-  *Fix:* Verify that the `messages` array belongs to the current `channelId` before computing and locking the ref.
+## 4. Remaining Suggestions
 
-## 3. Product Impact
-
-- **Banner Action Discrepancy:**
-  The PR description states that clicking the top banner "Jump ↑" scrolls to the NEW separator. However, the code and spec implement a "Mark as Read" action that calls `scrollToBottom()`. Jumping to the oldest unread message vs. jumping to the bottom are very different UX flows. Please clarify the intended behavior and align the PR description, spec, and code.
-- **Immediate Banner Dismissal:**
-  If the `MessageList` component natively auto-scrolls to the bottom on initial load, the `onScroll` handler will immediately detect `atBottom === true` and dismiss the Top Banner before the user can even see it. Ensure initial auto-scroll logic correctly accounts for unread state (usually by scrolling to the NEW line instead of the bottom).
-
-## 4. Suggestions (Non-blocking)
-
-- **`isOwnMessage` Detection:** 
-  Checking `lastMsg.id.startsWith("pending-")` works well for optimistic UI. However, if the user sends a message from another session/device, it won't start with `pending-` and might trigger the bottom pill instead of clearing the NEW line. Consider also checking if `lastMsg.authorId === currentUserId`.
-- **Throttling State Updates in `onScroll`:**
-  Currently, `setShowTopBanner(false)` and `setNewMessagesBelowCount(0)` are called continuously while the user is at the bottom of the list. While React 18 batches this well, it's safer to wrap them in conditions (`if (showTopBanner) ...`) to avoid unnecessary dispatch calls during high-frequency scroll events.
+* **No-scrollbar Banner Persistence**: To fix the C3 edge case, consider checking `isNearBottom(container)` inside the `useEffect` that runs on channel entry or messages update. If the user is already at the bottom and all unread messages are visible without scrolling, immediately clear the top banner.
+* **Wrapper Divs**: Wrapping `LazyMessageItem` in a `div` might slightly impact flex layouts depending on the parent CSS. Using `<React.Fragment key={msg.id}>` is generally safer for injecting sibling elements like the separator.
 
 ## 5. Positive Notes
+* The entry state computation logic using `unreadComputedForRef` is very clean and accurately reflects the freeze-on-entry requirement from the spec.
+* Good job thoroughly reading the spec and mapping out the three conditions (Case A, B, C) for the separator!
 
-- **Excellent State Separation:** The architectural choice to freeze `lastReadIdSnapshotRef` on entry correctly prevents the NEW line from jumping around wildly as users read messages.
-- **Clear Spec:** The accompanying `unread-spec.md` is incredibly well-written and leaves no ambiguity about how the state rules should function. Great documentation!
+## Rating
+**❌ Major Issues** (O(N^2) render loop must be fixed).

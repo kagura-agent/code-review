@@ -1,75 +1,73 @@
-# Consolidated Review — PR #346: feat: NEW separator line and unread banner
+# Consolidated Review — PR #346 Round 2 (Re-review)
 
 **Reviewers:** 🌟 Stella (GPT-5.5) · 🌠 Nova (Claude Opus 4.7) · 💫 Vega (Gemini 3.1 Pro)
-**Overall Verdict: ⚠️ Needs Changes** (unanimous)
-**Individual:** Stella ⚠️ · Nova ⚠️ · Vega ⚠️
-
-Architecture and frozen-snapshot design are sound. The separation of entry indicators from real-time indicators is correct. Issues are focused on edge cases and UX correctness.
+**Overall Verdict: ⚠️ Needs Changes** (unanimous; Vega rated ❌ Major Issues due to perf regression)
+**Individual:** Stella ⚠️ · Nova ⚠️ · Vega ❌
 
 ---
 
-## Consensus Issues (2+ reviewers agree — high confidence)
+## Round 1 Critical Issues — Status
 
-### 🔴 C1 — NEW line unreachable when `lastReadIdx === -1` (all 3)
+| R1 Issue | Status | Consensus |
+|----------|--------|-----------|
+| C1: NEW line unreachable when lastReadIdx=-1 | ✅ Fixed | All 3 — Case B/C branch renders separator at top of list |
+| C2: No indicators for never-read channels | ✅ Fixed | All 3 — `!lastReadId` → all messages unread, shows NEW line + banner |
+| C3: Banner persists on bottom-entry | ✅ Fixed per spec (Nova) / ⚠️ Partial (Stella, Vega) | Nova: author committed spec doc defining banner persists until user action — documented behavior, not bug. Stella/Vega: edge cases remain (no scroll event fires if already at bottom / no scrollbar) |
+| Nova-1: Mark as Read doesn't call ack | ✅ Fixed | All 3 — now calls `markRead()` + `api.ackMessage()` |
 
-When `lastReadId` is not in the loaded messages array (older than the loaded window), `showNewLine` is set to `true` but the render condition `prev.id === lastReadId` can never match — the NEW separator never appears. Banner says "N new messages" but no red line is visible.
-
-Also, `entryUnreadCount = messages.length` is wrong-by-direction: if `lastReadId` is *newer* than the loaded slice (e.g. cross-device read), the count is dramatically over-reported.
-
-**Fix:** Render the NEW line at the top of the loaded list when `lastReadIdx === -1`, or track `firstUnreadMessageId` explicitly. Suppress banner if the direction is ambiguous.
-
-### 🔴 C2 — No indicators for never-read channels (Stella + Nova)
-
-When `lastReadId` is null (never-read channel / new user), the compute effect short-circuits with no indicators. But all messages should be unread.
-
-**Fix:** Treat `!lastReadId` as "everything is unread" — show banner with `messages.length` count, place NEW line before first message.
-
-### 🔴 C3 — Top banner persists forever on bottom-entry (Nova + Vega)
-
-When a user enters a channel and lands at the bottom (most common case — `scrollMemory.wasAtBottom === true`):
-1. `scrollToBottomImmediate` runs with `restoringRef = true`, suppressing the scroll listener
-2. Banner is shown by the compute effect
-3. No scroll event fires → `if (atBottom) setShowTopBanner(false)` never runs
-4. Banner stays "N new messages — Mark as Read" forever until manual scroll
-
-**Fix:** After entry restore, if landed at bottom, schedule `setShowTopBanner(false)`. Or clear in the own-message branch. Or trigger an explicit `isNearBottom` check after restore completes.
+**All R1 critical issues are materially resolved.** The remaining C3 edge cases are about polish, not correctness.
 
 ---
 
-## Per-Reviewer Unique Findings
+## New Issue — Consensus Blocker
+
+### 🔴 N1 — O(N²) render regression (all 3)
+
+Inside `messages.map`, the code runs `messages.some(m => m.id === lastReadId)` on every iteration:
+
+```tsx
+const lastReadIdInMessages = lastReadId
+  ? messages.some((m) => m.id === lastReadId)  // O(N) per row
+  : false;
+```
+
+500 messages = 250,000 comparisons per render. Will cause visible UI lag during typing and scrolling.
+
+**Fix:** Hoist `lastReadIdInMessages` outside the `.map()` loop — compute once per render. The compute effect already knows `lastReadIdx`; store a boolean in state or compute before the map.
+
+---
+
+## New Issues — Per-Reviewer
 
 ### 🌠 Nova
 
-- **🔴 "Mark as Read" doesn't actually mark as read** — Only calls `scrollToBottom()` + `setShowTopBanner(false)`. Works coincidentally because effect #3 auto-acks on mount. If auto-ack is ever refactored, this button becomes a lie. Messages arriving between mount and click are not acked. Fix: explicitly call `clearUnread(channelId)` + `api.ackMessage(...)`.
-- **🟡 Wrapping `<div key={msg.id}>`** around `LazyMessageItem` adds 1 DOM node per message. Use `<React.Fragment>` to avoid layout/CSS surprises.
-- **🟡 Bottom pill `position: absolute`** rendered outside the relative wrapper — may anchor to wrong element in some layouts.
-- **🟡 `getLastReadId` in useLayoutEffect deps** — if Zustand rebinds the reference, effect re-runs and wipes snapshot. Safer to dereference inside effect.
-- **🟡 "Mark as Read" / bottom pill are `<span onClick>`** — should be `<button>` for keyboard accessibility.
-- **🟡 Three branches in compute effect share identical trailing lines** — extract a helper to avoid drift.
+- **🟡 N-Nova-1: `entryUnreadCount = messages.length` lies for Case B/C** — A channel with 800 unread shows "50 new messages" (loaded page size, not true count). At minimum append "+" when `hasMore && !lastReadIdInMessages`.
+- **🟡 N-Nova-2: Bottom pill positioned outside `position:relative` container** — `position: absolute` with `bottom: 48` anchors to wrong ancestor. Move pill inside the relative wrapper. (Escalated from R1.)
+- **🟡 N-Nova-3: Mark as Read no-ops on pending last message** — If last visible row is `pending-…`, ack is skipped but banner is cleared. Next channel switch shows stale NEW line.
+- **🟡 N-Nova-4: Mark as Read ack order** — fire-and-forget `.catch(() => {})` means local state updates even if server ack fails. On refresh, unread badge reappears.
+- **🟡 N-Nova-5: Bottom pill doesn't ack** — scrolling to bottom via pill clears visual state but channel stays "unread" in store/sidebar until next refetch.
+- **🟡 N-Nova-6: PR description stale** — still says "Jump ↑" but code shows "Mark as Read".
 
 ### 🌟 Stella
 
-- **🟡 Missing tests** for: no read cursor, lastReadId older than loaded window, one unread, zero unread, channel switch with cached messages.
-- **🟡 Clear `newMessagesBelowCount`** in Mark as Read handler to avoid brief pill visibility during smooth scroll.
+- **🟡 Banner dismissal still relies on suppressed scroll events** — programmatic `scrollToBottom` sets `restoringRef=true`, skipping the scroll handler. If user is already at bottom and can't scroll further, banner stays until Mark as Read click.
+- **🟡 Extra `<div>` wrapper** around each `LazyMessageItem` — layout regression risk. Use `<Fragment>`.
+- **🟡 Clickable controls are `<span>` / `<div>`** — should be `<button>` for keyboard a11y.
 
 ### 💫 Vega
 
-- **🔴 Batch message pill counter** — `setNewMessagesBelowCount(c => c + 1)` only increments by 1. If multiple messages arrive in a single React batch, counter is inaccurate. Fix: increment by actual delta.
-- **🟡 Race condition on channel switch** — If `messages` array doesn't update synchronously with `channelId`, compute effect may use wrong channel's messages. Verify messages belong to current channelId before locking.
-- **🟡 `isOwnMessage` detection** — `lastMsg.id.startsWith("pending-")` misses messages sent from another device. Consider also checking `lastMsg.authorId === currentUserId`.
-- **🟡 Throttle state updates in scroll handler** — wrap in `if (showTopBanner)` to avoid unnecessary dispatches.
+- **🟡 No-scrollbar edge case** — if channel has few messages and no scrollbar exists, `onScroll` never fires, banner stays forever until Mark as Read click.
 
 ---
 
-## What's Done Well (consensus)
+## What's Done Well
 
-- ✅ **Frozen-snapshot architecture** (`lastReadIdSnapshotRef` + `unreadComputedForRef`) cleanly separates entry state from current state
-- ✅ **Layout-effect reset** syncs with `channelId` — avoids race between old/new channel snapshots
-- ✅ **Effect #5** correctly distinguishes own messages (clear NEW line + scroll) from received messages (pill increment when scrolled up)
-- ✅ **`docs/unread-spec.md`** is excellent documentation — review can be done against an authoritative spec
-- ✅ **Zero server changes** — reuses existing `useReadStateStore`
-- ✅ Uses CSS variables for theming consistency
-- ✅ Existing scroll restoration and prepend behavior preserved
+- ✅ **`docs/unread-spec.md` is excellent** — converts fuzzy review thread into testable contract. Great practice.
+- ✅ **Case A/B/C is explicit and commented** — no more dead branches.
+- ✅ **Mark as Read now writes to source of truth** — both store + server ack.
+- ✅ **Sending own message clears NEW line** — matches spec "user is engaged."
+- ✅ **Effect separation is clean** — channel-switch reset and compute-once effect are well decoupled.
+- ✅ **`restoringRef` guard reused** — right primitive, no new flags.
 
 ---
 
@@ -77,10 +75,8 @@ When a user enters a channel and lands at the bottom (most common case — `scro
 
 | # | Issue | Severity | Consensus |
 |---|-------|----------|-----------|
-| C1 | NEW line unreachable when lastReadId not in loaded messages | 🔴 Critical | All 3 |
-| C2 | No indicators for never-read channels (null lastReadId) | 🔴 Critical | Stella + Nova |
-| C3 | Top banner persists forever on bottom-entry | 🔴 Critical | Nova + Vega |
-| Nova-1 | "Mark as Read" doesn't actually mark as read | 🔴 Critical | Nova only (but logically correct) |
-| Vega-1 | Batch message pill counter off-by-N | 🟡 Medium | Vega only |
+| N1 | O(N²) render — `messages.some()` inside `.map()` | 🔴 Critical | All 3 |
+| N-Nova-1 | Unread count lies (50 vs 800+) | 🟡 Medium | Nova |
+| N-Nova-2 | Bottom pill positioned against wrong ancestor | 🟡 Medium | Nova (escalated from R1) |
 
-**Recommend fixing C1, C2, C3, and Nova-1 before merge.** The rest are non-blocking improvements.
+**Must fix N1 (trivial one-line hoist). Recommend also fixing N-Nova-1 (append "+") and N-Nova-2 (move pill inside relative wrapper).** The rest are non-blocking follow-ups.
