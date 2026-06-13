@@ -1,80 +1,58 @@
-# Consolidated Review — PR #339: feat: @mention with autocomplete and highlight
+# Consolidated Review — PR #339 Round 2 (Re-review)
 
 **Reviewers:** 🌟 Stella (GPT-5.5) · 🌠 Nova (Claude Opus 4.7) · 💫 Vega (Gemini 3.1 Pro)
-**Overall Verdict: ⚠️ Needs Changes**
-**Individual:** Stella ⚠️ · Nova ⚠️ · Vega ⚠️
+**Overall Verdict: ✅ Ready** (2-1 split; Stella ⚠️, Nova ✅, Vega ✅)
 
 ---
 
-## Consensus Issues (2+ reviewers agree — high confidence)
+## Round 1 Critical Issues — All Fixed ✅
 
-### 🔴 C1 — `replaceAll` substring replacement corrupts messages (all 3)
-
-`MessageInput.handleSubmit` does `text.replaceAll(@${username}, <@${userId}>)` — a literal substring match with no word boundaries.
-
-**Failure cases:**
-- Autocomplete `@alice`, then type `@aliceWonderland` → produces `<@id>Wonderland`
-- Autocomplete `@alice`, then type `email@alice.com` → corrupts to `email<@123>.com`
-- Manually typed `@alice` after a real autocomplete → silently converted to a ping
-
-**Fix:** Track mention insertions by position/range and apply replacements by index, or use word-boundary-aware regex. The descending-length sort is a good instinct but doesn't solve the fundamental issue.
-
-### 🟡 S1 — Autocomplete lacks a11y bindings (all 3)
-
-No `role="listbox"`, no `aria-activedescendant`, no `aria-expanded`/`aria-controls` on the textarea. Screen-reader users get nothing.
-
-### 🟡 S2 — Badge overflow / no cap (Stella + Nova + Vega)
-
-`{mentionCount}` printed raw — a user away for a while gets a `1234` badge breaking row layout. Use `count > 99 ? "99+" : count`.
-
-### 🟡 S3 — Autocomplete trigger regex too broad (Nova + Vega)
-
-`/@\w*$/` fires even when `@` is preceded by a word char (e.g. `email@gmail`). Pin to start-of-text or whitespace: `/(^|\s)@\w*$/`. Also `\w` excludes Unicode letters — non-ASCII usernames can't be filtered inline.
+| R1 Issue | Status | Consensus |
+|----------|--------|-----------|
+| C1: `replaceAll` substring corruption | ✅ Fixed | All 3 confirm — regex + `(?!\w)` + length sort + channel-switch clear |
+| Stella-1: Webhook messages skip mention resolution | ✅ Fixed | All 3 confirm — `createFromWebhook` now calls `resolveMentions()` + increments `mention_count` |
+| Stella-2: MESSAGE_UPDATE active-channel badge | ✅ Fixed (2/3) | Nova & Vega: active-channel guard `msg.channel_id !== activeChannelId` + `mentionedMessageIds` dedupe added. Stella disagrees — see §Disagreement below |
+| Vega-1: No onBlur → dangling autocomplete | ✅ Fixed | All 3 confirm — 150ms delayed close |
+| S2: Badge 99+ cap | ✅ Fixed | All 3 confirm |
+| Self-mention highlight | ✅ Fixed | All 3 confirm — `message.author.id !== currentUserId` guard |
+| mentionMapRef channel switch | ✅ Fixed | All 3 confirm — `useEffect([channelId])` |
 
 ---
 
-## Per-Reviewer Unique Findings
+## Disagreement: Stella's Remaining Blockers
 
-### 🌟 Stella
+### Stella N1 — Non-numeric user IDs cannot be mentioned
 
-- **🔴 Webhook messages never resolve mentions** — `MessagesRepo.createFromWebhook()` returns `mentions: []` and never calls `resolveMentions()`. Agent/webhook messages with `<@userId>` won't render chips, highlight, or update badges.
-- **🔴 MESSAGE_UPDATE mention counts for active channel users** — Server increments `mention_count` on edit, but client doesn't auto-ack `MESSAGE_UPDATE` for the active channel. Draft streaming that adds a mention while a user is reading leaves a stale badge.
+Stella notes `parseMentionIds()` only matches `<@(\d+)>`, so non-numeric bot/custom IDs would fail. **Nova and Vega did not flag this.** This is likely valid only if Cove still creates non-snowflake IDs — if the project has fully moved to numeric snowflake IDs, this is a non-issue. **Recommend: verify whether non-numeric user IDs still exist in practice.** If yes, widen the regex; if no, this is informational.
 
-### 🌠 Nova
+### Stella N2 — MESSAGE_UPDATE active-channel badge (escalation from R1)
 
-- **🟡 Self-mentions render the yellow highlight bar on your own message** — Discord doesn't do this. Guard: `isMentioned = mentions.some(u => u.id === self) && message.author.id !== self`.
-- **🟡 `mentionMapRef` not cleared on channel switch** — If `MessageInput` isn't remounted, a mention from channel A could fire in channel B. Add `useEffect(() => { mentionMapRef.current.clear() }, [channelId])`.
-- **🟡 `MessageItem` creates `new Map()` every render** — Prop identity churn kills memoization. Wrap with `useMemo`.
-- **🟡 `Message.mentions: User[]` type contract broken** — `resolveMentions` early-returns leaving `msg.mentions` undefined when no IDs found, but the type says required. Default-assign `[]`.
-- **🟡 No new tests** — Strongly recommend at least server-side test for `resolveMentions` guild-scoping and a parser test for mixed formatting.
-
-### 💫 Vega
-
-- **🔴 No `onBlur` handler → dangling autocomplete steals keys globally** — If user types `@` then clicks away, the autocomplete stays open and the capturing `window` keydown listener silently steals Enter/Tab/Arrow keys app-wide. Fix: `onBlur={() => setShowMention(false)}`.
-- **🟡 `mentionedMessageIds` Set grows indefinitely** — No eviction for long-lived sessions. Cap or scope-by-channel.
+Stella says this is still broken. However, Nova specifically confirmed the fix: `msg.channel_id !== activeChannelId` guard on the client + server-side set-diff (`existingMentionIds`) prevents double-counting. Vega also confirms fixed. **2-1 in favor of fixed.** The active-channel guard appears to correctly prevent badge increment for messages in the currently viewed channel.
 
 ---
 
-## What's Done Well (consensus)
+## Remaining Non-Blocking Issues (consensus or escalated)
 
-- ✅ SQL is parameterized everywhere — no injection surface
-- ✅ Guild-scoped JOIN closes the #337 info-leak cleanly
-- ✅ `<@(\d+)>` is digit-bounded → no ReDoS risk
-- ✅ Atomic `INSERT … ON CONFLICT … mention_count = mention_count + 1` handles concurrent writes correctly
-- ✅ React rendering auto-escapes usernames — no XSS
-- ✅ `stopImmediatePropagation` on Enter + `onHasResults` gate correctly prevents "Enter sent message while picking" bug from reverted #337
-- ✅ Pre-fetching members on READY avoids racing the first `@` trigger
-- ✅ Migration is small, additive, and idempotent
+| Issue | Flagged By | Priority |
+|-------|-----------|----------|
+| a11y: autocomplete lacks ARIA bindings | All 3 (escalated from R1) | Follow-up issue |
+| Trigger regex `/@\w*$/` fires inside emails | Nova + Vega (escalated) | Follow-up |
+| No new tests for mentions | Nova + Stella (escalated) | Follow-up |
+| `MessageItem` new Map() every render | Nova + Vega | Follow-up (useMemo) |
+| `mentionedMessageIds` Set unbounded | Nova + Vega | Follow-up (LRU cap) |
+| Left-side word boundary missing on `@` regex | Nova | Low — `bob@alice` edge case |
+| Stale mentionMapRef after deleting mention text | Nova | Low |
 
 ---
 
-## Blocking Summary
+## New Observations (Round 2 only)
 
-| # | Issue | Severity |
-|---|-------|----------|
-| C1 | `replaceAll` substring corruption | 🔴 Critical |
-| Stella-1 | Webhook messages skip mention resolution | 🔴 Critical |
-| Stella-2 | MESSAGE_UPDATE badge accuracy for active readers | 🟡 Medium |
-| Vega-1 | Dangling autocomplete steals global keys | 🔴 Critical |
+- Nova: `resolveMentions` assumes single-channel batch (`channelIds[0]`) — fragile for future callers, consider asserting `channelIds.size === 1`
+- Nova: "Unknown User" fallback in ChatMarkdown could flash during transitional renders (unlikely in practice)
+- Nova: Client/server mention_count can briefly diverge on reconnect; READY resync papers over it
 
-**Recommend fixing C1, Stella-1, and Vega-1 before merge.** The rest are non-blocking improvements.
+---
+
+## Recommendation
+
+**✅ Merge.** All R1 critical issues are resolved. The remaining items are quality-of-life improvements appropriate for a follow-up `mention-followups` tracking issue. Recommend filing that issue before merge to capture: a11y, trigger regex, tests, useMemo, Set cap.

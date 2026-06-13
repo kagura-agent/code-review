@@ -1,59 +1,99 @@
-# 🌟 Stella Review — kagura-agent/cove PR #339
+# Stella Review — PR #339 Round 2
+
+**Rating: ⚠️ Needs Changes**
 
 ## Summary
 
-This PR adds Discord-style user mentions end-to-end: client autocomplete and display conversion, markdown mention chips, self-mention highlighting, server-side mention resolution, `mention_count` persistence, and sidebar badges. The broad shape is solid and the security-sensitive rendering/SQL pieces are mostly handled safely, but I found several real correctness bugs that should be fixed before merge.
+The Round 1 fixes landed for several UI issues: the autocomplete now closes on blur, badges are capped at `99+`, webhook messages resolve mentions, self-authored mentions no longer highlight, and the original `@alice` → `@aliceWonderland` substring collision is mitigated.
 
-**Verdict: ⚠️ Needs Changes**
+However, I found two correctness problems that should block merge:
 
-Validation run locally:
-- `pnpm -F @cove/server test -- --runInBand` ✅ 223 passed
-- `pnpm -F @cove/client test` ✅ 6 passed
-- `pnpm -r build` ✅ passed (existing large chunk warning)
+1. Mention parsing only accepts numeric IDs, but Cove still creates/accepts non-numeric user IDs for bots/custom users, so many autocomplete-inserted mentions will not resolve or render.
+2. The previous MESSAGE_UPDATE mention-count bug is still not fixed for active-channel users; edits that add a mention persist a server-side badge count without acknowledging/clearing it.
 
-## Critical Issues
+`pnpm -r build` passes.
 
-1. **Webhook-created messages never resolve or count mentions**
-   - `MessagesRepo.createFromWebhook()` returns `mentions: []` and does not call `resolveMentions()` (`packages/server/src/repos/messages.ts:196-227`).
-   - `routes/webhooks.ts` dispatches that message directly and never increments `mention_count` (`packages/server/src/routes/webhooks.ts:187-197`).
-   - Impact: webhook/agent messages containing `<@userId>` will not render as mention chips, will not highlight the mentioned user, and will not update mention badges. This is especially risky because Cove agents/draft-style integrations often send through non-human channels.
-   - Fix: resolve mentions for webhook messages the same way as normal messages, and increment mention counts for resolved mentioned users except the webhook/author identity as appropriate.
+## Previous Issues Status
 
-2. **Client mention conversion is username-based and can corrupt messages / target the wrong user**
-   - Selection stores `displayName → userId` in `mentionMapRef` (`MessageInput.tsx:152-158`), then submit does a global `replaceAll(@username, <@id>)` (`MessageInput.tsx:83-92`).
-   - `users.username` is not unique in the schema, so duplicate usernames are possible. Selecting two users with the same username overwrites the map key, and every `@sameName` in the message is converted to the last selected user.
-   - It also converts manually typed `@username` text if that username was selected once anywhere in the draft, even when the user did not intend a mention.
-   - Fix: track mention ranges/tokens by inserted occurrence, or keep the wire format in an internal model while rendering/displaying `@username`; do not globally replace by username string.
+### Critical / blocking from Round 1
 
-3. **MESSAGE_UPDATE mention counts can remain unread for users viewing the active channel**
-   - On edit, the server increments `mention_count` for newly mentioned users (`routes/messages.ts:156-164`) before dispatching `MESSAGE_UPDATE`.
-   - The client intentionally does not call `ackMessage` on `MESSAGE_UPDATE` when the edited message is in the active channel; only `MESSAGE_CREATE` has auto-ack behavior.
-   - Impact: draft streaming/edit flows that add a mention while the user is actively reading the channel can leave a persisted mention badge until another ack happens/reload behavior catches up. This is a count accuracy bug in one of the PR’s key flows.
-   - Fix options: have active-channel clients ack the updated message when it mentions them, or make the server increment conditional on the user’s read cursor being behind the edited message / active-session state if available.
+- ✅ **C1: `replaceAll` substring collision corrupts messages** — Replaced with escaped regex and `(?!\w)`, plus entries are sorted by username length and `mentionMapRef` is cleared on channel switch/send. This fixes the reported `@alice` / `@aliceWonderland` case.
+  - Note: see new issue N3 for remaining display-name/global-replacement edge cases.
 
-## Product Impact
+- ✅ **Stella-1: Webhook messages never resolve mentions** — Fixed. `createFromWebhook()` now calls `resolveMentions()`, and webhook execution increments `mention_count` for mentioned users.
 
-- Users can see mention chips/highlights for normal REST-created messages, but webhook/agent messages will silently miss the feature.
-- Autocomplete UX can send unintended mentions in messages with repeated names or duplicate usernames.
-- Mention badges can become inaccurate around streaming edits and active readers.
-- Existing pre-migration unread mentions are not backfilled into `mention_count`; that may be acceptable, but it should be an intentional product decision.
+- ❌ **Stella-2: MESSAGE_UPDATE mention counts for active-channel users** — Not fixed; escalated.
+  - Server increments `mention_count` when an edit adds a new mention (`packages/server/src/routes/messages.ts:156-162`).
+  - Client only applies local update badges for non-active channels (`packages/client/src/lib/gateway-subscriptions.ts:68`).
+  - There is no ack/clear path for “message in my active channel was edited to mention me”, so the persisted server `mention_count` remains non-zero until some later unrelated ack. This can resurface as a stale mention badge after reload or after switching channels.
 
-## Suggestions
+- ✅ **Vega-1: No onBlur → dangling autocomplete steals global keys** — Fixed with textarea `onBlur` delayed close.
+
+### Non-blocking suggestions from Round 1
+
+- ❌ **S1: Autocomplete lacks a11y bindings** — Still open. The list has no combobox/listbox roles, `aria-activedescendant`, option roles, or live status.
+- ✅ **S2: Badge overflow / no cap** — Fixed with `99+` cap.
+- ⚠️ **S3: Autocomplete trigger regex too broad** — Partially addressed, but the trigger is now ASCII-word-only (`/@(\w*)$/`), which still triggers in cases like email-like text and excludes non-ASCII/hyphenated/space-containing names while filtering supports arbitrary usernames.
+- ✅ **Nova: `mentionMapRef` not cleared on channel switch** — Fixed.
+- ❌ **Nova: `MessageItem` creates new `Map()` every render** — Still open. `mentionUsers` is rebuilt on every render.
+- ✅ **Nova: `Message.mentions` type contract broken** — Fixed in shared type to `User[]`, and repo paths initialize/resolve arrays.
+- ❌ **Nova: No new tests** — Still no tests for mention parsing, webhook mention counts, edit mention counts, or autocomplete replacement.
+- ❌ **Vega: `mentionedMessageIds` Set grows indefinitely** — Still open. It is cleared only on gateway teardown, not bounded during long sessions.
+
+## New Issues
+
+### N1 — Non-numeric user IDs cannot be mentioned or rendered (blocking)
+
+`parseMentionIds()` and the client markdown parser only match `<@(\d+)>`:
+
+- `packages/server/src/repos/messages.ts:82-89`
+- `packages/client/src/lib/chat-markdown.ts` mention rule uses the same numeric-only pattern
+
+But Cove still supports non-numeric user IDs:
+
+- `packages/server/src/routes/agents.ts` derives bot/user IDs from username slugs when no explicit ID is provided.
+- `UsersRepo.create()` also uses the provided ID or username slug.
+- Existing migration tests still cover legacy/non-snowflake IDs, and route inputs can provide custom IDs.
+
+Autocomplete inserts `<@${userId}>`; if that `userId` is `luna`, `my-bot`, or any custom non-numeric ID, the server will not resolve it into `message.mentions`, mention counts will not increment, and the client will render raw `<@my-bot>` instead of a mention pill.
+
+**Suggested fix:** allow the project’s actual user ID grammar in both parsers, e.g. parse `<@([^>\s]+)>` or another validated ID pattern shared between client/server. Add tests with numeric and non-numeric IDs.
+
+### N2 — Active-channel edit mentions still leave stale persisted mention counts (blocking; R1 escalation)
+
+As noted above, the server increments `mention_count` on edit, but active clients do not ack/clear MESSAGE_UPDATE mentions. This leaves unread mention state persisted for a message the user has already seen in the open channel.
+
+**Suggested fix options:**
+
+- If an edited message mentions a user currently viewing the channel, dispatch/perform an ack or avoid incrementing for currently-active sessions; or
+- Have the client ack the edited message when `MESSAGE_UPDATE` arrives for the active channel; and
+- Add a server/client test covering “other user edits active-channel message to mention me; mention_count remains 0/cleared”.
+
+### N3 — Mention replacement is still spanless and username-keyed (correctness edge case)
+
+`mentionMapRef` maps `username → userId`, and submit converts every matching `@username` occurrence globally (`packages/client/src/components/MessageInput.tsx:94-99`). This can still mention the wrong user when:
+
+- Two guild members share the same username/display name.
+- The user selects one `@sam`, then later types literal `@sam` text that was not selected from autocomplete.
+- A selected username is a prefix before punctuation/hyphen (`(?!\w)` does not protect `@alice-bot`, `@alice.example`, or non-ASCII word continuations).
+
+This is less severe than N1/N2, but the robust fix is to keep selected mention spans/tokens or insert hidden wire-format IDs rather than doing global display-name replacement at send time.
+
+## Remaining Suggestions
 
 - Add focused tests for:
-  - webhook message with `<@userId>` resolves `mentions` and increments `mention_count`;
-  - duplicate usernames / repeated `@username` occurrences in `MessageInput`;
-  - `MESSAGE_UPDATE` adding a mention while active vs inactive;
-  - markdown parsing of mentions adjacent to bold/links/code.
-- Improve autocomplete accessibility: use `role="listbox"` / `role="option"`, expose active option via ARIA, and make mouse/keyboard behavior screen-reader friendly.
-- Cap or compact sidebar badge display (`99+`) to avoid layout issues with large counts.
-- Consider supporting Discord’s `<@!id>` mention variant if any bridge/plugin may emit it.
-- Consider showing unresolved mentions as the original `<@id>` or a neutral unresolved chip rather than `@Unknown User`, depending on desired transparency.
+  - numeric and non-numeric mention IDs,
+  - webhook mention resolution/counts,
+  - create vs edit mention-count behavior,
+  - active-channel edit mention ack/clear,
+  - replacement collision cases.
+- Add autocomplete ARIA roles/keyboard semantics.
+- Bound or otherwise prune `mentionedMessageIds` during long-running sessions.
+- Memoize `mentionUsers` in `MessageItem` if render cost becomes noticeable.
 
 ## Positive Notes
 
-- Mention resolution uses parameterized SQL and guild membership joins, which avoids the obvious injection and cross-guild user enumeration pitfalls.
-- React rendering escapes usernames, so the mention chip path does not appear XSS-prone.
-- Mention parsing is simple and bounded by content validation; I did not see a ReDoS concern.
-- Batch resolution for normal message lists avoids per-message user lookups.
-- The PR keeps the migration small and idempotent, and the repo builds/tests pass locally.
+- The guild-scoped SQL join in `resolveMentions()` preserves the intended privacy boundary.
+- Webhook mention resolution is now wired through create + dispatch paths.
+- The blur fix and `stopImmediatePropagation()` handling make the autocomplete interaction much safer.
+- Build passes cleanly with the current diff.
