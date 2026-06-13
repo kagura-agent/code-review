@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-13 02:30 (Asia/Shanghai)_
+_Last updated: 2026-06-13 14:42 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 161 | 157/161 (97%) → | Stable — 4 historical failures (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout). Last 70+ rounds: clean |
-| 🌠 Nova | claude-opus-4.7 | 165 | 165/165 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 161 | 150/161 (93%) ↓ | 11 failures total. Recent: #294 R1 crash, #294 R4 timeout, #294 R5 stale, #316 R5 timeout, #322 R1 timeout, **#337 R2 no output**. **6 failures in last 20 PRs — accelerating decline** |
+| 🌟 Stella | gpt-5.5 | 164 | 160/164 (98%) → | Stable — 4 historical failures (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout). Last 73+ rounds: clean |
+| 🌠 Nova | claude-opus-4.7 | 168 | 168/168 (100%) → | Rock solid. No failures ever |
+| 💫 Vega | gemini-3.1-pro-preview | 164 | 153/164 (93%) ↓ | 11 failures total. Recent: #294 R1 crash, #294 R4 timeout, #294 R5 stale, #316 R5 timeout, #322 R1 timeout, **#337 R2 no output**. **6 failures in last 20 PRs — accelerating decline** |
 
 ## Dimension Strengths (per reviewer)
 
@@ -47,9 +47,9 @@ _Last updated: 2026-06-13 02:30 (Asia/Shanghai)_
 | Retry/Idempotency | ⭐⭐⭐ | Retry-After NaN (#255 R1), POST retry duplicates (#255 R2), sendTyping budget (#255 R2) |
 | Session TTL/Auth | ⭐⭐⭐ | Non-sliding session design flaw (#264 R2), bot footgun (#264 R4), backfill hardcode (#264 R4) |
 | Security Model Design | ⭐⭐⭐ | Token exfiltration (#294 R1 — unique), webhook permission model (#294 R1), READY payload leak (#316 R2), CHANNEL_CREATE unreachable (#316 R3) |
-| UX-Level Analysis | ⭐⭐⭐ | **NEW: spinner scroll jolt (#330 R2 — unique), pendingPrependRestoreRef leak (#330 R3 — unique), token redaction (#331 R1), reply state cleanup (#335 R1), mention count cap (#337 R1)** |
+| UX-Level Analysis | ⭐⭐⭐ | **NEW: spinner scroll jolt (#330 R2 — unique), pendingPrependRestoreRef leak (#330 R3 — unique), token redaction (#331 R1), reply state cleanup (#335 R1), mention count cap (#337 R1), self-mention highlight (#339 R1), mentionMapRef channel-switch (#339 R1), 8 unique UX/arch findings (#343 R1)** |
 
-**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Zero false positives across 165 rounds. Strongest on API compatibility, security model design, async lifecycle, and UX-level analysis.
+**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Zero false positives across 168 rounds. Strongest on API compatibility, security model design, async lifecycle, and UX-level analysis. #343 demonstrated breadth (8 unique findings spanning UX, perf, a11y, security, and platform compat).
 **Nova's weakness:** None significant. Very occasionally over-cautious (e.g. #330 R5 — ⚠️ when .finally() guarantees re-render).
 
 ### 💫 Vega (Gemini 3.1 Pro)
@@ -73,23 +73,23 @@ _Last updated: 2026-06-13 02:30 (Asia/Shanghai)_
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 12 | ~95 | ~13% | ↑ Improving (guild_id #327, stuck spinner #330, retry-loses-reply #335, guild scoping #337) |
-| 🌠 Nova | 14 | ~95 | ~15% | → Stable (consistent high quality, spinner jolt #330, token redaction #331, reply cleanup #335) |
-| 💫 Vega | 3 | ~95 | ~3% | ↓↓ Declining sharply (only React 18 batching #330 was genuine star find; **below 10% threshold for 5+ consecutive periods**) |
+| 🌟 Stella | 14 | ~110 | ~13% | ↑ Improving (guild_id #327, stuck spinner #330, retry-loses-reply #335, guild scoping #337, webhook-mention #339) |
+| 🌠 Nova | 19 | ~110 | ~17% | ↑ Strengthening (spinner jolt #330, token redaction #331, reply cleanup #335, self-mention/mentionMapRef/Map-per-render/type-contract #339, 8 unique finds #343) |
+| 💫 Vega | 4 | ~110 | ~4% | ↓↓ Declining sharply (only React 18 batching #330 and dangling-autocomplete #339 were genuine unique finds; **below 10% threshold for 6+ consecutive periods**) |
 
 ## Consensus Participation
 
 | Reviewer | Part of 2/3+ consensus | Solo dissent (correct) | Solo dissent (noise) |
 |----------|----------------------|----------------------|---------------------|
-| 🌟 Stella | 87% | 14 (incl. stuck spinner #330 R3, guild_id #327 R5, retry-loses-reply #335 R1, guild scoping #337 R1) | 1 (#168 over-scope) |
-| 🌠 Nova | 93% | 10 (incl. spinner jolt #330 R2, pendingPrependRestore #330 R3, reply cleanup #335 R1) | 1 (#330 R5 over-cautious on .finally()) |
-| 💫 Vega | 80% | 7 (gen ID #190, own-message #192, 204 parsing #255, sliding math #264, React 18 #330) | 5 (#261 R3 premature Ready, #290 over-flagged, #327 R5 under-flag, **#330 R2/R3 over-lenient**, **#331 R2 over-escalated**) |
+| 🌟 Stella | 87% | 15 (incl. stuck spinner #330 R3, guild_id #327 R5, retry-loses-reply #335 R1, guild scoping #337 R1, webhook-mention #339 R1) | 1 (#168 over-scope) |
+| 🌠 Nova | 93% | 15 (incl. spinner jolt #330 R2, pendingPrependRestore #330 R3, reply cleanup #335 R1, self-mention/mentionMapRef/Map-per-render/type-contract #339 R1) | 1 (#330 R5 over-cautious on .finally()) |
+| 💫 Vega | 80% | 8 (gen ID #190, own-message #192, 204 parsing #255, sliding math #264, React 18 #330, dangling-autocomplete #339 R1) | 5 (#261 R3 premature Ready, #290 over-flagged, #327 R5 under-flag, **#330 R2/R3 over-lenient**, **#331 R2 over-escalated**) |
 
 ## Severity Calibration
 
 | Reviewer | Verdict matches final | Over-flags | Under-flags |
 |----------|----------------------|------------|-------------|
-| 🌟 Stella | 82% | 13% | 5% |
+| 🌟 Stella | 82% | 13% (incl. #339 R2 over-scoped MESSAGE_UPDATE) | 5% |
 | 🌠 Nova | 94% | 4% | 2% |
 | 💫 Vega | 72% ↓ | 14% (#290, #191, #330 R4, #331 R2) | 14% (#261 R3, #327 R5, **#330 R2/R3, #335 R1**) |
 
@@ -103,11 +103,11 @@ _Last updated: 2026-06-13 02:30 (Asia/Shanghai)_
 
 ## Reliability History
 
-| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#337) | Trend |
+| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#343) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 50/52 (96%) | → Stable |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 56/56 (100%) | → Rock solid |
-| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 53/52... | ↓ Recent: crash #278 R4, crash #294 R1, timeout #294 R4, stale #294 R5, timeout #316 R5, timeout #322 R1, **failed #337 R2**. 7 failures in 52 recent rounds (87%) |
+| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 53/55 (96%) | → Stable |
+| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 59/59 (100%) | → Rock solid |
+| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 56/55 (87%) | ↓ Recent: crash #278 R4, crash #294 R1, timeout #294 R4, stale #294 R5, timeout #316 R5, timeout #322 R1, **failed #337 R2**. 7 failures in 55 recent rounds (87%) |
 
 ## Vega Calibration Swing Pattern (NEW)
 
@@ -180,16 +180,18 @@ _Last updated: 2026-06-13 02:30 (Asia/Shanghai)_
 | **#331** | **cove** | **2026-06-12** | **R1-R2** | **✅ Ready** | **error-handling, delete-confirmation, token-redaction** |
 | **#335** | **cove** | **2026-06-12** | **R1-R3** | **✅ Ready** | **deleted-ref-visibility, retry-loses-reply, reply-state-cleanup** |
 | **#337** | **cove** | **2026-06-12** | **R1-R2** | **✅ Ready** | **enter-trap, cursorPos-stale, guild-scoping-leak, edit-mention-resolution** |
+| **#339** | **cove** | **2026-06-13** | **R1-R2** | **✅ Ready** | **replaceAll-mention-corruption, webhook-mention-resolution, dangling-autocomplete** |
+| **#343** | **cove** | **2026-06-13** | **R1** | **✅ Ready (pending)** | **context-menu-delete, server-auth-pre-existing, a11y** |
 
-## Ground Truth Summary (51 merged PRs)
+## Ground Truth Summary (52 merged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 96% — human approved without findings in 49/51 cases. Exceptions: #174 (design questions), #281 (false positive)
-- **Iterative review as quality gate:** In 49/51 merged PRs, our multi-round review was the actual quality gate
+- **Human rubber-stamp rate:** 96% — human approved without findings in 50/52 cases. Exceptions: #174 (design questions), #281 (false positive)
+- **Iterative review as quality gate:** In 50/52 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 2 (#100 verdict too conservative, #281 stale PR description)
-- **Multi-round PRs:** 40/51 PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
-- **Total review rounds:** ~177 across 51 merged PRs
+- **Multi-round PRs:** 41/52 PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
+- **Total review rounds:** ~180 across 52 merged PRs
 - **False-ready detection:** 2 cases (#255 R4→R5, #330 R4 Vega swing) — self-correcting system working
 - **Escalation protocol validated:** 6 cases — all led to fixes
 
@@ -210,3 +212,5 @@ _Last updated: 2026-06-13 02:30 (Asia/Shanghai)_
 6. **Throughput sustained.** 51 merged PRs, ~177 review rounds. Service scaling well. Average 2.7 rounds per PR.
 
 7. **Ground truth: human rubber-stamps 96%.** Our iterative review IS the quality gate. This validates the service but means limited external validation of our work.
+
+8. **Nova widening gap.** #339 (4 unique finds) + #343 (8 unique finds) show Nova pulling further ahead. 17% unique find rate vs Stella 13% vs Vega 4%. Nova is the most thorough reviewer by a significant margin.
