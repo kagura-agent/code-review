@@ -1603,5 +1603,13 @@
     "reviewed_at": "2026-06-13T10:59+08:00",
     "status": "open",
     "ground_truth": null
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 343,
+    "reviewed_at": "2026-06-13T11:10+08:00",
+    "status": "open",
+    "ground_truth": null
   }
 ]
