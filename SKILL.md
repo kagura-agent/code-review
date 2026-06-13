@@ -11,7 +11,7 @@ Trigger: any message implying "review this PR" + a PR reference (link, `owner/re
 
 - 🌟 Stella — `default-llm-sg/gpt-5.5`
 - 🌠 Nova — `default-llm-sg/claude-opus-4.7`
-- 💫 Vega — `default-llm-sg/gemini-3.1-pro-preview`
+- 💫 Vega — `default-llm-sg/gemini-2.5-pro`
 
 ## Modes
 

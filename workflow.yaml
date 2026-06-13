@@ -58,7 +58,7 @@ nodes:
       Spawn 3 independent reviewer subagents in parallel (sessions_spawn, mode: "run", runTimeoutSeconds: 0):
       - 🌟 Stella: model `default-llm-sg/gpt-5.5`
       - 🌠 Nova: model `default-llm-sg/claude-opus-4.7`
-      - 💫 Vega: model `default-llm-sg/gemini-3.1-pro-preview`
+      - 💫 Vega: model `default-llm-sg/gemini-2.5-pro`
       Each gets the review standard + PR details + review plan (if generated).
       Include the plan output so reviewers know which files are high/medium/low risk.
       Do NOT pre-feed the diff.
