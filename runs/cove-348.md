@@ -51,6 +51,32 @@
 ### Assessment Note
 - Vega's R2 was a significant miss — two reviewers found a shell injection vulnerability that Vega completely overlooked. This matches R1 pattern (Vega needed retry). Gemini 3.1 Pro reliability/thoroughness needs monitoring.
 
+## Round 3 (2026-06-14)
+
+### Reviewers
+- 🌟 Stella (GPT-5.5): ❌ Failed (2 attempts — garbled output, no review file)
+- 🌠 Nova (Claude Opus 4.7): ❌ Major Issues
+- 💫 Vega (Gemini 3.1 Pro): ❌ Major Issues
+
+### R2 Fix Verification
+- CI webhook shell injection: ✅ Fixed (env + jq)
+- OAuth given_name validation: ✅ Fixed
+- OAuth re-login COALESCE: ❌ REGRESSION — re-introduced the R1 bug
+
+### Key Finding
+- **COALESCE regression**: R3 added `COALESCE(global_name, ?)` back to existing-user OAuth UPDATE, re-introducing the exact R1 concern (user-cleared names overwritten on re-login). R2 had fixed this by not touching global_name on re-login.
+- Both Nova and Vega caught this independently.
+
+### Reviewer Performance
+- **Stella**: GPT-5.5 failed twice — first attempt garbled output, second attempt reasoning dump with no review file. Reliability concern for R3.
+- **Nova**: Excellent again. Found COALESCE regression, new given_name length issue, detailed R2 status tracking. Most thorough.
+- **Vega**: Caught COALESCE regression + mention collision + optimistic msg. Redemption from R2 miss.
+
+### Assessment Notes
+- Stella (GPT-5.5) reliability degrading across rounds: R1 OK, R2 OK, R3 failed twice
+- Vega (Gemini 3.1 Pro) improving: R1 needed retry, R2 missed CI injection, R3 caught regression
+- Nova (Claude Opus 4.7) consistently strongest reviewer across all 3 rounds
+
 ## Pending
-- Awaiting CI webhook fix
-- May need Round 3 review
+- Awaiting COALESCE regression fix
+- May need Round 4 review
