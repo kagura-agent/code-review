@@ -1681,5 +1681,18 @@
     "reviewers": 3,
     "rounds": 3,
     "notes": "R1: 4 criticals (NEW line unreachable, null lastReadId, banner persistence, Mark as Read). R2: O(N²) regression (all 3). R3: 2/3 Ready (Stella over-scoped stale cache). Merged 2026-06-13T10:46Z."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 348,
+    "reviewed_at": "2026-06-14T08:15+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "needs-changes",
+    "reviewers": 3,
+    "rounds": 2,
+    "notes": "R1: toUser() drops global_name, empty string normalization, control char validation, OAuth COALESCE semantics, missing tests. Author pushed fix commit c1e150d6 after R1 review — may need R2. R2: CI webhook shell-injection (Stella+Nova), display-name feature ready but CI blocks. Vega missed injection.",
+    "last_checked": "2026-06-14T08:32+08:00"
   }
 ]
