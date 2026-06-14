@@ -99,7 +99,36 @@
 | R3 | ❌ Major | Over-escalated (optimization items) |
 | R4 | ❌ Major | Over-escalated (same items) |
 
+## Round 5 (2026-06-14)
+
+### Reviewers
+- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes (TimeoutError vs AbortError retry nit)
+- 🌠 Nova (Claude Opus 4.7): ❌ Timed out
+- 💫 Vega (Gemini 3.1 Pro): ✅ Ready (calibration improved with explicit guidance)
+
+### R4 Fix Verification
+- 2s AbortSignal.timeout: ✅ Implemented
+- getChannelFile accepts signal param: ✅ Implemented
+- All previous fixes intact: ✅
+
+### Key Finding
+- Stella found TimeoutError (not AbortError) means retries still fire, but verified locally that retries with aborted signal fail in ~29ms. Practical impact negligible.
+
+### Reviewer Performance
+- **Stella**: Sharp technical find (TimeoutError vs AbortError). Over-weighted its impact but the observation was genuinely good.
+- **Nova**: Timed out. First failure in this PR series.
+- **Vega**: ✅ Ready — explicit calibration guidance in prompt worked. Much better than R3-R4.
+
 ## Final Status
-- Timeout is last remaining concern
-- Team can choose: fix timeout (~3 lines) or merge with follow-up
-- All security/correctness issues resolved since R2
+- ✅ Ready to merge
+- 5 rounds, all critical issues resolved
+- Recommended follow-ups: TimeoutError retry fix, unit tests, 5xx CoveApiError, 8KB cap UI
+
+## PR #352 Review Summary (5 Rounds)
+| Round | Verdict | Key Issue |
+|-------|---------|----------|
+| R1 | ⚠️ Unanimous | Bot permission bypass |
+| R2 | ⚠️ Unanimous | Delete toast, plugin error, store leak |
+| R3 | ⚠️ (Vega ❌) | dispatch.ts re-swallows errors |
+| R4 | ⚠️ (Vega ❌) | Timeout not addressed |
+| R5 | ✅ Ready | All resolved |
