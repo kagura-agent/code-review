@@ -1689,10 +1689,10 @@
     "reviewed_at": "2026-06-14T08:15+08:00",
     "status": "open",
     "ground_truth": null,
-    "verdict": "needs-changes",
+    "verdict": "ready",
     "reviewers": 3,
-    "rounds": 3,
-    "notes": "R1: toUser() drops global_name, empty string normalization, control char validation, OAuth COALESCE semantics, missing tests. Author pushed fix commit c1e150d6 after R1 review — may need R2. R2: CI webhook shell-injection (Stella+Nova), display-name feature ready but CI blocks. Vega missed injection. R3: COALESCE regression (R1 bug re-introduced). CI+OAuth validation fixed. Stella failed 2x.",
+    "rounds": 4,
+    "notes": "R1: toUser() drops global_name, empty string normalization, control char validation, OAuth COALESCE semantics, missing tests. Author pushed fix commit c1e150d6 after R1 review — may need R2. R2: CI webhook shell-injection (Stella+Nova), display-name feature ready but CI blocks. Vega missed injection. R3: COALESCE regression (R1 bug re-introduced). CI+OAuth validation fixed. Stella failed 2x. R4: All blockers resolved. Stella ⚠️ Nova ✅ Vega ❌(test only). Overall: Ready.",
     "last_checked": "2026-06-14T08:32+08:00"
   }
 ]
