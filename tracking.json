@@ -1723,7 +1723,7 @@
     "ground_truth": null,
     "verdict": "ready",
     "reviewers": 3,
-    "rounds": 5,
-    "notes": "R1: Bot permission bypass (Stella+Nova), content_type no max length, silent UI errors, perf concern. R2: R1 criticals fixed. Remaining: delete toast, plugin error log, store channel leak. R3: Delete toast+store leak fixed. P1 dispatch gap remains. Vega over-escalated. R4: CoveApiError+logging fixed. Timeout+tests remain. Vega over-escalated again. R5: Timeout fixed. Stella found TimeoutError nit (negligible impact). Nova timed out. Vega ✅ (calibration improved). Overall: Ready."
+    "rounds": 6,
+    "notes": "R1: Bot permission bypass (Stella+Nova), content_type no max length, silent UI errors, perf concern. R2: R1 criticals fixed. Remaining: delete toast, plugin error log, store channel leak. R3: Delete toast+store leak fixed. P1 dispatch gap remains. Vega over-escalated. R4: CoveApiError+logging fixed. Timeout+tests remain. Vega over-escalated again. R5: Timeout fixed. Stella found TimeoutError nit (negligible impact). Nova timed out. Vega ✅ (calibration improved). Overall: Ready. R6: New features (Monaco, cove.md card, mobile, UntrustedStructuredContext). Nova+Vega ✅, Stella ⚠️ (CDN). Overall Ready."
   }
 ]

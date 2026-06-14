@@ -124,11 +124,34 @@
 - 5 rounds, all critical issues resolved
 - Recommended follow-ups: TimeoutError retry fix, unit tests, 5xx CoveApiError, 8KB cap UI
 
-## PR #352 Review Summary (5 Rounds)
+## Round 6 (2026-06-14)
+
+### Reviewers
+- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes (Monaco CDN + TimeoutError)
+- 🌠 Nova (Claude Opus 4.7): ✅ Ready (most thorough, production-verified UntrustedStructuredContext)
+- 💫 Vega (Gemini 3.1 Pro): ✅ Ready (failed run but wrote file; calibration good)
+
+### New Features Reviewed
+- Monaco editor: lazy-loaded, CDN dependency flagged (Stella + Nova)
+- Guided cove.md creation: clean UX, 3 RTT optimization noted
+- Mobile sidebar: backdrop pattern correct
+- UntrustedStructuredContext: correct security boundary, production-verified
+
+### Reviewer Performance
+- **Nova**: Exceptional R6 review — covered all new features in depth, identified CDN issue, noted 5xx CoveApiError gap, verified previous fixes
+- **Stella**: Found same CDN issue. Kept pushing TimeoutError (valid but negligible impact). Ran all tests locally.
+- **Vega**: Failed run but wrote file before termination. Short review but correctly ✅. Calibration improved.
+
+## PR #352 Final Summary (6 Rounds)
 | Round | Verdict | Key Issue |
 |-------|---------|----------|
 | R1 | ⚠️ Unanimous | Bot permission bypass |
 | R2 | ⚠️ Unanimous | Delete toast, plugin error, store leak |
 | R3 | ⚠️ (Vega ❌) | dispatch.ts re-swallows errors |
 | R4 | ⚠️ (Vega ❌) | Timeout not addressed |
-| R5 | ✅ Ready | All resolved |
+| R5 | ✅ Ready | 2s timeout implemented |
+| R6 | ✅ Ready | New features (Monaco, cove.md card, mobile, UntrustedStructuredContext) |
+
+## Final Status
+- ✅ Ready to merge after 6 rounds
+- Follow-ups: Monaco self-hosting, theme, files array flash, 8KB cap UI, TimeoutError, 5xx CoveApiError
