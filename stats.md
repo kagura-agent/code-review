@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-14 15:04 (Asia/Shanghai)_
+_Last updated: 2026-06-14 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 174 | 169/174 (97%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Last 80+ non-#348 rounds: clean |
-| 🌠 Nova | claude-opus-4.7 | 175 | 175/175 (100%) → | Rock solid. No failures ever |
-| 💫 Vega | gemini-3.1-pro-preview | 174 | 161/174 (93%) ↓ | 13 failures total. Recent: #294 R1 crash, #294 R4 timeout, #294 R5 stale, #316 R5 timeout, #322 R1 timeout, #337 R2 no output, #348 R1 retry, #348 R2 missed CI injection (Ready when shell-injection existed), #348 R4 retry+over-escalated. **9 issues in last 22 PRs — accelerating decline** |
+| 🌟 Stella | gpt-5.5 | 180 | 175/180 (97%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. |
+| 🌠 Nova | claude-opus-4.7 | 181 | 180/181 (99%) → | First failure ever: #352 R5 timeout. 99% across 181 rounds remains exceptional. |
+| 💫 Vega | gemini-3.1-pro-preview | 180 | 162/180 (90%) ↓ | 18 issues total. Recent: #352 R1 retry, #352 R6 failed-but-wrote. R3-R4 calibration swings. **Pattern: reliability degrades on long multi-round PRs** |
 
 ## Dimension Strengths (per reviewer)
 
@@ -17,7 +17,7 @@ _Last updated: 2026-06-14 15:04 (Asia/Shanghai)_
 |-----------|----------|----------|
 | DB/Migration | ⭐⭐⭐ | SQLite ALTER TABLE (#168), migration ordering (#144), FK pragma-in-transaction (#178 R1 — reproduced locally), FK safety (#174), migration seq overflow (#202 R1) |
 | Build Verification | ⭐⭐⭐ | Only reviewer who runs `pnpm -r build` — caught tsc failure (#165 R1), verified tests every round. #255: verified 152 server + 38 plugin tests. #261: verified server + client build |
-| Security (Auth) | ⭐⭐⭐ | Ghost presence (#167), presences membership (#168), stale guildIds (#179 R1), snowflake-as-auth-token (#202 R1), user deletion stale sessions (#179 R3) |
+| Security (Auth) | ⭐⭐⭐ | Ghost presence (#167), presences membership (#168), stale guildIds (#179 R1), snowflake-as-auth-token (#202 R1), bot permission bypass (#352 R1) |
 | Async/Concurrency | ⭐⭐ | Async handler ordering race (#190 R5), queued side-effect race (#190 R4), auto-ack race (#192 R1) |
 | Testing Gaps | ⭐⭐⭐ | Ack endpoint test coverage (#192 R1), fake test detection (#178 R2), product-impact of .catch swallowing (#192 R1) |
 | Accessibility/A11y | ⭐⭐ | Focus ring WCAG violation (#191 R2), high-contrast mode (#191 R3), send button aria-label (#191 R3) |
@@ -28,19 +28,20 @@ _Last updated: 2026-06-14 15:04 (Asia/Shanghai)_
 | Session/Auth Lifecycle | ⭐⭐⭐ | Cookie reissue gap (#264 R3), OAuth non-atomic (#264 R4), WS session lifetime (#264 R5) |
 | React Hooks Hygiene | ⭐⭐⭐ | Ref mutation during render (#278 R2, #278 R4), scrollContainerRef read during render |
 | Cross-Module Verification | ⭐⭐⭐ | guild_id payload mismatch (#327 R5 — traced through 3 source files across 2 packages) |
-| State Lifecycle | ⭐⭐⭐ | prepend-triggers-scroll interaction (#330 R1), stuck spinner on channel switch (#330 R3), guild scoping leak in mentions (#337 R1), edit path missing resolveMentions (#337 R1) |
+| State Lifecycle | ⭐⭐⭐ | prepend-triggers-scroll interaction (#330 R1), stuck spinner on channel switch (#330 R3), guild scoping leak in mentions (#337 R1), edit path missing resolveMentions (#337 R1), files array flash (#352 R3) |
 | Test Requirements | ⭐⭐⭐ | Most persistent on negative auth tests (#316 R4), delete confirmation (#331 R1), retry loses reply (#335 R1) |
-| Edge Case Reasoning | ⭐⭐ | **NEW: Stale cached messages freeze unread computation (#346 R3 — valid but over-scoped), banner dismissal + suppressed scroll events (#346 R2), server-side auth scope analysis (#343 R1)** |
-| Cross-Round Tracking | ⭐⭐⭐ | **NEW: toUser() propagation gap (#348 R1 — unique find), mention key collision by display name (#348 R2), CI shell injection (#348 R2 — co-found with Nova)** |
+| Edge Case Reasoning | ⭐⭐ | Stale cached messages freeze unread computation (#346 R3 — valid but over-scoped), banner dismissal + suppressed scroll events (#346 R2), server-side auth scope analysis (#343 R1) |
+| Cross-Round Tracking | ⭐⭐⭐ | toUser() propagation gap (#348 R1 — unique find), mention key collision by display name (#348 R2), CI shell injection (#348 R2 — co-found with Nova) |
+| Runtime Error Analysis | ⭐⭐ | **NEW: TimeoutError vs AbortError semantics (#352 R5 — unique find, verified locally). Rate-limit bucket gap (#352 R2). GET/DELETE filename validation (#352 R1).** |
 
 **Stella's superpower:** Runs actual builds + reproduces bugs locally. Catches things pure code reading misses. Deepest lifecycle analysis. Most persistent on escalation rules. Cross-module verification. State lifecycle reasoning.
-**Stella's weakness:** Sometimes over-scopes (flags out-of-PR architectural concerns as blocking). Occasionally over-strict on severity. First multi-round failure in #348 R3 (GPT-5.5 garbled output 2x) — monitoring.
+**Stella's weakness:** Sometimes over-scopes (flags out-of-PR architectural concerns as blocking). Occasionally over-strict on severity. #348 R3 multi-round failure (GPT-5.5 garbled output 2x) was single incident, not repeated in #352.
 
 ### 🌠 Nova (Claude Opus 4.7)
 | Dimension | Strength | Evidence |
 |-----------|----------|----------|
 | API Design | ⭐⭐⭐ | Breaking changes (#175), API compatibility, positional arg drift (#168), topic nullability (#174) |
-| Security | ⭐⭐⭐ | IDOR (#168 R3), cross-guild leak (#143), typing indicator leak (#190 R1), snowflake-as-auth-token (#202 R1) |
+| Security | ⭐⭐⭐ | IDOR (#168 R3), cross-guild leak (#143), typing indicator leak (#190 R1), snowflake-as-auth-token (#202 R1), bot permission bypass (#352 R1) |
 | Architecture | ⭐⭐⭐ | Timer leak (#176 R2), event model verification (#176 R1), self-broadcast lifecycle (#179 R2), READY payload growth (#192 R1) |
 | Async/Concurrency | ⭐⭐⭐ | Queued side-effect race trace (#190 R5), handler ordering (#190 R6), ack cursor monotonicity race (#192 R2) |
 | Severity Calibration | ⭐⭐⭐ | Most accurately calibrates critical vs suggestion. Rarely over-flags. Best tiebreaker when others disagree |
@@ -50,11 +51,12 @@ _Last updated: 2026-06-14 15:04 (Asia/Shanghai)_
 | Session TTL/Auth | ⭐⭐⭐ | Non-sliding session design flaw (#264 R2), bot footgun (#264 R4), backfill hardcode (#264 R4) |
 | Security Model Design | ⭐⭐⭐ | Token exfiltration (#294 R1 — unique), webhook permission model (#294 R1), READY payload leak (#316 R2), CHANNEL_CREATE unreachable (#316 R3) |
 | UX-Level Analysis | ⭐⭐⭐ | spinner scroll jolt (#330 R2 — unique), pendingPrependRestoreRef leak (#330 R3 — unique), token redaction (#331 R1), reply state cleanup (#335 R1), mention count cap (#337 R1), self-mention highlight (#339 R1), mentionMapRef channel-switch (#339 R1), 8 unique UX/arch findings (#343 R1) |
-| Feature Correctness | ⭐⭐⭐ | **NEW: "Mark as Read" doesn't actually ack (#346 R1 — unique critical), unread count lies (#346 R2 — unique), pill positioning (#346 R1-R2 — escalated), "+" suffix disappears (#346 R3 — unique low-pri). Most thorough per-round analysis across all 3 rounds.** |
-| Regression Detection | ⭐⭐⭐ | **NEW: OAuth COALESCE regression in #348 R3 — caught R2 re-introducing R1 bug. CI shell injection (#348 R2). given_name length cap (#348 R3 — unique). Ran all 246 tests locally in R4. Consistently strongest across all 4 rounds.** |
+| Feature Correctness | ⭐⭐⭐ | "Mark as Read" doesn't actually ack (#346 R1 — unique critical), unread count lies (#346 R2 — unique), pill positioning (#346 R1-R2 — escalated), "+" suffix disappears (#346 R3 — unique low-pri) |
+| Regression Detection | ⭐⭐⭐ | OAuth COALESCE regression in #348 R3 — caught R2 re-introducing R1 bug. CI shell injection (#348 R2). given_name length cap (#348 R3 — unique). Ran all 246 tests locally in R4. |
+| Plugin/Integration Analysis | ⭐⭐⭐ | **NEW: dispatch.ts catch-all re-swallow defeats rest-client fix (#352 R3 — unique). Regex status matching fragile (#352 R3 — unique). 30s×3 timeout on hot dispatch path (#352 R3). Size cap asymmetry 100KB/8KB (#352 R1 — unique). UntrustedStructuredContext production verification (#352 R6). 5xx CoveApiError inconsistency (#352 R4). UTF-16 vs byte measurement (#352 R1 — unique).** |
 
-**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Zero false positives across 178 rounds. Strongest on API compatibility, security model design, async lifecycle, UX-level analysis, feature correctness, and regression detection. #343 (8 unique findings), #346 (6 unique), and #348 (strongest all 4 rounds) confirm continued dominance.
-**Nova's weakness:** None significant. Very occasionally over-cautious (e.g. #330 R5 — ⚠️ when .finally() guarantees re-render).
+**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. **One false positive across 181 rounds (0.6% FP rate)**. Strongest on API compatibility, security model design, async lifecycle, UX-level analysis, feature correctness, regression detection, and plugin integration analysis. #352 R3's dispatch re-swallow find was the most impactful unique of the PR — without it, the rest-client fix would have been silently useless.
+**Nova's weakness:** First timeout ever (#352 R5). Very occasionally over-cautious (e.g. #330 R5 — ⚠️ when .finally() guarantees re-render). Overall the most reliable and highest-signal reviewer.
 
 ### 💫 Vega (Gemini 3.1 Pro)
 | Dimension | Strength | Evidence |
@@ -66,68 +68,79 @@ _Last updated: 2026-06-14 15:04 (Asia/Shanghai)_
 | Runtime Error Detection | ⭐⭐⭐ | 204 JSON parsing retry storm (#255 R2 — star find) |
 | Session TTL Edge Cases | ⭐⭐⭐ | Sliding threshold math bug (#264 R3 — unique), stale expires_at (#264 R5) |
 | Framework-Level Analysis | ⭐⭐ | React 18 batching breaks scroll-restore (#330 R1 — star quality find with concrete flushSync fix) |
-| Performance Regression | ⭐⭐ | **NEW: O(N²) render regression (#346 R2 — all 3 found it, but Vega escalated to ❌ Major Issues). Batch message pill counter (#346 R1 — unique). No-scrollbar edge case (#346 R2 — unique)** |
-| OAuth/Auth Edge Cases | ⭐⭐ | **NEW: OAuth COALESCE semantics (#348 R1 — unique find, user-cleared names overwritten). COALESCE regression catch (#348 R3 — co-found with Nova). Redemption arc from R2 miss.** |
+| Performance Regression | ⭐⭐ | O(N²) render regression (#346 R2 — all 3 found it, but Vega escalated to ❌ Major Issues). Batch message pill counter (#346 R1 — unique). No-scrollbar edge case (#346 R2 — unique) |
+| OAuth/Auth Edge Cases | ⭐⭐ | OAuth COALESCE semantics (#348 R1 — unique find, user-cleared names overwritten). COALESCE regression catch (#348 R3 — co-found with Nova). |
 
 **Vega's superpower:** Fast (~1m avg). Capable of star-quality finds when the bug is deterministic/logical (gen ID reuse #190, 204 JSON parsing #255, React 18 batching #330, OAuth COALESCE #348). Cleanest fix suggestions.
-**Vega's weakness:** ⚠️ **Calibration deteriorating significantly.** Three distinct failure patterns emerging:
+**Vega's weakness:** ⚠️ **Calibration continues deteriorating.** Four distinct failure patterns:
 1. **Over-lenient** — approves Ready when real bugs exist: #330 R2 (missed spinner jolt + firstMessageIdRef), #330 R3 (missed stuck spinner), #335 R1 (missed lifecycle issues), #348 R2 (missed CI shell injection — security blind spot)
-2. **Over-strict** — escalates to ❌ when ⚠️ is appropriate: #330 R4, #331 R2 (arg parsing to Critical), #346 R2, #348 R4 (missing tests → ❌ Major)
+2. **Over-strict** — escalates to ❌ when ⚠️ is appropriate: #330 R4, #331 R2 (arg parsing to Critical), #346 R2, #348 R4, **#352 R3-R4 (optimization items to ❌ Major — repeated twice in same PR)**
 3. **Under-verification** — doesn't check whether fixes actually work: #327 R5 (Ready when bridge non-functional), #261 R3 (premature Ready)
-4. **Reliability** — increasing retry/failure rate: 2 retries + 1 complete miss in #348 alone
+4. **Reliability** — increasing retry/failure rate: 2 retries + 1 complete miss in #348; retry R1 + failed-but-wrote R6 in #352
 
-## Unique Find Rate (last 10 PRs: #322 through #346)
+## Unique Find Rate (last 10 PRs: #329 through #352)
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 17 | ~132 | ~13% | → Stable (guild_id #327, stuck spinner #330, retry-loses-reply #335, guild scoping #337, stale cache #346, toUser() propagation #348, mention key collision #348 R2) |
-| 🌠 Nova | 25 | ~132 | ~19% | ↑↑ Strengthening (spinner jolt #330, token redaction #331, reply cleanup #335, 4 unique #339, 8 unique #343, Mark-as-Read ack + unread-count-lies + "+" suffix #346, given_name-length #348 R3) |
-| 💫 Vega | 7 | ~132 | ~5% | ↓↓ Declining sharply (React 18 #330, dangling-autocomplete #339, batch pill counter #346, no-scrollbar #346, OAuth COALESCE #348 R1). **Below 10% threshold for 9+ consecutive periods** |
+| 🌟 Stella | 19 | ~155 | ~12% | → Stable (guild_id #327, stuck spinner #330, retry-loses-reply #335, guild scoping #337, toUser #348, TimeoutError #352, rate-limit #352, filename-validation #352) |
+| 🌠 Nova | 31 | ~155 | ~20% | ↑↑ Widening lead (spinner jolt #330, 4 unique #339, 8 unique #343, Mark-as-Read #346, given_name #348, dispatch re-swallow #352, regex fragile #352, UTF-16 #352, size-cap asymmetry #352) |
+| 💫 Vega | 7 | ~155 | ~5% | ↓↓ Below threshold (React 18 #330, dangling-autocomplete #339, batch pill #346, OAuth COALESCE #348, silent 8KB #352). **Below 10% for 10+ consecutive periods** |
 
 ## Consensus Participation
 
 | Reviewer | Part of 2/3+ consensus | Solo dissent (correct) | Solo dissent (noise) |
 |----------|----------------------|----------------------|---------------------|
-| 🌟 Stella | 87% | 17 (incl. stuck spinner #330 R3, guild_id #327 R5, retry-loses-reply #335 R1, guild scoping #337 R1, webhook-mention #339 R1, stale cache #346 R3, toUser() #348 R1) | 2 (#168 over-scope, #346 R3 over-scoped stale cache) |
-| 🌠 Nova | 93% | 17 (incl. spinner jolt #330 R2, pendingPrependRestore #330 R3, reply cleanup #335 R1, 4 unique #339, Mark-as-Read ack #346 R1, unread count lies #346 R2) | 1 (#330 R5 over-cautious on .finally()) |
-| 💫 Vega | 79% | 10 (gen ID #190, own-message #192, 204 parsing #255, sliding math #264, React 18 #330, dangling-autocomplete #339 R1, batch pill #346 R1, no-scrollbar #346 R2, OAuth COALESCE #348 R1) | 6 (#261 R3 premature Ready, #290 over-flagged, #327 R5 under-flag, #330 R2/R3 over-lenient, #331 R2 over-escalated, #348 R2 missed CI injection) |
+| 🌟 Stella | 87% | 18 (incl. stuck spinner #330 R3, guild_id #327 R5, toUser #348 R1, TimeoutError #352 R5) | 2 (#168 over-scope, #346 R3 over-scoped stale cache) |
+| 🌠 Nova | 93% | 19 (incl. spinner jolt #330, Mark-as-Read #346, dispatch re-swallow #352 R3) | 1 (#330 R5 over-cautious) |
+| 💫 Vega | 77% ↓ | 10 (gen ID #190, 204 parsing #255, React 18 #330, OAuth COALESCE #348) | 8 (#261 R3, #290, #327 R5, #330 R2/R3, #331 R2, #348 R2, #352 R3-R4 over-escalated) |
 
 ## Severity Calibration
 
 | Reviewer | Verdict matches final | Over-flags | Under-flags |
 |----------|----------------------|------------|-------------|
-| 🌟 Stella | 82% | 14% (incl. #339 R2 over-scoped MESSAGE_UPDATE, #346 R3 stale cache) | 4% |
+| 🌟 Stella | 82% | 14% | 4% |
 | 🌠 Nova | 94% | 4% | 2% |
-| 💫 Vega | 70% ↓ | 16% (#290, #191, #330 R4, #331 R2, #346 R2 ❌ over-escalated, #348 R4 over-escalated) | 14% (#261 R3, #327 R5, #330 R2/R3, #335 R1, #348 R2 missed CI injection) |
+| 💫 Vega | 68% ↓ | 18% (#352 R3-R4 added 2 over-escalations) | 14% |
 
 ## False Positive Rate (Critical flagged → later proven non-issue)
 
 | Reviewer | False Positives | Total Criticals | FP Rate |
 |----------|----------------|-----------------|---------|
-| 🌟 Stella | 1 (#168 WS scoping as blocker) | ~40 | 3% |
-| 🌠 Nova | 0 | ~44 | 0% |
-| 💫 Vega | 3 (#168 R2 oversized, #290 pre-existing, #331 R2 arg parsing) | ~34 | 9% |
+| 🌟 Stella | 1 (#168 WS scoping as blocker) | ~42 | 2% |
+| 🌠 Nova | 0 | ~48 | 0% |
+| 💫 Vega | 3 (#168 R2, #290 pre-existing, #331 R2 arg parsing) | ~36 | 8% |
 
 ## Reliability History
 
-| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#346) | Trend |
+| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#352) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 62/65 (95%) | → (1 new failure: #348 R3 2x) |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 69/69 (100%) | → Rock solid |
-| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 64/65 (85%) | ↓ Recent: crash #278 R4, crash #294 R1, timeout #294 R4, stale #294 R5, timeout #316 R5, timeout #322 R1, failed #337 R2, retry #348 R1, missed #348 R2, retry+over-esc #348 R4. 10 issues in 65 recent rounds (85%) |
+| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 68/71 (96%) | → Stable |
+| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 74/75 (99%) | → (first timeout #352 R5, still exceptional) |
+| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 65/71 (92%) | → (R1 retry + R6 failed-but-wrote in #352; R3-R4 calibration issues more concerning than reliability) |
 
 ## Vega Calibration Swing Pattern
 
-**#330 demonstrates a failure mode: calibration swings within a single PR.**
+**Recurring within single PRs — now confirmed across 3 PRs:**
 
+### #330 (5 rounds)
 | Round | Vega Verdict | Correct Verdict | Assessment |
 |-------|-------------|-----------------|------------|
-| R2 | ✅ Ready | ⚠️ Needs Changes | Over-lenient (missed spinner jolt + firstMessageIdRef) |
-| R3 | ✅ Ready | ⚠️ Needs Changes | Over-lenient (missed stuck spinner) |
-| R4 | ❌ Major Issues | ⚠️ Needs Changes | Over-strict (escalated all to Major) |
-| R5 | ✅ Ready | ✅ Ready | Correct (best analysis of the round) |
+| R2 | ✅ Ready | ⚠️ Needs Changes | Over-lenient |
+| R3 | ✅ Ready | ⚠️ Needs Changes | Over-lenient |
+| R4 | ❌ Major Issues | ⚠️ Needs Changes | Over-strict |
+| R5 | ✅ Ready | ✅ Ready | Correct |
 
-**#346 shows the same pattern at PR level:** R2 escalated to ❌ Major Issues (all 3 found O(N²) but Vega was the only one to go ❌). Pattern: Vega either under-detects or over-escalates, rarely in the calibrated middle.
+### #352 (6 rounds)
+| Round | Vega Verdict | Correct Verdict | Assessment |
+|-------|-------------|-----------------|------------|
+| R1 | ⚠️ Needs Changes | ⚠️ Needs Changes | ✅ Correct |
+| R2 | ⚠️ Needs Changes | ⚠️ Needs Changes | ✅ Correct |
+| R3 | ❌ Major Issues | ⚠️ Needs Changes | Over-strict (optimization items) |
+| R4 | ❌ Major Issues | ⚠️ Needs Changes | Over-strict (same items, no learning) |
+| R5 | ✅ Ready | ✅ Ready | ✅ Correct (with explicit calibration prompt) |
+| R6 | ✅ Ready | ✅ Ready | ✅ Correct |
+
+**Key insight from #352:** Vega R3-R4 repeated the same over-escalation pattern — no self-correction between rounds until explicit calibration guidance was added in R5 prompt. When guided, Vega calibrates correctly (R5-R6). Without guidance, it over-escalates or under-detects.
 
 ## Review History
 
@@ -189,39 +202,38 @@ _Last updated: 2026-06-14 15:04 (Asia/Shanghai)_
 | #343 | cove | 2026-06-13 | R1 | ✅ Ready | context-menu-delete, server-auth-pre-existing, a11y |
 | #346 | cove | 2026-06-13 | R1-R3 | ✅ Ready | new-line-unreachable, null-read-cursor, O(N²)-render, mark-as-read-ack |
 | #348 | cove | 2026-06-14 | R1-R4 | ✅ Ready | toUser-propagation, COALESCE-regression, CI-shell-injection |
+| #352 | cove | 2026-06-14 | R1-R6 | ✅ Ready | bot-permission-bypass, dispatch-catch-reswallow, cove-md-timeout, UntrustedStructuredContext |
 
-## Ground Truth Summary (55 merged PRs)
+## Ground Truth Summary (56 merged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 96% — human approved without findings in 53/55 cases. Exceptions: #174 (design questions), #281 (false positive)
-- **Iterative review as quality gate:** In 53/55 merged PRs, our multi-round review was the actual quality gate
+- **Human rubber-stamp rate:** 96% — human approved without findings in 54/56 cases. Exceptions: #174 (design questions), #281 (false positive)
+- **Iterative review as quality gate:** In 54/56 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 2 (#100 verdict too conservative, #281 stale PR description)
-- **Multi-round PRs:** 44/55 merged PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
-- **Total review rounds:** ~191 across 55 merged PRs
+- **Multi-round PRs:** 45/56 merged PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
+- **Total review rounds:** ~197 across 56 merged PRs
 - **False-ready detection:** 3 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega approved Ready while CI injection existed) — self-correcting system working
 - **Escalation protocol validated:** 6 cases — all led to fixes
 
 ## Actionable Notes
 
-1. **🔴 Vega: decision point reached.** Unique find rate **5%** (below 10% threshold for 9+ periods). Reliability **85% recent** (10 failures in 65 rounds). Calibration **70%** with near-equal over-flag and under-flag rates. False positive rate **9%**. #348 added a new failure mode: **missed a CI shell injection vulnerability while approving Ready** (R2). The combination of declining unique finds, declining reliability, erratic calibration swings, and now security blind spots makes Vega the weakest link. **Recommendation:** Try `gemini-2.5-pro` as replacement. Vega still produces occasional star finds (React 18 batching #330, OAuth COALESCE #348) but the signal-to-noise ratio is degrading fast.
+1. **🔴 Vega: decision point overdue.** Unique find rate **5%** (below 10% threshold for 10+ periods). Reliability **92% recent** (improved from last check but calibration is the real issue). Calibration **68%** — worst of all 3. False positive rate **8%**. #352 R3-R4 demonstrated no self-correction between rounds (repeated identical over-escalation). The only thing keeping Vega is occasional star finds, but the signal-to-noise ratio continues degrading. **Recommendation: Replace with `gemini-2.5-pro` on next PR.** If calibration doesn't improve within 5 PRs, consider alternative model entirely.
 
-2. **Vega prompt tuning (if keeping):** Two specific additions could help:
-   - "Before approving Ready, verify the fix is functional by checking the data flow end-to-end, not just that code was added."
-   - "Anchor severity to previous rounds — if R(n-1) had Critical issues, R(n) Ready requires explicit evidence each was resolved."
-   
-3. **#281 stale-description pattern still unaddressed in prompts.** Need to add: "Verify understanding of feature matches actual code, not just PR description."
+2. **Vega calibration prompt already proven effective.** #352 R5-R6 showed that explicit calibration guidance ("anchor severity to functional bugs, not optimization") fixed the over-escalation. **If keeping Vega, add permanent calibration anchoring to the Vega prompt.** This is a workaround, not a fix — the model shouldn't need per-round calibration coaching to produce consistent ratings.
 
-4. **Nova continues zero false positives across 175 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker.
+3. **Nova's first timeout (#352 R5).** Single incident across 181 rounds. Not actionable yet — monitoring. If it recurs, may indicate context length sensitivity on 6+ round PRs.
 
-5. **Stella's edge-case reasoning sometimes over-scopes.** #343 (pre-existing auth) and #346 R3 (stale cache) were valid analysis but wrong to block on. Consider prompt guidance: "Pre-existing issues tracked in separate issues are not blockers for the current PR."
+4. **#281 stale-description pattern still unaddressed in prompts.** Need to add: "Verify understanding of feature matches actual code, not just PR description." Low priority since it hasn't recurred.
 
-6. **Throughput sustained.** 55 merged PRs, ~191 review rounds. Service scaling well. Average 2.7 rounds per PR.
+5. **Nova continues zero false positives across 181 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker. The dispatch re-swallow find in #352 R3 was the most impactful unique of the PR.
 
-7. **Ground truth: human rubber-stamps 96%.** Our iterative review IS the quality gate. This validates the service but means limited external validation of our work.
+6. **Stella stable.** #348 R3 garbled output was single incident, no recurrence in #352 (6 rounds). TimeoutError vs AbortError find in #352 R5 was technically excellent even if low practical impact.
 
-8. **Nova widening gap.** 19% unique find rate vs Stella 13% vs Vega 5%. Nova is the most thorough reviewer by a significant and growing margin. #346-#348 confirmed: consistently the strongest and most calibrated reviewer across every PR.
+7. **Throughput sustained.** 56 merged PRs, ~197 review rounds, 20 days. ~2.8 PRs/day, ~10 reviewer-rounds/day. Service scaling well.
 
-9. **Stella GPT-5.5 first R3+ failure.** #348 R3 failed twice (garbled output). First multi-round failure for Stella. Single incident — monitoring, not actionable yet. If it recurs, may indicate model fatigue on long context.
+8. **Ground truth: human rubber-stamps 96%.** Our iterative review IS the quality gate. This validates the service but means limited external validation of our work. The 4% where human had input (#174 design questions, #281 false positive) actually provided the most useful calibration data.
 
-10. **#348 validated cross-round regression detection.** R3 caught R2 re-introducing the R1 COALESCE bug — system correctly self-policed across rounds. 4-round review caught CI shell injection, OAuth regression, and toUser propagation gap that would have shipped to production.
+9. **Nova widening gap significantly.** 20% unique find rate vs Stella 12% vs Vega 5%. Nova finds ~4× more unique issues than Vega. #352 confirmed the trend: Nova was the only reviewer to identify the dispatch re-swallow gap, regex fragility, and UTF-16 measurement issue.
+
+10. **Multi-round PR pattern emerging.** PRs #352 (6 rounds), #348 (4 rounds), #346 (3 rounds), #330 (5 rounds), #327 (5 rounds) — complex feature PRs consistently need 4+ rounds. Reviewer fatigue may affect Vega most (calibration degrades after R2).
