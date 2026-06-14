@@ -1687,12 +1687,31 @@
     "repo": "cove",
     "pr": 348,
     "reviewed_at": "2026-06-14T08:15+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "needs_changes",
+      "our_verdict_r4": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "toUser-propagation-gap",
+        "empty-string-normalization",
+        "control-char-validation",
+        "oauth-coalesce-regression",
+        "ci-webhook-shell-injection"
+      ],
+      "noise": [],
+      "calibration": "4-round review. R1 caught toUser() propagation (Stella unique), OAuth COALESCE (Vega unique). R2 caught CI shell injection (Stella+Nova; Vega missed). R3 caught COALESCE regression (Nova+Vega; Stella failed 2x). R4 all resolved, test coverage disagreement only. Human approved without comments — iterative review was the quality gate."
+    },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 4,
-    "notes": "R1: toUser() drops global_name, empty string normalization, control char validation, OAuth COALESCE semantics, missing tests. Author pushed fix commit c1e150d6 after R1 review — may need R2. R2: CI webhook shell-injection (Stella+Nova), display-name feature ready but CI blocks. Vega missed injection. R3: COALESCE regression (R1 bug re-introduced). CI+OAuth validation fixed. Stella failed 2x. R4: All blockers resolved. Stella ⚠️ Nova ✅ Vega ❌(test only). Overall: Ready.",
-    "last_checked": "2026-06-14T08:32+08:00"
+    "notes": "R1: toUser() drops global_name, empty string normalization, control char validation, OAuth COALESCE semantics, missing tests. R2: CI webhook shell-injection (Stella+Nova), Vega missed. R3: COALESCE regression (R1 bug re-introduced). Stella failed 2x. R4: All blockers resolved. Merged 2026-06-14T01:49Z.",
+    "last_checked": "2026-06-14T15:04+08:00"
   }
 ]
