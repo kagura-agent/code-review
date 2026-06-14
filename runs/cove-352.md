@@ -51,6 +51,28 @@
 - **Stella**: Found rate-limit gap others missed. Good delete-error catch.
 - **Vega**: Caught state leaks + delete issue. Incorrectly claimed upsert has race conditions (SQLite serializes writes). Shortest review.
 
+## Round 3 (2026-06-14)
+
+### Reviewers
+- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes (files array flash)
+- 🌠 Nova (Claude Opus 4.7): ⚠️ Needs Changes (P1 dispatch gap)
+- 💫 Vega (Gemini 3.1 Pro): ❌ Major Issues (over-escalated optimization items)
+
+### R2 Fix Verification
+- Delete error toast: ✅ Fixed
+- Plugin selective catch: ⚠️ Partial (rest-client OK, dispatch.ts still swallows)
+- Store channel leak: ✅ Fixed
+
+### Key Finding
+- Nova found dispatch.ts outer catch {} defeats the rest-client fix
+- Nova also found regex status matching is fragile (could match filenames like 404.md)
+- Vega over-escalated redundant requests + silent 8KB limit to ❌ Major
+
+### Reviewer Performance
+- **Nova**: Again the strongest. Found the real remaining gap (dispatch swallow + regex + timeout).
+- **Stella**: Found files array not cleared — valid but minor.
+- **Vega**: Over-escalated optimization items to ❌ Major. Calibration issue persists.
+
 ## Pending
-- Awaiting small fixes (delete toast, plugin logging, store reset)
-- Close to merge
+- P1 dispatch logging + typed errors + timeout (~10 lines)
+- Very close to merge
