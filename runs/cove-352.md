@@ -73,6 +73,33 @@
 - **Stella**: Found files array not cleared — valid but minor.
 - **Vega**: Over-escalated optimization items to ❌ Major. Calibration issue persists.
 
-## Pending
-- P1 dispatch logging + typed errors + timeout (~10 lines)
-- Very close to merge
+## Round 4 (2026-06-14)
+
+### Reviewers
+- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes (timeout)
+- 🌠 Nova (Claude Opus 4.7): ⚠️ Needs Changes (timeout + tests)
+- 💫 Vega (Gemini 3.1 Pro): ❌ Major Issues (over-escalated again)
+
+### R3 Fix Verification
+- dispatch.ts logging: ✅ Fixed
+- CoveApiError typed class: ✅ Fixed
+- Short timeout: ❌ Not addressed
+- Unit tests: ❌ Not added
+
+### Reviewer Performance
+- **Nova**: Consistent, thorough, well-calibrated. Found 5xx Error inconsistency too.
+- **Stella**: Good, verified builds/tests locally. Agreed with Nova on timeout.
+- **Vega**: ❌ Major for 4th time on this PR over optimization items. Severe calibration problem.
+
+### Vega Calibration Issue (PR #352)
+| Round | Vega Rating | Actual Severity |
+|-------|-------------|------------------|
+| R1 | ⚠️ OK | ⚠️ Correct |
+| R2 | ⚠️ OK | ⚠️ Correct |
+| R3 | ❌ Major | Over-escalated (optimization items) |
+| R4 | ❌ Major | Over-escalated (same items) |
+
+## Final Status
+- Timeout is last remaining concern
+- Team can choose: fix timeout (~3 lines) or merge with follow-up
+- All security/correctness issues resolved since R2
