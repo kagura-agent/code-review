@@ -1713,5 +1713,17 @@
     "rounds": 4,
     "notes": "R1: toUser() drops global_name, empty string normalization, control char validation, OAuth COALESCE semantics, missing tests. R2: CI webhook shell-injection (Stella+Nova), Vega missed. R3: COALESCE regression (R1 bug re-introduced). Stella failed 2x. R4: All blockers resolved. Merged 2026-06-14T01:49Z.",
     "last_checked": "2026-06-14T15:04+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 352,
+    "reviewed_at": "2026-06-14T15:30+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "needs-changes",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: Bot permission bypass (Stella+Nova), content_type no max length, silent UI errors, perf concern."
   }
 ]
