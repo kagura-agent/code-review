@@ -1723,7 +1723,7 @@
     "ground_truth": null,
     "verdict": "needs-changes",
     "reviewers": 3,
-    "rounds": 1,
-    "notes": "R1: Bot permission bypass (Stella+Nova), content_type no max length, silent UI errors, perf concern."
+    "rounds": 2,
+    "notes": "R1: Bot permission bypass (Stella+Nova), content_type no max length, silent UI errors, perf concern. R2: R1 criticals fixed. Remaining: delete toast, plugin error log, store channel leak."
   }
 ]

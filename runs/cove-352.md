@@ -26,5 +26,31 @@
 - Vega (Gemini 3.1 Pro) failed on first spawn again — consistent pattern across PRs
 - All 3 agreed on verdict — clean consensus round
 
+## Round 2 (2026-06-14)
+
+### Reviewers
+- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes
+- 🌠 Nova (Claude Opus 4.7): ⚠️ Needs Changes (minor)
+- 💫 Vega (Gemini 3.1 Pro): ⚠️ Needs Changes
+
+### R1 Fix Verification
+- Bot permission bypass: ✅ Fixed (all 4 routes + 6 tests)
+- content_type cap: ✅ Fixed
+- filename validation: ✅ Fixed
+- Buffer.byteLength: ✅ Fixed
+- UI errors: ⚠️ Partial (save/create yes, delete no)
+
+### Remaining
+- Delete error toast missing (all 3)
+- Plugin error swallowing escalated to 🟠 (Nova)
+- Store state leaks across channels escalated to 🟠 (Nova + Vega)
+- Various 🟡 nits deferred
+
+### Reviewer Performance
+- **Nova**: Most thorough again. Correctly downgraded U1 (double-fetch was actually fine). Detailed escalation reasoning.
+- **Stella**: Found rate-limit gap others missed. Good delete-error catch.
+- **Vega**: Caught state leaks + delete issue. Incorrectly claimed upsert has race conditions (SQLite serializes writes). Shortest review.
+
 ## Pending
-- Awaiting PR author's response
+- Awaiting small fixes (delete toast, plugin logging, store reset)
+- Close to merge
