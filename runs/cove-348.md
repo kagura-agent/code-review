@@ -77,6 +77,37 @@
 - Vega (Gemini 3.1 Pro) improving: R1 needed retry, R2 missed CI injection, R3 caught regression
 - Nova (Claude Opus 4.7) consistently strongest reviewer across all 3 rounds
 
-## Pending
-- Awaiting COALESCE regression fix
-- May need Round 4 review
+## Round 4 (2026-06-14)
+
+### Reviewers
+- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes (wants explicit regression tests)
+- 🌠 Nova (Claude Opus 4.7): ✅ Ready (most thorough, convincing analysis)
+- 💫 Vega (Gemini 3.1 Pro): ❌ Major Issues (test escalation only, no functional concerns)
+
+### R3 Blocker Resolution
+- COALESCE regression: ✅ Fixed (global_name removed from UPDATE entirely)
+- given_name length: ✅ Fixed (80-char cap)
+- Optimistic self-message: ✅ Fixed
+- findByToken cleanup: ✅ Fixed
+
+### Key Discussion
+- Disagreement was purely about test coverage, not functional issues
+- Nova argued structural fix (column not in UPDATE) is strongest defense; existing tests adequate
+- Stella/Vega wanted explicit regression tests
+- Consolidated verdict: ✅ Ready — all functional blockers resolved across 4 rounds
+
+### Reviewer Performance
+- **Stella**: GPT-5.5 recovered from R3 failures. Found #339 is a merged PR not a tracking issue. Good detail but over-scoped.
+- **Nova**: Consistently strongest. Ran all 246 tests locally. Most detailed and calibrated analysis across all 4 rounds.
+- **Vega**: Failed first attempt (11s), succeeded on retry. Over-escalated missing tests to ❌ Major (Vega pattern: either misses things or over-escalates).
+
+### Reliability Across All Rounds
+| Reviewer | R1 | R2 | R3 | R4 |
+|----------|----|----|----|----|  
+| Stella (GPT-5.5) | ✅ OK | ✅ OK | ❌ Failed 2x | ✅ OK |
+| Nova (Opus 4.7) | ✅ Best | ✅ Best | ✅ Best | ✅ Best |
+| Vega (Gemini 3.1) | ❌ Failed 1x | ❌ Missed CI injection | ✅ Caught regression | ⚠️ Failed 1x, over-escalated |
+
+## Final Status
+- ✅ Ready to merge
+- Recommended follow-up: OAuth re-login test, resolveMentions assertion, mention collision tracking issue, display name trim
