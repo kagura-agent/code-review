@@ -37,6 +37,16 @@
 - **Stella**: Consistent, verified fixes, focused on test gap.
 - **Vega**: Correct ✅, concise.
 
+## Ground Truth (2026-06-15)
+- **Human reviewer:** daniyuu → approved without findings
+- **Our verdict R1:** ⚠️ Needs Changes → **R2:** ✅ Ready
+- **Accuracy:** correct
+- **Blind spots:** none
+- **Effective dimensions:** cross-channel-sidebar-corruption, unbounded-cache-lru
+- **Noise:** none
+- **Calibration:** R1 caught real cross-channel bug (Stella unique). R2 confirmed both fixes. Human approved without comments.
+- **Vega assessment:** R1 failed run but wrote file; approved Ready when cross-channel bug existed — under-detection pattern continues.
+
 ## Final Status
-- ✅ Ready to merge (both R1 blockers fixed)
+- ✅ Merged 2026-06-14T14:52Z (daniyuu approved)
 - Follow-ups: tests, cove.md constant, no-op PUT, cache factory
