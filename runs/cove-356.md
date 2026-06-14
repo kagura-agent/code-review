@@ -20,5 +20,23 @@
 - **Nova**: Most thorough. Detailed suggestions (race, dedup, no-op). Good test recommendations.
 - **Vega**: Failed run but wrote file. Short review, missed the cross-channel bug. ✅ rating questionable.
 
-## Pending
-- Awaiting cross-channel fix + tests
+## Round 2 (2026-06-14)
+
+### Reviewers
+- 🌟 Stella (GPT-5.5): ⚠️ Needs Changes (tests)
+- 🌠 Nova (Claude Opus 4.7): ⚠️ Needs Changes (soft, almost Ready)
+- 💫 Vega (Gemini 3.1 Pro): ✅ Ready
+
+### R1 Fix Verification
+- Cross-channel sidebar: ✅ Fixed (all 3 agree)
+- Cache LRU: ✅ Fixed (all 3 agree)
+- Tests: ❌ Not added
+
+### Reviewer Performance
+- **Nova**: Thorough again. Detailed analysis of cache eviction, new issues identified.
+- **Stella**: Consistent, verified fixes, focused on test gap.
+- **Vega**: Correct ✅, concise.
+
+## Final Status
+- ✅ Ready to merge (both R1 blockers fixed)
+- Follow-ups: tests, cove.md constant, no-op PUT, cache factory
