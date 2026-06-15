@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-15 14:29 (Asia/Shanghai)_
+_Last updated: 2026-06-15 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 186 | 181/186 (97%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. #357 R1-R4 all clean. |
-| 🌠 Nova | claude-opus-4.7 | 187 | 186/187 (99%) → | First failure ever: #352 R5 timeout. 99% across 187 rounds remains exceptional. #357 R1-R4 all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 186 | 167/186 (90%) ↓ | 19 issues total pre-#357. #357 R1-R4 all produced output. R2 over-escalated (❌ vs ⚠️), R4 over-held (⚠️ vs ✅). **Model switched to gemini-2.5-pro on 2026-06-15. #357 is first PR with new model — calibration gap persists.** |
+| 🌟 Stella | gpt-5.5 | 191 | 186/191 (97%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. #357 R1-R5 all clean. |
+| 🌠 Nova | claude-opus-4.7 | 192 | 191/192 (99%) → | First failure ever: #352 R5 timeout. 99% across 192 rounds remains exceptional. #357 R1-R5 all clean. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 191 | 172/191 (90%) → | 19 pre-#357 issues + #357 R1-R5 all clean output. R2 over-escalated (❌ vs ⚠️), R4 over-held (⚠️ vs ✅). **Model switched to gemini-2.5-pro on 2026-06-15. #357 is first PR with new model — reliability improved, calibration gap persists.** |
 
 ## Dimension Strengths (per reviewer)
 
@@ -82,17 +82,17 @@ _Last updated: 2026-06-15 14:29 (Asia/Shanghai)_
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 21 | ~175 | ~12% | → Stable. #357: webhook bypass (unique). Consistent edge-case finder. |
-| 🌠 Nova | 33 | ~175 | ~19% | ↑↑ Widening lead. #357: THREAD_UPDATE broadcast gap (unique). Continues dominant unique-find performance. |
-| 💫 Vega | 7 | ~175 | ~4% | ↓↓ Still below 10% threshold. #357 R1-R4: no unique finds (0/14 blockers). **Below 10% for 12+ consecutive periods. First PR with gemini-2.5-pro shows no improvement in unique finds yet.** |
+| 🌟 Stella | 22 | ~185 | ~12% | → Stable. #357: webhook bypass (R4 unique), migration idempotency (R5 unique, likely FP). Consistent edge-case finder. |
+| 🌠 Nova | 35 | ~185 | ~19% | ↑↑ Widening lead. #357: THREAD_DELETE dead code (R2 unique), PATCH archive permission gate (R3 unique), THREAD_UPDATE broadcast gap (R4 unique), N+1 enrichment + menu/UX (R5 unique). Dominant. |
+| 💫 Vega | 8 | ~185 | ~4% | ↓↓ Still below 10% threshold. #357 R1-R5: 1 unique find (owner_id NULL edge case — minor). **Below 10% for 13+ consecutive periods. First PR with gemini-2.5-pro: reliability up, unique finds still low.** |
 
 ## Consensus Participation
 
 | Reviewer | Part of 2/3+ consensus | Solo dissent (correct) | Solo dissent (noise) |
 |----------|----------------------|----------------------|---------------------|
-| 🌟 Stella | 87% | 20 (incl. stuck spinner #330 R3, guild_id #327 R5, toUser #348 R1, TimeoutError #352 R5, cross-channel-sidebar #356 R1, webhook-bypass #357 R4) | 2 (#168 over-scope, #346 R3 over-scoped stale cache) |
-| 🌠 Nova | 93% | 20 (incl. spinner jolt #330, Mark-as-Read #346, dispatch re-swallow #352 R3, THREAD_UPDATE #357 R4) | 1 (#330 R5 over-cautious) |
-| 💫 Vega | 75% ↓ | 10 (gen ID #190, 204 parsing #255, React 18 #330, OAuth COALESCE #348) | 10 (#261 R3, #290, #327 R5, #330 R2/R3, #331 R2, #348 R2, #352 R3-R4, #356 R1 under-detected, **#357 R4 over-held**) |
+| 🌟 Stella | 87% | 21 (incl. stuck spinner #330 R3, guild_id #327 R5, toUser #348 R1, TimeoutError #352 R5, cross-channel-sidebar #356 R1, webhook-bypass #357 R4, migration-concern #357 R5) | 2 (#168 over-scope, #346 R3 over-scoped stale cache) + 1 likely FP (#357 R5 migration) |
+| 🌠 Nova | 93% | 22 (incl. spinner jolt #330, Mark-as-Read #346, dispatch re-swallow #352 R3, THREAD_DELETE-dead-code #357 R2, PATCH-archive-permission #357 R3, THREAD_UPDATE-broadcast #357 R4) | 1 (#330 R5 over-cautious) |
+| 💫 Vega | 74% ↓ | 11 (gen ID #190, 204 parsing #255, React 18 #330, OAuth COALESCE #348, owner_id NULL #357 R4) | 11 (#261 R3, #290, #327 R5, #330 R2/R3, #331 R2, #348 R2, #352 R3-R4, #356 R1 under-detected, **#357 R2 over-escalated, #357 R4 over-held**) |
 
 ## Severity Calibration
 
@@ -100,23 +100,23 @@ _Last updated: 2026-06-15 14:29 (Asia/Shanghai)_
 |----------|----------------------|------------|-------------|
 | 🌟 Stella | 82% | 14% | 4% |
 | 🌠 Nova | 94% | 4% | 2% |
-| 💫 Vega | 66% ↓ | 19% | 15% (#357 R2 over-escalated, R4 over-held vs 2/3 Ready) |
+| 💫 Vega | 65% ↓ | 20% | 15% (#357 R2 over-escalated ❌, R3 under-escalated, R4 over-held ⚠️ vs 2/3 ✅) |
 
 ## False Positive Rate (Critical flagged → later proven non-issue)
 
 | Reviewer | False Positives | Total Criticals | FP Rate |
 |----------|----------------|-----------------|---------|
-| 🌟 Stella | 1 (#168 WS scoping as blocker) | ~42 | 2% |
-| 🌠 Nova | 0 | ~48 | 0% |
-| 💫 Vega | 3 (#168 R2, #290 pre-existing, #331 R2 arg parsing) | ~37 | 8% |
+| 🌟 Stella | 1 (#168 WS scoping as blocker) + 1 likely (#357 R5 migration) | ~44 | 2-5% |
+| 🌠 Nova | 0 | ~51 | 0% |
+| 💫 Vega | 3 (#168 R2, #290 pre-existing, #331 R2 arg parsing) | ~39 | 8% |
 
 ## Reliability History
 
 | Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#357) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 74/77 (96%) | → Stable |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 80/81 (99%) | → (first timeout #352 R5, still exceptional) |
-| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 70/77 (91%) | → Slight uptick (#357 R1-R4 all produced output, but calibration still off) |
+| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 79/82 (96%) | → Stable |
+| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 85/86 (99%) | → (first timeout #352 R5, still exceptional) |
+| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 75/82 (91%) | → Slight uptick (#357 R1-R5 all produced output, but calibration still off) |
 
 ## Vega Calibration Swing Pattern
 
@@ -150,15 +150,16 @@ _Last updated: 2026-06-15 14:29 (Asia/Shanghai)_
 
 **#356 note:** Same under-detection pattern as #330 R2/R3, #335 R1, #348 R2. Vega approved Ready while a real cross-channel corruption bug existed.
 
-### #357 (4 rounds) — first PR with gemini-2.5-pro
+### #357 (5 rounds) — first PR with gemini-2.5-pro
 | Round | Vega Verdict | Correct Verdict | Assessment |
 |-------|-------------|-----------------|------------|
 | R1 | ⚠️ Needs Changes | ⚠️ Needs Changes | ✅ Correct |
 | R2 | ❌ Major Issues | ⚠️ Needs Changes | Over-strict (N+1 + nested threads) |
-| R3 | ⚠️ Needs Changes | ❌ Needs Changes | Under-strict (security leak warranted ❌) |
+| R3 | ⚠️ Needs Changes | ⚠️ Needs Changes | ✅ Correct |
 | R4 | ⚠️ Needs Changes | ✅ Ready | Over-held (owner_id NULL is follow-up tier) |
+| R5 | ✅ Ready | ✅ Ready | ✅ Correct |
 
-**#357 note:** First PR with gemini-2.5-pro. Calibration pattern persists from gemini-3.1-pro: R2 over-escalated, R3 under-escalated, R4 over-held. Model change has not fixed the calibration gap.
+**#357 note:** First PR with gemini-2.5-pro. Reliability improved (5/5 output). Calibration: 3/5 correct, R2 over-escalated, R4 over-held. Pattern persists from gemini-3.1-pro but slightly better (R3 and R5 correct vs previous swings). Model change has marginally improved calibration but not enough.
 
 ## Review History
 
@@ -222,23 +223,23 @@ _Last updated: 2026-06-15 14:29 (Asia/Shanghai)_
 | #348 | cove | 2026-06-14 | R1-R4 | ✅ Ready | toUser-propagation, COALESCE-regression, CI-shell-injection |
 | #352 | cove | 2026-06-14 | R1-R6 | ✅ Ready | bot-permission-bypass, dispatch-catch-reswallow, cove-md-timeout, UntrustedStructuredContext |
 | #356 | cove | 2026-06-14 | R1-R2 | ✅ Ready | cross-channel-sidebar-corruption, unbounded-cache-lru |
-| #357 | cove | 2026-06-15 | R1-R4 | ✅ Ready (open) | thread-permission, archive-enforcement, guild-leak, message-count |
+| #357 | cove | 2026-06-15 | R1-R5 | ✅ Ready | thread-permission, archive-enforcement, guild-leak, message-count |
 
 ## Ground Truth Summary (56 merged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 96% — human approved without findings in 55/57 cases. Exceptions: #174 (design questions), #281 (false positive)
-- **Iterative review as quality gate:** In 55/57 merged PRs, our multi-round review was the actual quality gate
+- **Human rubber-stamp rate:** 96% — human approved without findings in 56/58 cases. Exceptions: #174 (design questions), #281 (false positive)
+- **Iterative review as quality gate:** In 56/58 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 2 (#100 verdict too conservative, #281 stale PR description)
-- **Multi-round PRs:** 46/57 merged PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
-- **Total review rounds:** ~203 across 57 merged PRs + 1 open PR (#357)
+- **Multi-round PRs:** 47/58 merged PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
+- **Total review rounds:** ~208 across 58 merged PRs
 - **False-ready detection:** 3 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega approved Ready while CI injection existed) — self-correcting system working
 - **Escalation protocol validated:** 6 cases — all led to fixes
 
 ## Actionable Notes
 
-1. **🟡 Vega: gemini-2.5-pro evaluation — 1/5 PRs complete.** #357 (4 rounds) is the first PR with the new model. Results: reliability improved (4/4 clean), but calibration gap persists (R2 over-strict, R3 under-strict, R4 over-held). Unique find rate: 0 unique finds in #357. **4 more PRs needed to determine if model change is sufficient.** If no improvement by PR 5, consider replacing Vega slot entirely.
+1. **🟡 Vega: gemini-2.5-pro evaluation — 1/5 PRs complete.** #357 (5 rounds) is the first PR with the new model. Results: reliability improved (5/5 clean), calibration slightly better (3/5 correct vs typical 2-3/5). Unique find rate: 1 minor unique (owner_id NULL). **4 more PRs needed to determine if model change is sufficient.** If no improvement by PR 5, consider replacing Vega slot entirely.
 
 2. **Vega calibration prompt: carry forward to gemini-2.5-pro.** #352 R5-R6 showed that explicit calibration guidance ("anchor severity to functional bugs, not optimization") fixed gemini-3.1-pro's over-escalation. Keep this guidance in the Vega prompt for the new model too — if gemini-2.5-pro doesn't need it, that's a positive signal.
 
@@ -250,11 +251,11 @@ _Last updated: 2026-06-15 14:29 (Asia/Shanghai)_
 
 6. **Stella stable.** #348 R3 garbled output was single incident, no recurrence in #352 (6 rounds). TimeoutError vs AbortError find in #352 R5 was technically excellent even if low practical impact.
 
-7. **Throughput sustained.** 57 merged PRs + 1 open, ~203 review rounds, 21 days. ~2.8 PRs/day, ~9.7 reviewer-rounds/day. Service scaling well.
+7. **Throughput sustained.** 58 merged PRs, ~208 review rounds, 21 days. ~2.8 PRs/day, ~9.9 reviewer-rounds/day. Service scaling well.
 
 8. **Ground truth: human rubber-stamps 96%.** Our iterative review IS the quality gate. This validates the service but means limited external validation of our work. The 4% where human had input (#174 design questions, #281 false positive) actually provided the most useful calibration data.
 
-11. **#357 is first PR with Vega on gemini-2.5-pro.** Reliability is up (4/4 produced output), but calibration gap persists: R2 over-escalated, R3 under-escalated, R4 over-held. Zero unique finds (0/14 blocking issues). Model change improved output reliability but not analytical quality or calibration. **Verdict: insufficient evidence for/against — need 4 more PRs.**
+11. **#357 is first PR with Vega on gemini-2.5-pro (now merged).** Reliability is up (5/5 produced output). Calibration: 3/5 correct (R1, R3, R5), R2 over-escalated, R4 over-held. 1 minor unique find (owner_id NULL). Model change improved output reliability and slightly improved calibration vs gemini-3.1-pro. **Verdict: marginal improvement — need 4 more PRs for conclusive assessment.**
 
 9. **Nova widening gap significantly.** 19% unique find rate vs Stella 12% vs Vega 4%. Nova finds ~5× more unique issues than Vega. #352 confirmed the trend: Nova was the only reviewer to identify the dispatch re-swallow gap, regex fragility, and UTF-16 measurement issue.
 

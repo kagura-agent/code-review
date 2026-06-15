@@ -1784,10 +1784,41 @@
     "repo": "cove",
     "pr": 357,
     "reviewed_at": "2026-06-15T13:10+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "needs_changes",
+      "our_verdict_r4": "ready",
+      "our_verdict_r5": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "thread-member-permissions",
+        "auto-archive-validation",
+        "nested-thread-blocking",
+        "n+1-active-threads",
+        "guild-active-threads-leak",
+        "archive-lock-permission-gate",
+        "archive-write-enforcement",
+        "bulk-delete-message-count",
+        "thread-indicator-state-sync",
+        "threadDelete-dead-code"
+      ],
+      "noise": [
+        "Stella R5 migration idempotency concern — likely false positive (CI passes, Luna staging-tested)",
+        "Vega R2 over-escalated N+1 + nested threads to Major Issues",
+        "Vega R4 over-held at Needs Changes when 2/3 said Ready"
+      ],
+      "calibration": "5-round deep review of ~2k LOC feature PR. R1-R3 found 11 blocking issues (permissions, validation, security leaks, correctness). R4 all fixed, 2/3 Ready. R5 confirmed R4 additions clean + no regressions. Human approved without comments — iterative review was the quality gate."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
     "rounds": 5,
-    "notes": "R1-R4: 14 blockers found+fixed. R5 Final: Ready (2/3). Migration concern from Stella likely false positive. Luna staging-tested. Ship it.",
-    "last_checked": "2026-06-15T15:55+08:00"
+    "notes": "R1-R4: 14 blockers found+fixed. R5 Final: Ready (2/3). Migration concern from Stella likely false positive. Luna staging-tested. Merged 2026-06-15T07:57Z.",
+    "last_checked": "2026-06-15T20:26+08:00"
   }
 ]
