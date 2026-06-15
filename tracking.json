@@ -1786,8 +1786,8 @@
     "reviewed_at": "2026-06-15T13:10+08:00",
     "status": "open",
     "ground_truth": null,
-    "rounds": 1,
-    "notes": "R1: Permission gaps on thread-member routes (Stella+Nova), missing tests (all 3), missing input validation (all 3), thread indicator state sync (Stella+Nova). Needs Changes.",
-    "last_checked": "2026-06-15T13:10+08:00"
+    "rounds": 2,
+    "notes": "R1: Permission gaps, missing tests, unvalidated input, state sync. All fixed in R2. R2: Nested threads, N+1 fetch, threadDelete dead code. Needs Changes.",
+    "last_checked": "2026-06-15T13:55+08:00"
   }
 ]
