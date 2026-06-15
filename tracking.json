@@ -1786,8 +1786,8 @@
     "reviewed_at": "2026-06-15T13:10+08:00",
     "status": "open",
     "ground_truth": null,
-    "rounds": 4,
-    "notes": "R1-R3 blockers all fixed (14 total). R4: Ready (2/3), webhook bypass suggestion only. Final: Ready to merge.",
-    "last_checked": "2026-06-15T14:29+08:00"
+    "rounds": 5,
+    "notes": "R1-R4: 14 blockers found+fixed. R5 Final: Ready (2/3). Migration concern from Stella likely false positive. Luna staging-tested. Ship it.",
+    "last_checked": "2026-06-15T15:55+08:00"
   }
 ]
