@@ -1778,5 +1778,16 @@
     "rounds": 2,
     "notes": "R1: Cross-channel sidebar bug (Stella), missing tests (Nova+Stella), unbounded cache (all 3). R2: Both blockers fixed. Tests still missing but non-blocking. Overall Ready.",
     "last_checked": "2026-06-15T02:30+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 357,
+    "reviewed_at": "2026-06-15T13:10+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "rounds": 1,
+    "notes": "R1: Permission gaps on thread-member routes (Stella+Nova), missing tests (all 3), missing input validation (all 3), thread indicator state sync (Stella+Nova). Needs Changes.",
+    "last_checked": "2026-06-15T13:10+08:00"
   }
 ]
