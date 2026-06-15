@@ -1820,5 +1820,17 @@
     "rounds": 5,
     "notes": "R1-R4: 14 blockers found+fixed. R5 Final: Ready (2/3). Migration concern from Stella likely false positive. Luna staging-tested. Merged 2026-06-15T07:57Z.",
     "last_checked": "2026-06-15T20:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 367,
+    "reviewed_at": "2026-06-16T02:26+08:00",
+    "status": "open",
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 3/3 unanimous Ready. Per-channel message queue. No blockers. Tests + minor suggestions non-blocking.",
+    "last_checked": "2026-06-16T02:26+08:00"
   }
 ]
