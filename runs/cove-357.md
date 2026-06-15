@@ -52,3 +52,27 @@
 - R1 → R2 → R3 turnaround very fast (all within same session)
 - Communication bug in R1 (forgot webhook + channel reply) — fixed in R2/R3
 - Reviewers escalating all non-blocking items is becoming a pattern — may need to update the escalation rule in the review prompt to clarify: escalation applies to items with real correctness/security impact, not cosmetic/cleanup items
+
+## Round 4
+**Verdict:** ✅ Ready (2/3) · ⚠️ Needs Changes (1/3) → **Overall: ✅ Ready**
+
+### R3 Blockers: All 4 ✅ Fixed
+1. Guild active-threads leak → filtered by `requireBotChannelPermission`
+2. PATCH archive/lock → gated to thread owner_id
+3. Archived threads accept writes → 403 with Discord error code 50083
+4. Bulk delete stale message_count → `decrementMessageCountBy(n)` + `resetMessageCount()`
+
+### New Findings (non-blocking)
+- Webhook bypass of archive/lock (Stella — valid edge case, follow-up)
+- No THREAD_UPDATE broadcast after bulk-delete count mutation (Nova — minor)
+- owner_id NULL edge case (Nova, Vega — one-line fix, follow-up)
+
+### 4-Round Summary
+- 14 blocking issues found and fixed across 4 rounds
+- PR ready to merge
+- 8 follow-up items logged
+
+### Reviewer Assessment (R4)
+- **Nova**: Correctly scoped remaining items as non-blocking. THREAD_UPDATE broadcast and owner_id NULL both real. Best calibration.
+- **Stella**: Webhook bypass is valid but correctly not a blocker. Only reviewer to flag it. Consistent thoroughness.
+- **Vega**: ⚠️ rated as Needs Changes while the other two approved. Over-held on owner_id NULL which is a one-line follow-up, not a blocker at this project scale. Same calibration gap.
