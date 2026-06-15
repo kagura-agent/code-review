@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: "Multi-model PR review — spawn 3 reviewers (GPT-5.5, Claude Opus 4.7, Gemini 3.1 Pro), consolidate findings, optionally post to GitHub."
+description: "Multi-model PR review — spawn 3 reviewers (GPT-5.5, Claude Opus 4.7, Gemini 2.5 Pro), consolidate findings, optionally post to GitHub."
 ---
 
 # Code Review

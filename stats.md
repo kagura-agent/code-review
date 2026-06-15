@@ -8,7 +8,7 @@ _Last updated: 2026-06-15 02:30 (Asia/Shanghai)_
 |----------|-------|---------------------|-------------|-------|
 | 🌟 Stella | gpt-5.5 | 182 | 177/182 (97%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. |
 | 🌠 Nova | claude-opus-4.7 | 183 | 182/183 (99%) → | First failure ever: #352 R5 timeout. 99% across 183 rounds remains exceptional. |
-| 💫 Vega | gemini-3.1-pro-preview | 182 | 163/182 (90%) ↓ | 19 issues total. #356 R1 failed run but wrote file (partial). R3-R4 calibration swings continue. **Pattern: reliability degrades on long multi-round PRs** |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 182 | 163/182 (90%) ↓ | 19 issues total. #356 R1 failed run but wrote file (partial). R3-R4 calibration swings continue. **Model switched to gemini-2.5-pro on 2026-06-15. Previous stats reflect gemini-3.1-pro-preview.** |
 
 ## Dimension Strengths (per reviewer)
 
@@ -58,7 +58,7 @@ _Last updated: 2026-06-15 02:30 (Asia/Shanghai)_
 **Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. **One false positive across 181 rounds (0.6% FP rate)**. Strongest on API compatibility, security model design, async lifecycle, UX-level analysis, feature correctness, regression detection, and plugin integration analysis. #352 R3's dispatch re-swallow find was the most impactful unique of the PR — without it, the rest-client fix would have been silently useless.
 **Nova's weakness:** First timeout ever (#352 R5). Very occasionally over-cautious (e.g. #330 R5 — ⚠️ when .finally() guarantees re-render). Overall the most reliable and highest-signal reviewer.
 
-### 💫 Vega (Gemini 3.1 Pro)
+### 💫 Vega (Gemini 2.5 Pro — switched 2026-06-15, was Gemini 3.1 Pro)
 | Dimension | Strength | Evidence |
 |-----------|----------|----------|
 | Security (Code-level) | ⭐⭐⭐ | Prototype pollution (#176 R1, unique), IDOR framing (#168 R3, clearest) |
@@ -227,9 +227,9 @@ _Last updated: 2026-06-15 02:30 (Asia/Shanghai)_
 
 ## Actionable Notes
 
-1. **🔴 Vega: decision point overdue.** Unique find rate **5%** (below 10% threshold for 10+ periods). Reliability **92% recent** (improved from last check but calibration is the real issue). Calibration **68%** — worst of all 3. False positive rate **8%**. #352 R3-R4 demonstrated no self-correction between rounds (repeated identical over-escalation). The only thing keeping Vega is occasional star finds, but the signal-to-noise ratio continues degrading. **Recommendation: Replace with `gemini-2.5-pro` on next PR.** If calibration doesn't improve within 5 PRs, consider alternative model entirely.
+1. **🟡 Vega: model switched to gemini-2.5-pro (2026-06-15).** Previous model (gemini-3.1-pro-preview) had: unique find rate 5% (below 10% threshold for 11+ periods), reliability 90%, calibration 67%, FP rate 8%. All stats above reflect old model. **Evaluation period: next 5 PRs with gemini-2.5-pro to determine if model change improves calibration and unique find rate.** If no improvement after 5 PRs, consider replacing Vega slot entirely.
 
-2. **Vega calibration prompt already proven effective.** #352 R5-R6 showed that explicit calibration guidance ("anchor severity to functional bugs, not optimization") fixed the over-escalation. **If keeping Vega, add permanent calibration anchoring to the Vega prompt.** This is a workaround, not a fix — the model shouldn't need per-round calibration coaching to produce consistent ratings.
+2. **Vega calibration prompt: carry forward to gemini-2.5-pro.** #352 R5-R6 showed that explicit calibration guidance ("anchor severity to functional bugs, not optimization") fixed gemini-3.1-pro's over-escalation. Keep this guidance in the Vega prompt for the new model too — if gemini-2.5-pro doesn't need it, that's a positive signal.
 
 3. **Nova's first timeout (#352 R5).** Single incident across 181 rounds. Not actionable yet — monitoring. If it recurs, may indicate context length sensitivity on 6+ round PRs.
 
@@ -243,7 +243,7 @@ _Last updated: 2026-06-15 02:30 (Asia/Shanghai)_
 
 8. **Ground truth: human rubber-stamps 96%.** Our iterative review IS the quality gate. This validates the service but means limited external validation of our work. The 4% where human had input (#174 design questions, #281 false positive) actually provided the most useful calibration data.
 
-11. **#356 confirms Vega's under-detection pattern.** R1: Vega approved Ready when Stella found cross-channel sidebar corruption. Same pattern as #330 R2/R3, #335 R1, #348 R2. Vega's R1 was also a partial failure (failed run but managed to write file). Model replacement increasingly justified.
+11. **#356 confirmed Vega's under-detection pattern (gemini-3.1-pro).** R1: Vega approved Ready when Stella found cross-channel sidebar corruption. Same pattern as #330 R2/R3, #335 R1, #348 R2. **Model replaced with gemini-2.5-pro on 2026-06-15.** First real test will be the next Cove PR.
 
 9. **Nova widening gap significantly.** 19% unique find rate vs Stella 12% vs Vega 4%. Nova finds ~5× more unique issues than Vega. #352 confirmed the trend: Nova was the only reviewer to identify the dispatch re-swallow gap, regex fragility, and UTF-16 measurement issue.
 
