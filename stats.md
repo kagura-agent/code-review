@@ -6,9 +6,9 @@ _Last updated: 2026-06-16 20:26 (Asia/Shanghai)_
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 198 | 193/198 (97%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. #357-#369 clean (4 PRs). |
-| 🌠 Nova | claude-opus-4.7 | 199 | 197/199 (99%) → | Two timeouts: #352 R5, #369 R1 (re-spawned successfully). 99% across 199 rounds. Worth monitoring if frequency increases. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 198 | 179/198 (90%) → | 19 pre-#357 issues + #357-#369 all clean output. **Model switched to gemini-2.5-pro on 2026-06-15. 4 PRs with new model — reliability improved (12/12 clean output), calibration gap persists (missed schema blocker in #369 R1, over-escalated in R2).** |
+| 🌟 Stella | gpt-5.5 | 200 | 195/200 (98%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. #357-#387 clean (5 PRs). |
+| 🌠 Nova | claude-opus-4.7 | 201 | 199/201 (99%) → | Two timeouts: #352 R5, #369 R1 (re-spawned successfully). 99% across 201 rounds. Worth monitoring if frequency increases. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 198 | 179/198 (90%) → | 19 pre-#357 issues + #357-#369 all clean output. **Model switched to gemini-2.5-pro on 2026-06-15. 4 PRs with new model — reliability improved (12/12 clean output), calibration gap persists.** Not used in #387 (2-reviewer run). |
 
 ## Dimension Strengths (per reviewer)
 
@@ -238,6 +238,7 @@ _Last updated: 2026-06-16 20:26 (Asia/Shanghai)_
 | #357 | cove | 2026-06-15 | R1-R5 | ✅ Ready | thread-permission, archive-enforcement, guild-leak, message-count |
 | #367 | cove | 2026-06-16 | R1 | ✅ Ready | per-channel-message-queue, FIFO-dispatch |
 | #369 | cove | 2026-06-16 | R1-R3 | ✅ Ready | manifest-schema-validation, error-forwarding, multi-account-tests |
+| #387 | cove | 2026-06-16 | R1-R2 | ✅ Ready | reply-to-validation, metadata-schema, test-coverage |
 
 ## Ground Truth Summary (61 merged PRs)
 
@@ -246,8 +247,8 @@ _Last updated: 2026-06-16 20:26 (Asia/Shanghai)_
 - **Human rubber-stamp rate:** 97% — human approved without findings in 59/61 cases. Exceptions: #174 (design questions), #281 (false positive)
 - **Iterative review as quality gate:** In 59/61 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 2 (#100 verdict too conservative, #281 stale PR description)
-- **Multi-round PRs:** 49/61 merged PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190)
-- **Total review rounds:** ~221 across 61 PRs
+- **Multi-round PRs:** 49/61 merged PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190). #387 currently at R2 (open).
+- **Total review rounds:** ~225 across 62 PRs (+ 1 open)
 - **False-ready detection:** 4 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega approved Ready while CI injection existed, #369 R1 Vega approved Ready while schema blocker existed) — self-correcting system working
 - **Escalation protocol validated:** 7 cases — all led to fixes (#369 R2 escalated error swallowing + test coverage to Major)
 
@@ -265,7 +266,7 @@ _Last updated: 2026-06-16 20:26 (Asia/Shanghai)_
 
 6. **Stella stable.** No issues in #367-#369. Schema/manifest validation is a confirmed strength alongside build verification.
 
-7. **Throughput sustained.** 61 PRs, ~221 review rounds, 22 days. ~2.8 PRs/day, ~10.0 reviewer-rounds/day.
+7. **Throughput sustained.** 62 PRs, ~225 review rounds, 22 days. ~2.8 PRs/day, ~10.2 reviewer-rounds/day.
 
 8. **Ground truth: human rubber-stamps 97%.** Our iterative review IS the quality gate.
 
