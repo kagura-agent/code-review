@@ -1826,11 +1826,21 @@
     "repo": "cove",
     "pr": 367,
     "reviewed_at": "2026-06-16T02:26+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
-    "notes": "R1: 3/3 unanimous Ready. Per-channel message queue. No blockers. Tests + minor suggestions non-blocking.",
-    "last_checked": "2026-06-16T02:26+08:00"
+    "notes": "R1: 3/3 unanimous Ready. Per-channel message queue. No blockers. Tests + minor suggestions non-blocking. Merged 2026-06-15T23:56Z.",
+    "last_checked": "2026-06-16T08:26+08:00",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Unanimous 3/3 Ready R1. Human approved without comments. Clean focused PR — per-channel FIFO queue correctly assessed as low-risk."
+    }
   }
 ]
