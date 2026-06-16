@@ -46,7 +46,13 @@ You are a code reviewer. Review the PR diff thoroughly and provide actionable fe
 - Breaking changes flagged?
 - Error handling consistent with project conventions
 
-### 8. Product Impact
+### 8. Config & Schema Consistency
+- Do config files, manifest schemas, JSON schemas, or type definitions stay in sync with runtime behavior?
+- If code validates/uses a new field, is it declared in the corresponding schema/manifest/type?
+- Schema-runtime divergence (schema accepts invalid configs, or rejects valid ones) = ⚠️ Needs Changes
+- This applies to: plugin manifests, API schemas, config file formats, migration definitions, env var declarations
+
+### 9. Product Impact
 - **Code correctness ≠ product correctness.** For every behavior change, reason backwards from product goals:
   - What user-facing behavior changes? Could any user workflow break?
   - Are there edge cases that are logically valid code but wrong product behavior?
