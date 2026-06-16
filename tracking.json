@@ -1842,5 +1842,40 @@
       "noise": [],
       "calibration": "Unanimous 3/3 Ready R1. Human approved without comments. Clean focused PR — per-channel FIFO queue correctly assessed as low-risk."
     }
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 369,
+    "round": 2,
+    "mode": "comment",
+    "reviewed_at": "2026-06-16T00:59:11.817Z",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "manifest-schema-validation",
+        "error-forwarding",
+        "dead-code-fallback",
+        "multi-account-test-coverage",
+        "defaultAccount-resolution"
+      ],
+      "noise": [
+        "Stella R3 over-scoped: root-level credentials question is design not bug"
+      ],
+      "calibration": "3-round review. R1 caught critical schema blocker (Stella+Nova, Vega missed). R2 escalated error swallowing + test coverage to Major (3/3). R3 all blockers fixed, 2/3 Ready. Human approved without comments — iterative review was the quality gate."
+    },
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "rounds": 3,
+    "notes": "R1: schema blocker (Stella+Nova, Vega missed). R2: error swallowing + tests escalated (3/3). R3: 2/3 Ready (Stella over-scoped root-level design). All blockers fixed in 3 rounds. Merged 2026-06-16T01:32Z.",
+    "last_checked": "2026-06-16T20:26+08:00"
   }
 ]
