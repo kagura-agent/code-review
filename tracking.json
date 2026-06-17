@@ -1883,11 +1883,35 @@
     "repo": "cove",
     "pr": 387,
     "reviewed_at": "2026-06-16T21:30+08:00",
-    "status": "open",
+    "status": "closed",
     "verdict": "ready",
     "reviewers": 2,
     "rounds": 2,
     "notes": "R1: 2/2 needs_changes (reply_to.id unvalidated, no tests). R2: Nova Ready, Stella dissent (extra fields not stripped). Overall Ready. Awaiting merge.",
-    "last_checked": "2026-06-17T08:26+08:00"
+    "last_checked": "2026-06-17T14:30+08:00",
+    "closed_at": "2026-06-17T01:33:35Z",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "closed_unmerged",
+      "close_reason": "spec_revision",
+      "close_comment": "Closing — implementation doesn't align with revised design. #386 spec has been significantly revised (all-ID addressing, platform-side autoThread, no resolveTargetRoute). Will re-implement from scratch.",
+      "our_findings_correct": [
+        "reply_to.id unvalidated (B2/B1)",
+        "no test coverage for new behavior",
+        "metadata column accepts arbitrary extra fields"
+      ],
+      "human_findings": [],
+      "blind_spots": [
+        "spec misalignment — the PR implemented a design that was about to be revised; our review focused on code quality, not whether the design itself was the right approach (this is arguably outside code-review scope, but a \"design questioning\" prompt could have caught it)"
+      ],
+      "noise": [],
+      "accuracy": "correct_on_code",
+      "calibration": "review correctly flagged validation + test gaps; PR closed for unrelated spec-revision reasons, so our verdicts had no impact on outcome",
+      "effective_dimensions": [
+        "input-validation",
+        "test-coverage",
+        "metadata-shape-constraints"
+      ]
+    }
   }
 ]

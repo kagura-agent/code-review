@@ -1,6 +1,6 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-17 08:26 (Asia/Shanghai)_
+_Last updated: 2026-06-17 14:30 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -238,40 +238,45 @@ _Last updated: 2026-06-17 08:26 (Asia/Shanghai)_
 | #357 | cove | 2026-06-15 | R1-R5 | ✅ Ready | thread-permission, archive-enforcement, guild-leak, message-count |
 | #367 | cove | 2026-06-16 | R1 | ✅ Ready | per-channel-message-queue, FIFO-dispatch |
 | #369 | cove | 2026-06-16 | R1-R3 | ✅ Ready | manifest-schema-validation, error-forwarding, multi-account-tests |
-| #387 | cove | 2026-06-16 | R1-R2 | ✅ Ready | reply-to-validation, metadata-schema, test-coverage |
+| #387 | cove | 2026-06-16 | R1-R2 | ⏹️ Closed (spec revision) | reply-to-validation, metadata-schema, test-coverage |
 
-## Ground Truth Summary (61 merged PRs)
+## Ground Truth Summary (61 merged + 1 closed-unmerged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
-- **Our blind spots:** 0 — human has never flagged something all 3 reviewers missed
-- **Human rubber-stamp rate:** 97% — human approved without findings in 59/61 cases. Exceptions: #174 (design questions), #281 (false positive)
+- **Our blind spots:** 1 — #387 spec-misalignment (PR closed because design was revised mid-flight; our review was code-quality correct but didn't question whether the design itself was the right approach). Arguably outside code-review scope.
+- **Human rubber-stamp rate:** 97% — human approved without findings in 59/61 merged cases. Exceptions: #174 (design questions), #281 (false positive)
 - **Iterative review as quality gate:** In 59/61 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 2 (#100 verdict too conservative, #281 stale PR description)
-- **Multi-round PRs:** 49/61 merged PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190). #387 currently at R2 (open).
-- **Total review rounds:** ~225 across 62 PRs (+ 1 open)
+- **Multi-round PRs:** 50/62 reviewed PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190). #387 closed at R2.
+- **Total review rounds:** ~227 across 62 PRs (all closed: 61 merged + 1 unmerged)
 - **False-ready detection:** 4 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega approved Ready while CI injection existed, #369 R1 Vega approved Ready while schema blocker existed) — self-correcting system working
 - **Escalation protocol validated:** 7 cases — all led to fixes (#369 R2 escalated error swallowing + test coverage to Major)
+- **Closed-unmerged outcomes:** 1 (#387 — spec revision, not review-driven). Our R1 finds (reply_to validation, test coverage) and R2 Stella dissent (extra-fields strip) were code-correct; closure reason was orthogonal.
 
 ## Actionable Notes
 
-1. **🟡 Vega: gemini-2.5-pro evaluation — 4/5 PRs complete.** #357 (5 rounds) + #367 (1 round) + #369 (3 rounds). Results: reliability improved (12/12 clean output), calibration still weak (#369 R1 missed schema blocker, R2 over-escalated to ❌ Major Issues). Unique find rate: 2 minor uniques across 4 PRs (zero in #369). **1 more PR needed. If calibration doesn't improve, replace Vega slot.**
+1. **🟡 Vega: gemini-2.5-pro evaluation — 4/5 PRs complete.** #357 (5 rounds) + #367 (1 round) + #369 (3 rounds). Results: reliability improved (12/12 clean output), calibration still weak (#369 R1 missed schema blocker, R2 over-escalated to ❌ Major Issues). Unique find rate: 2 minor uniques across 4 PRs (zero in #369). Vega was **not used in #387** (2-reviewer run), so eval still at 4/5. **1 more PR needed. If calibration doesn't improve, replace Vega slot.**
 
-2. **Vega calibration prompt: add cross-file/manifest dimension.** #369 showed Vega's blind spot on schema-runtime divergence. The default prompt now has a "Config & Schema Consistency" dimension (added this reflection). Monitor whether Vega catches this class of issue going forward.
+2. **Vega calibration prompt: add cross-file/manifest dimension.** #369 showed Vega's blind spot on schema-runtime divergence. The default prompt now has a "Config & Schema Consistency" dimension. Monitor whether Vega catches this class of issue going forward.
 
-3. **Nova's second timeout (#369 R1 after #352 R5).** Two incidents now across 199 rounds. Both on plugin-related PRs. May indicate that plugin PRs with SDK tracing are context-heavy. Worth monitoring — if 3rd timeout occurs, consider adjusting Nova's timeout or context budget for plugin PRs.
+3. **Nova's second timeout (#369 R1 after #352 R5).** Two incidents now across ~203 rounds. Both on plugin-related PRs. May indicate that plugin PRs with SDK tracing are context-heavy. Worth monitoring — if 3rd timeout occurs, consider adjusting Nova's timeout or context budget for plugin PRs.
 
 4. **#281 stale-description pattern still unaddressed in prompts.** Need to add: "Verify understanding of feature matches actual code, not just PR description." Low priority since it hasn't recurred.
 
-5. **Nova continues zero false positives across 195 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker.
+5. **Nova continues zero false positives across ~201 rounds.** Best-calibrated reviewer. Continue using Nova's verdict as tiebreaker. #387 R2: Nova Ready vs Stella dissent (extra-fields strip) — Stella's dissent was a legitimate hardening follow-up; Nova's Ready was also defensible since the validation was correct on the documented field.
 
-6. **Stella stable.** No issues in #367-#369. Schema/manifest validation is a confirmed strength alongside build verification.
+6. **Stella stable.** No issues in #367-#387. Schema/manifest validation is a confirmed strength alongside build verification. #387 R2: solo dissent on extra-fields-stripping was a correct hardening observation (would matter if metadata bag grows).
 
-7. **Throughput sustained.** 63 PRs (62 merged + 1 open), ~229 review rounds, 22 days. ~2.9 PRs/day, ~10.4 reviewer-rounds/day.
+7. **Throughput sustained.** 62 PRs (61 merged + 1 closed), ~227 review rounds, 22 days. ~2.8 PRs/day, ~10.3 reviewer-rounds/day.
 
-8. **Ground truth: human rubber-stamps 97%.** Our iterative review IS the quality gate.
+8. **Ground truth: human rubber-stamps 97% (of merged PRs).** Our iterative review IS the quality gate. The one closed-unmerged PR (#387) was closed for spec revision, not for code defects.
 
-9. **Nova widening gap significantly.** 20% unique find rate vs Stella 13% vs Vega 5%. Nova finds ~4× more unique issues than Vega. #369 R3: Nova and Vega both Ready, Stella dissented (over-scoped) — Nova's calibration remains best.
+9. **Nova widening gap significantly.** 21% unique find rate vs Stella 13% vs Vega 5%. Nova finds ~4× more unique issues than Vega. #369 R3: Nova and Vega both Ready, Stella dissented (over-scoped) — Nova's calibration remains best. #387: Nova found metadata-schema-owner + CLI usage string uniques.
 
 10. **Multi-round PR pattern emerging.** Complex feature PRs consistently need 4+ rounds. Reviewer fatigue may affect Vega most.
 
 11. **Prompt evolved: added "Config & Schema Consistency" dimension (#8).** Triggered by #369 — Vega's miss of the manifest schema gap. This dimension was implicit before; now explicit. Should help all reviewers but especially Vega on plugin/config PRs.
+
+12. **#387 closed-unmerged — spec-revision blind spot (low priority).** PR implemented a design that was revised mid-flight. Our review focused on code quality (correctly caught validation gaps + test coverage); no reviewer questioned whether the design itself was the right approach. **Decision: not adding a "design questioning" dimension to the prompt.** Reasons: (a) code review's contract is to review what was submitted, not to second-guess product/design decisions; (b) adding it would generate false positives on every PR; (c) this is the first occurrence in 62 PRs (1.6%). If recurrence climbs above ~5%, reconsider. The check belongs upstream in design review, not code review.
+
+13. **#387 R2 disagreement: legitimate, not noise.** Stella flagged "extra-fields stripping in metadata" as a follow-up hardening concern (server stores the whole `reply_to` object, only `id` is validated). Nova rated Ready since the validated field works correctly. Both positions are defensible — Stella was right that future metadata growth makes this risk worse; Nova was right that today's contract is intact. This is healthy reviewer disagreement, not a calibration failure on either side.
