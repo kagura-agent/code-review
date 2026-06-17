@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-16 20:26 (Asia/Shanghai)_
+_Last updated: 2026-06-17 08:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 200 | 195/200 (98%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. #357-#387 clean (5 PRs). |
-| 🌠 Nova | claude-opus-4.7 | 201 | 199/201 (99%) → | Two timeouts: #352 R5, #369 R1 (re-spawned successfully). 99% across 201 rounds. Worth monitoring if frequency increases. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 198 | 179/198 (90%) → | 19 pre-#357 issues + #357-#369 all clean output. **Model switched to gemini-2.5-pro on 2026-06-15. 4 PRs with new model — reliability improved (12/12 clean output), calibration gap persists.** Not used in #387 (2-reviewer run). |
+| 🌟 Stella | gpt-5.5 | 202 | 197/202 (98%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. #357-#387 clean (6 PRs, 2 rounds in #387). |
+| 🌠 Nova | claude-opus-4.7 | 203 | 201/203 (99%) → | Two timeouts: #352 R5, #369 R1 (re-spawned successfully). 99% across 203 rounds. Worth monitoring if frequency increases. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 198 | 179/198 (90%) → | 19 pre-#357 issues + #357-#369 all clean output. **Model switched to gemini-2.5-pro on 2026-06-15. 4 PRs with new model — reliability improved (12/12 clean output), calibration gap persists.** Not used in #387 (2-reviewer run). Idle 1 PR. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -85,9 +85,9 @@ _Last updated: 2026-06-16 20:26 (Asia/Shanghai)_
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 25 | ~191 | ~13% | → Stable. #369: test fixture staleness (1 minor unique). Consistent edge-case finder. |
-| 🌠 Nova | 39 | ~191 | ~20% | ↑↑ Widening lead. #369: dead code fallback + SDK trace (1 unique). Dominant. |
-| 💫 Vega | 9 | ~191 | ~5% | ↓↓ Still below 10% threshold. #369: zero unique finds (missed the critical blocker entirely). **Below 10% for 15+ consecutive periods. 3rd PR with gemini-2.5-pro: reliability up, unique finds still low.** |
+| 🌟 Stella | 25 | ~193 | ~13% | → Stable. #387: extra fields stripping (R2 dissent, valid hardening follow-up). Consistent edge-case finder. |
+| 🌠 Nova | 40 | ~193 | ~21% | ↑↑ Widening lead. #387: metadata schema owner + CLI usage string (2 unique). Dominant. |
+| 💫 Vega | 9 | ~193 | ~5% | ↓↓ Still below 10% threshold. Not used in #387. **Below 10% for 15+ consecutive periods. 4 PRs with gemini-2.5-pro: reliability up, unique finds still low.** |
 
 ## Consensus Participation
 
@@ -117,8 +117,8 @@ _Last updated: 2026-06-16 20:26 (Asia/Shanghai)_
 
 | Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#367) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 82/85 (96%) | → Stable |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 86/88 (98%) | → (two timeouts #352 R5 + #369 R1, monitoring) |
+| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 84/87 (97%) | → Stable |
+| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 88/90 (98%) | → (two timeouts #352 R5 + #369 R1, monitoring) |
 | 💫 Vega | 8/12 (67%) | 89/97 (92%) | 78/85 (92%) | → Uptick (#357 + #367 + #369 all produced output, calibration gap persists) |
 
 ## Vega Calibration Swing Pattern
@@ -266,7 +266,7 @@ _Last updated: 2026-06-16 20:26 (Asia/Shanghai)_
 
 6. **Stella stable.** No issues in #367-#369. Schema/manifest validation is a confirmed strength alongside build verification.
 
-7. **Throughput sustained.** 62 PRs, ~225 review rounds, 22 days. ~2.8 PRs/day, ~10.2 reviewer-rounds/day.
+7. **Throughput sustained.** 63 PRs (62 merged + 1 open), ~229 review rounds, 22 days. ~2.9 PRs/day, ~10.4 reviewer-rounds/day.
 
 8. **Ground truth: human rubber-stamps 97%.** Our iterative review IS the quality gate.
 

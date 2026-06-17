@@ -1888,6 +1888,6 @@
     "reviewers": 2,
     "rounds": 2,
     "notes": "R1: 2/2 needs_changes (reply_to.id unvalidated, no tests). R2: Nova Ready, Stella dissent (extra fields not stripped). Overall Ready. Awaiting merge.",
-    "last_checked": "2026-06-17T02:28+08:00"
+    "last_checked": "2026-06-17T08:26+08:00"
   }
 ]
