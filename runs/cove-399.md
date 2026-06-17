@@ -79,3 +79,46 @@ Improvement over R1: changed verdict from ✅ Ready to ⚠️ Needs Changes. Fou
 - The R2 fix introduced a regression (N1/N2) that the "behavioral tests" can't detect — proving C4's point
 - Nova provided the most actionable fix with exact code and the `finalizeDraft` interlock detail
 - Pattern: "refactor that claims to restore behavior" → subtle ordering bugs → only caught by reviewers who trace concurrent execution paths
+
+---
+
+# Round 3
+
+**Date:** 2026-06-17
+**Verdict:** ⚠️ Needs Changes (2/3)
+
+## R1+R2 Resolution
+
+| Issue | Status |
+|-------|--------|
+| C1 Dead adapter | ✅ Resolved |
+| C2 Draft streaming | ✅ Resolved — createFinalizableDraftLifecycle restored |
+| C3 Tool progress | ✅ Resolved |
+| C4 Tests | 🔴 **Blocker — 3rd round unaddressed** |
+| C5 Error recovery | ✅ Resolved |
+| N1 editQueue race | ✅ Resolved |
+| N2 finalizeDraft race | ✅ Mostly resolved |
+| M2 onCompactionStart | ✅ Resolved |
+
+## New/Escalated Findings (R3)
+
+1. **C4 → Blocker** — 3rd round, zero new test assertions on changed paths. Stella + Nova consensus.
+2. **N6 (High)** — Final editMessage not enqueued onto editQueue, races with late partials. Nova unique.
+3. **N2-depth (Medium)** — sendOrEdit guard `stopped && !final` should be `final || stopped`. Nova unique.
+4. **N4 escalated (High)** — coveOutbound chunkerMode/deliveryCapabilities still not in base.outbound. Stella + Nova.
+5. **N5 held (High)** — Chunk limit duplicated in 2 files. Stella + Nova.
+6. **Preview clamp suffix** — 41 chars not 30, can exceed 4000. Stella + Nova (L4).
+
+## Reviewer Performance (R3)
+
+| Reviewer | Verdict | Key Contribution |
+|----------|---------|------------------|
+| 🌟 Stella | ⚠️ Needs Changes | Preview suffix math, N4/N5 escalation, C4 blocker |
+| 🌠 Nova | ⚠️ Needs Changes | N6 final edit race, N2-depth guard fix, concrete 5-test minimum, anti-confirmation note |
+| 💫 Vega | ✅ LGTM | Claimed all issues resolved incl C4 — wrong. Missed N6, N4, N5, suffix bug. |
+
+## Vega Assessment (R3)
+
+Third consecutive round of Vega under-detecting. R1: ✅ Ready with 0 findings (5 critical existed). R2: ⚠️ Needs Changes but missed editQueue race. R3: ✅ LGTM, claimed C4 resolved (it isn't — tests unchanged), missed N6/N4/N5/suffix. Vega's review is actively misleading — it tells the author everything is fine when it isn't.
+
+**Vega evaluation verdict: REPLACE.** 6 PRs with gemini-2.5-pro, calibration has not improved. Unique find rate <5%, false-ready rate >60% in recent rounds.
