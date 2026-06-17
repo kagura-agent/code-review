@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-17 14:30 (Asia/Shanghai)_
+_Last updated: 2026-06-17 18:24 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 202 | 197/202 (98%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. #357-#387 clean (6 PRs, 2 rounds in #387). |
-| 🌠 Nova | claude-opus-4.7 | 203 | 201/203 (99%) → | Two timeouts: #352 R5, #369 R1 (re-spawned successfully). 99% across 203 rounds. Worth monitoring if frequency increases. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 198 | 179/198 (90%) → | 19 pre-#357 issues + #357-#369 all clean output. **Model switched to gemini-2.5-pro on 2026-06-15. 4 PRs with new model — reliability improved (12/12 clean output), calibration gap persists.** Not used in #387 (2-reviewer run). Idle 1 PR. |
+| 🌟 Stella | gpt-5.5 | 203 | 198/203 (98%) → | 5 failures total (#176 R1 timeout, #190 R5 late, #255 R2 miss, #278 R5 timeout, #348 R3 failed 2x). Stable. #357-#399 clean (7 PRs). |
+| 🌠 Nova | claude-opus-4.7 | 204 | 202/204 (99%) → | Two timeouts: #352 R5, #369 R1 (re-spawned successfully). 99% across 204 rounds. Worth monitoring if frequency increases. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 199 | 180/199 (90%) → | 19 pre-#357 issues + #357-#399 all clean output. **Model switched to gemini-2.5-pro on 2026-06-15. 5 PRs with new model — reliability improved (13/13 clean output), calibration gap persists.** #399: ✅ Ready when ⚠️ Needs Changes was correct — missed all 5 critical issues. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -239,6 +239,7 @@ _Last updated: 2026-06-17 14:30 (Asia/Shanghai)_
 | #367 | cove | 2026-06-16 | R1 | ✅ Ready | per-channel-message-queue, FIFO-dispatch |
 | #369 | cove | 2026-06-16 | R1-R3 | ✅ Ready | manifest-schema-validation, error-forwarding, multi-account-tests |
 | #387 | cove | 2026-06-16 | R1-R2 | ⏹️ Closed (spec revision) | reply-to-validation, metadata-schema, test-coverage |
+| #399 | cove | 2026-06-17 | R1 | ⚠️ Needs Changes (2/3) | dead-adapter-code, draft-streaming-removed, tool-progress-noop, tests-dont-test-changes, no-error-recovery |
 
 ## Ground Truth Summary (61 merged + 1 closed-unmerged PRs)
 
@@ -255,7 +256,7 @@ _Last updated: 2026-06-17 14:30 (Asia/Shanghai)_
 
 ## Actionable Notes
 
-1. **🟡 Vega: gemini-2.5-pro evaluation — 4/5 PRs complete.** #357 (5 rounds) + #367 (1 round) + #369 (3 rounds). Results: reliability improved (12/12 clean output), calibration still weak (#369 R1 missed schema blocker, R2 over-escalated to ❌ Major Issues). Unique find rate: 2 minor uniques across 4 PRs (zero in #369). Vega was **not used in #387** (2-reviewer run), so eval still at 4/5. **1 more PR needed. If calibration doesn't improve, replace Vega slot.**
+1. **🟡 Vega: gemini-2.5-pro evaluation — 5/5 PRs complete.** #357 (5 rounds) + #367 (1 round) + #369 (3 rounds) + #399 (1 round). Results: reliability improved (13/13 clean output), **calibration remains unacceptable** — #399 gave ✅ Ready with zero findings while Stella and Nova both found 5 critical issues including dead code, user-visible regressions, and tests that don't test anything. Verify-findings confidence only 50%. Unique find rate: 2 minor uniques across 5 PRs. **Evaluation complete. Verdict: Vega's calibration is not improving. Consider replacing Vega slot.**
 
 2. **Vega calibration prompt: add cross-file/manifest dimension.** #369 showed Vega's blind spot on schema-runtime divergence. The default prompt now has a "Config & Schema Consistency" dimension. Monitor whether Vega catches this class of issue going forward.
 
