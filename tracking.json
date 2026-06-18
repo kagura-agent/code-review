@@ -2019,5 +2019,18 @@
     "reviewers": 3,
     "rounds": 2,
     "notes": "R1: 3 criticals (lost chunking, double-delete, post-seal isCurrent). R2: 2/3 fixed, chunking deferred to #406. Author justified deferral (SDK callback broken). Merged 2026-06-18T09:26Z."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 408,
+    "reviewed_at": "2026-06-18T17:30:00+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "last_checked": "2026-06-19T02:30+08:00",
+    "reviewers": 3,
+    "rounds": 2,
+    "verdict": "ready",
+    "notes": "R1: no-op-cancels-deploy race (Nova unique). R2: 2:1 Ready (Stella+Vega vs Nova). Atomic publish deferred. Still open."
   }
 ]

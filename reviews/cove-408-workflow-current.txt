@@ -1,0 +1,225 @@
+name: Deploy Staging
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [closed]
+  push:
+    branches: [main]
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm -r build
+
+      - name: Bundle server
+        run: |
+          npx esbuild packages/server/dist/index.js \
+            --bundle --platform=node --format=esm \
+            --outfile=server-bundle.js \
+            --external:better-sqlite3 --external:ws \
+            --alias:@cove/shared=./packages/shared/src/index.ts
+
+      - name: Deploy to VM1 (staging)
+        env:
+          SSH_KEY: ${{ secrets.VM1_SSH_KEY }}
+          HOST: moltbook.kagura-agent.com
+          USER: azureuser
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $USER@$HOST"
+          SCP="scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
+
+          # Upload server bundle
+          $SSH "mkdir -p /home/azureuser/cove-staging"
+          $SCP server-bundle.js $USER@$HOST:/home/azureuser/cove-staging/server-bundle.js
+
+          # Ensure native dependencies
+          $SSH "cd /home/azureuser/cove-staging && npm install --no-save better-sqlite3 ws 2>/dev/null"
+
+          # Upload client dist
+          $SSH "sudo rm -rf /tmp/cove-staging-client-$GITHUB_RUN_ID && mkdir -p /tmp/cove-staging-client-$GITHUB_RUN_ID"
+          $SCP -r packages/client/dist/* $USER@$HOST:/tmp/cove-staging-client-$GITHUB_RUN_ID/
+          $SSH "sudo rm -rf /var/www/cove-staging && sudo mkdir -p /var/www/cove-staging && sudo cp -r /tmp/cove-staging-client-$GITHUB_RUN_ID/* /var/www/cove-staging/ && rm -rf /tmp/cove-staging-client-$GITHUB_RUN_ID"
+
+          # Verify client assets deployed
+          $SSH "test -d /var/www/cove-staging/assets && ls /var/www/cove-staging/assets/*.js > /dev/null 2>&1" || { echo '❌ Client assets missing after deploy'; exit 1; }
+
+          # Create/restart staging service (port 3501, separate DB)
+          $SSH "sudo tee /etc/systemd/system/cove-staging.service > /dev/null << 'UNIT'
+          [Unit]
+          Description=Cove Staging Server
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=azureuser
+          WorkingDirectory=/home/azureuser/cove-staging
+          ExecStart=/usr/bin/node server-bundle.js
+          Environment=PORT=3501
+          Environment=COVE_DB_PATH=/home/azureuser/cove-staging/cove-staging.db
+          Environment=COVE_STATIC_DIR=/var/www/cove-staging
+          Environment=GATEWAY_URL=wss://staging.cove.kagura-agent.com/gateway
+          Environment=BASE_URL=https://staging.cove.kagura-agent.com
+          Environment=COVE_ADMIN_TOKEN=${{ secrets.COVE_ADMIN_TOKEN }}
+          Environment=GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          Environment=GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          Restart=on-failure
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+          UNIT"
+
+          $SSH "sudo systemctl daemon-reload && sudo systemctl restart cove-staging"
+
+          # Health check
+          sleep 5
+          $SSH "curl -sf http://localhost:3501/api/health" || { $SSH "sudo journalctl -u cove-staging --no-pager -n 20"; exit 1; }
+          echo "✅ Staging deploy successful!"
+
+      - name: Notify #cove-dev
+        if: success()
+        env:
+          WEBHOOK_URL: ${{ secrets.COVE_DEV_WEBHOOK_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          PR_TITLE: ${{ github.event.pull_request.title || github.event.head_commit.message }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          SHORT_SHA=${COMMIT_SHA:0:7}
+          if [ -n "$PR_NUMBER" ]; then
+            MSG="✅ Deployed: #${PR_NUMBER} \"${PR_TITLE}\" (${SHORT_SHA})"
+          else
+            MSG="✅ Deployed: ${PR_TITLE%$'\n'*} (${SHORT_SHA})"
+          fi
+          curl -sf -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -nc --arg content "$MSG" '{content: $content}')"
+
+      - name: Comment preview URL (PRs only)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `🏝️ **Preview deployed!**\n\n` +
+              `**URL:** https://staging.cove.kagura-agent.com\n` +
+              `**Port:** 3501 (separate DB)\n\n` +
+              `Staging will redeploy main when this PR is merged or closed.`;
+
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.data.find(c =>
+              c.user.login === 'github-actions[bot]' && c.body.includes('Preview deployed')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  redeploy-main:
+    if: github.event.action == 'closed' && github.event.pull_request.merged == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm -r build
+
+      - name: Bundle server
+        run: |
+          npx esbuild packages/server/dist/index.js \
+            --bundle --platform=node --format=esm \
+            --outfile=server-bundle.js \
+            --external:better-sqlite3 --external:ws \
+            --alias:@cove/shared=./packages/shared/src/index.ts
+
+      - name: Deploy main to staging
+        env:
+          SSH_KEY: ${{ secrets.VM1_SSH_KEY }}
+          HOST: moltbook.kagura-agent.com
+          USER: azureuser
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $USER@$HOST"
+          SCP="scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no"
+
+          $SSH "mkdir -p /home/azureuser/cove-staging"
+          $SCP server-bundle.js $USER@$HOST:/home/azureuser/cove-staging/server-bundle.js
+
+          $SSH "cd /home/azureuser/cove-staging && npm install --no-save better-sqlite3 ws 2>/dev/null"
+
+          $SSH "sudo rm -rf /tmp/cove-staging-client-$GITHUB_RUN_ID && mkdir -p /tmp/cove-staging-client-$GITHUB_RUN_ID"
+          $SCP -r packages/client/dist/* $USER@$HOST:/tmp/cove-staging-client-$GITHUB_RUN_ID/
+          $SSH "sudo rm -rf /var/www/cove-staging && sudo mkdir -p /var/www/cove-staging && sudo cp -r /tmp/cove-staging-client-$GITHUB_RUN_ID/* /var/www/cove-staging/ && rm -rf /tmp/cove-staging-client-$GITHUB_RUN_ID"
+
+          # Verify client assets deployed
+          $SSH "test -d /var/www/cove-staging/assets && ls /var/www/cove-staging/assets/*.js > /dev/null 2>&1" || { echo '❌ Client assets missing after deploy'; exit 1; }
+
+          $SSH "sudo systemctl restart cove-staging"
+
+          sleep 5
+          $SSH "curl -sf http://localhost:3501/api/health" || { $SSH "sudo journalctl -u cove-staging --no-pager -n 20"; exit 1; }
+          echo "✅ Staging redeployed to main"
