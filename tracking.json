@@ -1931,8 +1931,9 @@
     "owner": "kagura-agent",
     "repo": "cove",
     "pr": 400,
-    "reviewed_at": "2026-06-18T11:52:00+08:00",
+    "reviewed_at": "2026-06-18T12:20:00+08:00",
     "status": "open",
-    "ground_truth": null
+    "ground_truth": null,
+    "round": 2
   }
 ]
