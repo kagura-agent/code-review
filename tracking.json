@@ -1920,6 +1920,19 @@
     "pr": 399,
     "reviewed_at": "2026-06-17T23:05:00+08:00",
     "status": "open",
+    "ground_truth": null,
+    "last_checked": "2026-06-18T02:30+08:00",
+    "pr_state": "OPEN",
+    "commits_since_review": 0,
+    "review_decision": "REVIEW_REQUIRED",
+    "ci_status": "all_green (test/deploy SUCCESS, redeploy SKIPPED)"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 400,
+    "reviewed_at": "2026-06-18T11:52:00+08:00",
+    "status": "open",
     "ground_truth": null
   }
 ]
