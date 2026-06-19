@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-19 02:30 (Asia/Shanghai)_
+_Last updated: 2026-06-19 08:35 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 208 | 202/208 (97%) → | 6 failures total. #408: clean 2/2. Stable on normal-sized PRs. |
-| 🌠 Nova | claude-opus-4.7 | 210 | 207/210 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #408: strongest performer — found the original workflow-level concurrency race (unique). |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 205 | 185/205 (90%) → | #408 R1: crashed (needed retry). R2: minimal/thin review. Reliability: crash-retry pattern continues. |
+| 🌟 Stella | gpt-5.5 | 210 | 204/210 (97%) → | 6 failures total. #408: clean 2/2. Stable on normal-sized PRs. |
+| 🌠 Nova | claude-opus-4.7 | 212 | 209/212 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #408: strongest performer — found the original workflow-level concurrency race (unique). |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 207 | 187/207 (90%) → | #408 R1: crashed (needed retry). R2: minimal/thin review. Reliability: crash-retry pattern continues. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -259,21 +259,21 @@ _Last updated: 2026-06-19 02:30 (Asia/Shanghai)_
 | #399 | cove | 2026-06-17 | R1-R3 | ⏹️ Closed (rewrite as #400) | dead-adapter-code, draft-streaming-removed, editQueue-race, tests-dont-test-changes, no-error-recovery |
 | #400 | cove | 2026-06-18 | R1-R2 | ✅ Ready | SDK-type-hallucination, fallback-resendsFullText, delete-before-send, method-binding |
 | #405 | cove | 2026-06-18 | R1-R2 | ✅ Ready (1 blocker deferred) | lost-chunking, double-delete-draft, post-seal-staleness, typing-keepalive |
-| #408 | cove | 2026-06-18 | R1-R2 | ✅ Ready (2:1 split) | no-op-cancels-deploy-race, atomic-publish-deferred |
+| #408 | cove | 2026-06-18 | R1-R2 | ✅ Ready (2:1 split) | no-op-cancels-deploy-race, per-job-concurrency, atomic-publish-deferred |
 
 ## Ground Truth Summary (63 merged + 2 closed-unmerged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 2 — #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
-- **Human rubber-stamp rate:** 95% — human approved without findings in 60/63 merged cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
-- **Iterative review as quality gate:** In 61/63 merged PRs, our multi-round review was the actual quality gate
+- **Human rubber-stamp rate:** 95% — human approved without findings in 61/64 merged cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
+- **Iterative review as quality gate:** In 62/64 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
-- **Multi-round PRs:** 52/65 reviewed PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190).
-- **Total review rounds:** ~238 across 66 PRs (63 merged + 2 closed-unmerged + 1 open)
+- **Multi-round PRs:** 53/66 reviewed PRs went through 2+ rounds. Average rounds: 2.7. Max: 7 (#190).
+- **Total review rounds:** ~240 across 66 PRs (64 merged + 2 closed-unmerged)
 - **False-ready detection:** 5 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega) — self-correcting system working
 - **Escalation protocol validated:** 8 cases — all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
-- **NEW: SDK type hallucination pattern.** #400 R1 had 2 false positives where Nova+Vega inferred SDK types from naming conventions instead of verifying against source. First systematic hallucination failure across all reviewers.
+- **SDK type hallucination pattern.** #400 R1 had 2 false positives where Nova+Vega inferred SDK types from naming conventions instead of verifying against source. First systematic hallucination failure across all reviewers.
 
 ## Actionable Notes
 
@@ -289,9 +289,9 @@ _Last updated: 2026-06-19 02:30 (Asia/Shanghai)_
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 66 PRs (63 merged + 2 closed + 1 open), ~238 review rounds, 24 days. ~2.8 PRs/day, ~9.9 reviewer-rounds/day.
+7. **Throughput sustained.** 66 PRs (64 merged + 2 closed), ~240 review rounds, 24 days. ~2.8 PRs/day, ~10.0 reviewer-rounds/day.
 
-8. **Ground truth: human rubber-stamps 95% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite).
+8. **Ground truth: human rubber-stamps 95% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). No open PRs in tracking as of this run.
 
 9. **Nova still leads unique find rate.** 20% unique find rate vs Stella 13% vs Vega 5%. Nova finds ~4× more unique issues than Vega. But #400 showed Nova can hallucinate too — the 20% needs adjustment for 2 false uniques in #400.
 

@@ -2025,9 +2025,24 @@
     "repo": "cove",
     "pr": 408,
     "reviewed_at": "2026-06-18T17:30:00+08:00",
-    "status": "open",
-    "ground_truth": null,
-    "last_checked": "2026-06-19T02:30+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "no-op-cancels-deploy-race",
+        "per-job-concurrency-scope",
+        "atomic-publish-deferred"
+      ],
+      "noise": [],
+      "calibration": "R1 caught real no-op-cancels-deploy race (Nova unique). R2 correctly cleared 2:1 (Stella+Vega vs Nova on atomic publish). Nova atomic publish push was valid but over-held for staging context. Human approved without comments — iterative review was the quality gate."
+    },
+    "last_checked": "2026-06-19T08:35+08:00",
     "reviewers": 3,
     "rounds": 2,
     "verdict": "ready",
