@@ -115,12 +115,12 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "R1 had Vega dissent (needs_changes) on getComputedStyle + member list split; R2 unanimous ready. Human approved without comments \u2014 our findings were valid suggestions but non-blocking for this project context."
+      "calibration": "R1 had Vega dissent (needs_changes) on getComputedStyle + member list split; R2 unanimous ready. Human approved without comments — our findings were valid suggestions but non-blocking for this project context."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
-    "notes": "R1 manual (not FlowForge), R2 via FlowForge #3410. 3/3 \u2705 Ready both rounds.",
+    "notes": "R1 manual (not FlowForge), R2 via FlowForge #3410. 3/3 ✅ Ready both rounds.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -137,7 +137,7 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "Unanimous ready, human approved quickly. Clean mechanical refactor \u2014 our review correctly identified it as low-risk."
+      "calibration": "Unanimous ready, human approved quickly. Clean mechanical refactor — our review correctly identified it as low-risk."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -164,7 +164,7 @@
         "data-loss-prevention"
       ],
       "noise": [],
-      "calibration": "R1 caught real critical (migration ordering \u2192 silent data loss), 3/3 consensus. R2 correctly cleared after fix. Stella's recovery edge case was valid but non-blocking. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real critical (migration ordering → silent data loss), 3/3 consensus. R2 correctly cleared after fix. Stella's recovery edge case was valid but non-blocking. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -194,7 +194,7 @@
     "reviewers": 2,
     "rounds": 2,
     "flowforge_instance": 3427,
-    "notes": "R1: Vega failed. R2: 3/3 \u2705 unanimous. Merged 2026-06-03.",
+    "notes": "R1: Vega failed. R2: 3/3 ✅ unanimous. Merged 2026-06-03.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -222,7 +222,7 @@
     "reviewers": 2,
     "rounds": 3,
     "flowforge_instance": 3433,
-    "notes": "R3: 3/3 \u2705. XSS + paragraph collapse fixed. Vega clean for 2nd run after prompt fix.",
+    "notes": "R3: 3/3 ✅. XSS + paragraph collapse fixed. Vega clean for 2nd run after prompt fix.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -239,13 +239,13 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "Unanimous ready, human approved quickly. Clean polish PR \u2014 correctly identified as low-risk."
+      "calibration": "Unanimous ready, human approved quickly. Clean polish PR — correctly identified as low-risk."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
     "flowforge_instance": 3444,
-    "notes": "Clean polish PR. 3/3 \u2705. Merged 2026-06-03.",
+    "notes": "Clean polish PR. 3/3 ✅. Merged 2026-06-03.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -267,13 +267,13 @@
         "build-failure-detection"
       ],
       "noise": [],
-      "calibration": "R1 caught real tsc build failure (AppEnv typing) that tests missed. R2 confirmed fix. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real tsc build failure (AppEnv typing) that tests missed. R2 confirmed fix. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3460,
-    "notes": "R1: Stella caught real build failure (AppEnv typing). R2: 3/3 \u2705. Merged 2026-06-03.",
+    "notes": "R1: Stella caught real build failure (AppEnv typing). R2: 3/3 ✅. Merged 2026-06-03.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -290,13 +290,13 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "Unanimous ready, human approved quickly. Solid defensive programming \u2014 validation and migration guard correctly assessed as ready."
+      "calibration": "Unanimous ready, human approved quickly. Solid defensive programming — validation and migration guard correctly assessed as ready."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
     "flowforge_instance": 3468,
-    "notes": "Clean 3/3 \u2705. Migration guard + validation. Vega 6th consecutive clean. Merged 2026-06-03.",
+    "notes": "Clean 3/3 ✅. Migration guard + validation. Vega 6th consecutive clean. Merged 2026-06-03.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -319,13 +319,13 @@
         "rest-gateway-shape-mismatch"
       ],
       "noise": [],
-      "calibration": "R1 caught real ghost presence edge case (duplicate IDENTIFY) + style duplication + shape mismatch. R2 confirmed all fixed, 3/3 unanimous. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real ghost presence edge case (duplicate IDENTIFY) + style duplication + shape mismatch. R2 confirmed all fixed, 3/3 unanimous. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "flowforge_instance": 3474,
-    "notes": "R2: 3/3 \u2705. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean. Merged 2026-06-03.",
+    "notes": "R2: 3/3 ✅. Ghost presence + StatusDot + shape mismatch all fixed. Vega 8th clean. Merged 2026-06-03.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -382,7 +382,7 @@
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
-    "notes": "R1: input validation (3/3). R2: 3/3 \u2705. Human had inline comments. Merged 2026-06-04T04:37Z.",
+    "notes": "R1: input validation (3/3). R2: 3/3 ✅. Human had inline comments. Merged 2026-06-04T04:37Z.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -405,7 +405,7 @@
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
-    "notes": "Template string interpolation caught. 3/3 \u2705 R2. Merged 2026-06-04T05:10Z.",
+    "notes": "Template string interpolation caught. 3/3 ✅ R2. Merged 2026-06-04T05:10Z.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -543,7 +543,7 @@
         "height-restore-on-failure"
       ],
       "noise": [],
-      "calibration": "R1 caught real IME regression for CJK users (2/3). R2 escalated 3 issues to 3/3 consensus. R3 all fixed, unanimous. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real IME regression for CJK users (2/3). R2 escalated 3 issues to 3/3 consensus. R3 all fixed, unanimous. Human approved without comments — iterative review was the quality gate."
     },
     "rounds": 3,
     "notes": "R1: IME composition (2/3). R2: focus ring + height restore + mobile (3/3). R3: 3/3 unanimous ready. First UI/accessibility-focused review. Merged 2026-06-04.",
@@ -573,10 +573,10 @@
         "dispatch-monotonicity"
       ],
       "noise": [],
-      "calibration": "4-round deep review. All R1-R3 blockers genuine bugs. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "4-round deep review. All R1-R3 blockers genuine bugs. Human approved without comments — iterative review was the quality gate."
     },
     "rounds": 4,
-    "notes": "R1-R3: 5 criticals found+fixed. R4: \u2705 Ready with follow-ups (same-ms monotonicity, deleted-msg edge case). 4-round marathon.",
+    "notes": "R1-R3: 5 criticals found+fixed. R4: ✅ Ready with follow-ups (same-ms monotonicity, deleted-msg edge case). 4-round marathon.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -601,10 +601,10 @@
         "migration-overflow"
       ],
       "noise": [],
-      "calibration": "3-round deep review. R1 caught critical security (auth token as snowflake). All blockers resolved by R3. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "3-round deep review. R1 caught critical security (auth token as snowflake). All blockers resolved by R3. Human approved without comments — iterative review was the quality gate."
     },
     "rounds": 3,
-    "notes": "R1: \u274c security (snowflake auth token). R2: \u26a0\ufe0f (CAST index, idMap). R3: \u2705 Ready. All blockers resolved. Follow-ups: email UNIQUE, worker ID.",
+    "notes": "R1: ❌ security (snowflake auth token). R2: ⚠️ (CAST index, idMap). R3: ✅ Ready. All blockers resolved. Follow-ups: email UNIQUE, worker ID.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -632,7 +632,7 @@
       "calibration": "3-round review. R1 caught stale last_message_id + broken clear button (regression from #192 work). All blockers resolved by R3. Human approved without comments."
     },
     "rounds": 3,
-    "notes": "R1-R2: stale last_message_id + broken clear + allowlist. R3: \u2705 Ready with follow-ups (deletion auth deferred to #113, @me tests, clear-all broadcast).",
+    "notes": "R1-R2: stale last_message_id + broken clear + allowlist. R3: ✅ Ready with follow-ups (deletion auth deferred to #113, @me tests, clear-all broadcast).",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -658,7 +658,7 @@
       "calibration": "R1 caught real UX regression (grid clips multi-line input). R2 confirmed fix. Human approved without comments."
     },
     "rounds": 2,
-    "notes": "R1: 3/3 \u26a0\ufe0f (fixed grid clips input). R2: \u2705 Ready. minmax fix correct. Follow-ups: getComputedStyle race, mobile sidebar overlap.",
+    "notes": "R1: 3/3 ⚠️ (fixed grid clips input). R2: ✅ Ready. minmax fix correct. Follow-ups: getComputedStyle race, mobile sidebar overlap.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -687,7 +687,7 @@
         "resolveuser-duplication"
       ],
       "noise": [],
-      "calibration": "4-round security review. R1 caught PUBLIC_PATHS signup break (Nova unique), URIError DoS (Vega unique), pendingToken leak (Stella+Vega). R2 caught localStorage XSS remnant (Vega). R3 escalated resolveUser duplication (3/3). Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "4-round security review. R1 caught PUBLIC_PATHS signup break (Nova unique), URIError DoS (Vega unique), pendingToken leak (Stella+Vega). R2 caught localStorage XSS remnant (Vega). R3 escalated resolveUser duplication (3/3). Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -846,7 +846,7 @@
         "unit-test-coverage"
       ],
       "noise": [],
-      "calibration": "6-round mega-review. R1: 5 criticals (RESUMED abort, REST retry). R2: 204 JSON parsing (Vega star). R3: POST retry escalated. R4: appeared fixed but R5 caught try/catch control flow bug making isIdempotent non-functional. R6: fix confirmed + 15 unit tests. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "6-round mega-review. R1: 5 criticals (RESUMED abort, REST retry). R2: 204 JSON parsing (Vega star). R3: POST retry escalated. R4: appeared fixed but R5 caught try/catch control flow bug making isIdempotent non-functional. R6: fix confirmed + 15 unit tests. Human approved without comments — iterative review was the quality gate."
     }
   },
   {
@@ -860,7 +860,7 @@
     "verdict": "needs_changes",
     "reviewers": 3,
     "ground_truth": null,
-    "notes": "R3: 3/3 needs_changes. POST retry escalated \ud83d\udfe1\u2192\ud83d\udd34. sendTyping budget escalated. 204 fix confirmed. Stella dispatch.ts fallback paths finding.",
+    "notes": "R3: 3/3 needs_changes. POST retry escalated 🟡→🔴. sendTyping budget escalated. 204 fix confirmed. Stella dispatch.ts fallback paths finding.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -919,7 +919,7 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "6-round marathon. R5 caught try/catch control flow bug that R4 missed \u2014 isIdempotent gate was non-functional. R6 confirmed fix + 15 unit tests. Human approved without comments."
+      "calibration": "6-round marathon. R5 caught try/catch control flow bug that R4 missed — isIdempotent gate was non-functional. R6 confirmed fix + 15 unit tests. Human approved without comments."
     },
     "last_checked": "2026-06-19T20:26+08:00"
   },
@@ -1047,7 +1047,7 @@
       "notes": "R4: All R3 items unaddressed, correctly escalated. +OAuth non-atomic, backfill hardcode, bot footgun."
     },
     "last_checked": "2026-06-19T20:26+08:00",
-    "notes": "R4: All R3 issues unaddressed \u2192 escalated to \ud83d\udd34. +OAuth non-atomic, backfill hardcode, bot footgun. 3/3 needs_changes."
+    "notes": "R4: All R3 issues unaddressed → escalated to 🔴. +OAuth non-atomic, backfill hardcode, bot footgun. 3/3 needs_changes."
   },
   {
     "owner": "kagura-agent",
@@ -1097,7 +1097,7 @@
         "oauth-atomic",
         "ws-session-lifetime"
       ],
-      "calibration": "6-round marathon. R1 caught critical data-loss (DELETE users instead of UPDATE). R3 Vega sliding threshold math. R4 escalation protocol enforced. R5 all 7 items fixed + Stella WS session lifetime. R6 final stale expires_at fixed, 3/3 unanimous. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "6-round marathon. R1 caught critical data-loss (DELETE users instead of UPDATE). R3 Vega sliding threshold math. R4 escalation protocol enforced. R5 all 7 items fixed + Stella WS session lifetime. R6 final stale expires_at fixed, 3/3 unanimous. Human approved without comments — iterative review was the quality gate."
     },
     "notes": "R6: 3/3 APPROVE. stale expires_at fixed. 164 tests pass. Merged 2026-06-08T01:53Z.",
     "last_checked": "2026-06-19T20:26+08:00"
@@ -1128,7 +1128,7 @@
         "shared-intersection-observer"
       ],
       "noise": [],
-      "calibration": "5-round scroll architecture review. R1 Vega unique (scroll listener). R2 Stella unique (lint). R4 Stella unique (lint again from shared observer). Vega crashed R4, Stella timeout R5. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "5-round scroll architecture review. R1 Vega unique (scroll listener). R2 Stella unique (lint). R4 Stella unique (lint again from shared observer). Vega crashed R4, Stella timeout R5. Human approved without comments — iterative review was the quality gate."
     },
     "last_checked": "2026-06-19T20:26+08:00",
     "verdict": "ready",
@@ -1224,7 +1224,7 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [
-        "Vega flagged abort as needs_changes \u2014 verified as pre-existing behavior not regression"
+        "Vega flagged abort as needs_changes — verified as pre-existing behavior not regression"
       ],
       "calibration": "Stella+Nova correctly approved. Vega over-flagged pre-existing behavior as regression. Human approved without comments. isCurrent() guard pattern is the real abort mechanism."
     },
@@ -1258,9 +1258,9 @@
         "sender-name-fallback"
       ],
       "noise": [
-        "Vega R5 stale \u2014 reviewed old diff, identical to R3 output"
+        "Vega R5 stale — reviewed old diff, identical to R3 output"
       ],
-      "calibration": "5-round deep review. Nova unique token exfiltration find (R1). R3-R5 iterative fixes. Vega stale in R5 (reviewed old diff). Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "5-round deep review. Nova unique token exfiltration find (R1). R3-R5 iterative fixes. Vega stale in R5 (reviewed old diff). Human approved without comments — iterative review was the quality gate."
     },
     "last_checked": "2026-06-19T20:26+08:00",
     "rounds": 5,
@@ -1364,12 +1364,12 @@
         "negative-auth-tests"
       ],
       "noise": [],
-      "calibration": "5-round deep review. C2 (REST gating) persisted across 3 rounds \u2014 different routes missed each time. Nova unique READY payload leak (R2) and CHANNEL_CREATE unreachable (R3). Stella most persistent on test requirements. Vega failed R5. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "5-round deep review. C2 (REST gating) persisted across 3 rounds — different routes missed each time. Nova unique READY payload leak (R2) and CHANNEL_CREATE unreachable (R3). Stella most persistent on test requirements. Vega failed R5. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 5,
-    "notes": "R1-R4: Major\u2192Changes (5 criticals progressively fixed). R5: \u2705 Ready 2/2. 5-round journey complete.",
+    "notes": "R1-R4: Major→Changes (5 criticals progressively fixed). R5: ✅ Ready 2/2. 5-round journey complete.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -1391,7 +1391,7 @@
     "verdict": "ready",
     "reviewers": 2,
     "rounds": 1,
-    "notes": "R1: Nova \u2705, Stella \u26a0\ufe0f (closing delimiter), Vega failed. Approved with caveat. Merged 2026-06-11T09:37Z.",
+    "notes": "R1: Nova ✅, Stella ⚠️ (closing delimiter), Vega failed. Approved with caveat. Merged 2026-06-11T09:37Z.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -1500,7 +1500,7 @@
         "pendingPrependRestore-leak"
       ],
       "noise": [],
-      "calibration": "5-round deep review. R1 caught 3 criticals (channel-switch race, prepend triggers auto-scroll, React 18 batching). Each round introduced new issues from fixes. Vega under-flagged R2 (Ready when 3 new criticals) and R3 (Ready when stuck spinner). Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "5-round deep review. R1 caught 3 criticals (channel-switch race, prepend triggers auto-scroll, React 18 batching). Each round introduced new issues from fixes. Vega under-flagged R2 (Ready when 3 new criticals) and R3 (Ready when stuck spinner). Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -1564,7 +1564,7 @@
         "reply-state-cleanup"
       ],
       "noise": [],
-      "calibration": "R1 caught real lifecycle issues (deleted ref visibility, retry loses reply). Vega missed all 3 criticals in R1 \u2014 approved Ready when real bugs existed. Human approved without comments."
+      "calibration": "R1 caught real lifecycle issues (deleted ref visibility, retry loses reply). Vega missed all 3 criticals in R1 — approved Ready when real bugs existed. Human approved without comments."
     }
   },
   {
@@ -1620,7 +1620,7 @@
       "noise": [
         "Stella R2 over-scoped: non-numeric user IDs (unverified) and MESSAGE_UPDATE (overruled 2-1)"
       ],
-      "calibration": "R1 caught 3 real criticals (replaceAll, webhook, autocomplete) + 3 consensus suggestions. R2 correctly cleared. Stella over-persistent on MESSAGE_UPDATE (2-1 overruled). Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught 3 real criticals (replaceAll, webhook, autocomplete) + 3 consensus suggestions. R2 correctly cleared. Stella over-persistent on MESSAGE_UPDATE (2-1 overruled). Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -1674,13 +1674,13 @@
         "unread-count-lies"
       ],
       "noise": [],
-      "calibration": "R1 caught 4 real criticals (unanimous). R2 caught O(N\u00b2) regression from fix (all 3). R3 correctly cleared. Vega over-escalated R2 to Major but caught real issue. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught 4 real criticals (unanimous). R2 caught O(N²) regression from fix (all 3). R3 correctly cleared. Vega over-escalated R2 to Major but caught real issue. Human approved without comments — iterative review was the quality gate."
     },
     "last_checked": "2026-06-19T20:26+08:00",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 3,
-    "notes": "R1: 4 criticals (NEW line unreachable, null lastReadId, banner persistence, Mark as Read). R2: O(N\u00b2) regression (all 3). R3: 2/3 Ready (Stella over-scoped stale cache). Merged 2026-06-13T10:46Z."
+    "notes": "R1: 4 criticals (NEW line unreachable, null lastReadId, banner persistence, Mark as Read). R2: O(N²) regression (all 3). R3: 2/3 Ready (Stella over-scoped stale cache). Merged 2026-06-13T10:46Z."
   },
   {
     "owner": "kagura-agent",
@@ -1706,7 +1706,7 @@
         "ci-webhook-shell-injection"
       ],
       "noise": [],
-      "calibration": "4-round review. R1 caught toUser() propagation (Stella unique), OAuth COALESCE (Vega unique). R2 caught CI shell injection (Stella+Nova; Vega missed). R3 caught COALESCE regression (Nova+Vega; Stella failed 2x). R4 all resolved, test coverage disagreement only. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "4-round review. R1 caught toUser() propagation (Stella unique), OAuth COALESCE (Vega unique). R2 caught CI shell injection (Stella+Nova; Vega missed). R3 caught COALESCE regression (Nova+Vega; Stella failed 2x). R4 all resolved, test coverage disagreement only. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -1744,12 +1744,12 @@
       "noise": [
         "Vega R3-R4 over-escalated optimization items to Major Issues"
       ],
-      "calibration": "6-round review. R1 caught critical bot permission bypass (Stella+Nova). R2 fixed security. R3 Nova found dispatch.ts re-swallow. R4 CoveApiError fixed. R5 timeout implemented. R6 new features (Monaco, cove.md card, mobile, UntrustedStructuredContext). Vega over-escalated R3-R4 but improved R5-R6 with calibration guidance. Nova timed out R5 (first failure in this PR). Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "6-round review. R1 caught critical bot permission bypass (Stella+Nova). R2 fixed security. R3 Nova found dispatch.ts re-swallow. R4 CoveApiError fixed. R5 timeout implemented. R6 new features (Monaco, cove.md card, mobile, UntrustedStructuredContext). Vega over-escalated R3-R4 but improved R5-R6 with calibration guidance. Nova timed out R5 (first failure in this PR). Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 6,
-    "notes": "R1: Bot permission bypass (Stella+Nova), content_type no max length, silent UI errors, perf concern. R2: R1 criticals fixed. Remaining: delete toast, plugin error log, store channel leak. R3: Delete toast+store leak fixed. P1 dispatch gap remains. Vega over-escalated. R4: CoveApiError+logging fixed. Timeout+tests remain. Vega over-escalated again. R5: Timeout fixed. Stella found TimeoutError nit (negligible impact). Nova timed out. Vega \u2705 (calibration improved). Overall: Ready. R6: New features (Monaco, cove.md card, mobile, UntrustedStructuredContext). Nova+Vega \u2705, Stella \u26a0\ufe0f (CDN). Overall Ready.",
+    "notes": "R1: Bot permission bypass (Stella+Nova), content_type no max length, silent UI errors, perf concern. R2: R1 criticals fixed. Remaining: delete toast, plugin error log, store channel leak. R3: Delete toast+store leak fixed. P1 dispatch gap remains. Vega over-escalated. R4: CoveApiError+logging fixed. Timeout+tests remain. Vega over-escalated again. R5: Timeout fixed. Stella found TimeoutError nit (negligible impact). Nova timed out. Vega ✅ (calibration improved). Overall: Ready. R6: New features (Monaco, cove.md card, mobile, UntrustedStructuredContext). Nova+Vega ✅, Stella ⚠️ (CDN). Overall Ready.",
     "last_checked": "2026-06-19T20:26+08:00"
   },
   {
@@ -1771,7 +1771,7 @@
         "unbounded-cache-lru"
       ],
       "noise": [],
-      "calibration": "R1 caught real cross-channel bug (Stella unique). Unbounded cache flagged by all 3. R2 confirmed both fixes. Tests deferred but non-blocking. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real cross-channel bug (Stella unique). Unbounded cache flagged by all 3. R2 confirmed both fixes. Tests deferred but non-blocking. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -1809,11 +1809,11 @@
         "threadDelete-dead-code"
       ],
       "noise": [
-        "Stella R5 migration idempotency concern \u2014 likely false positive (CI passes, Luna staging-tested)",
+        "Stella R5 migration idempotency concern — likely false positive (CI passes, Luna staging-tested)",
         "Vega R2 over-escalated N+1 + nested threads to Major Issues",
         "Vega R4 over-held at Needs Changes when 2/3 said Ready"
       ],
-      "calibration": "5-round deep review of ~2k LOC feature PR. R1-R3 found 11 blocking issues (permissions, validation, security leaks, correctness). R4 all fixed, 2/3 Ready. R5 confirmed R4 additions clean + no regressions. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "5-round deep review of ~2k LOC feature PR. R1-R3 found 11 blocking issues (permissions, validation, security leaks, correctness). R4 all fixed, 2/3 Ready. R5 confirmed R4 additions clean + no regressions. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "ready",
     "reviewers": 3,
@@ -1840,7 +1840,7 @@
       "accuracy": "correct",
       "blind_spots": [],
       "noise": [],
-      "calibration": "Unanimous 3/3 Ready R1. Human approved without comments. Clean focused PR \u2014 per-channel FIFO queue correctly assessed as low-risk."
+      "calibration": "Unanimous 3/3 Ready R1. Human approved without comments. Clean focused PR — per-channel FIFO queue correctly assessed as low-risk."
     }
   },
   {
@@ -1870,7 +1870,7 @@
       "noise": [
         "Stella R3 over-scoped: root-level credentials question is design not bug"
       ],
-      "calibration": "3-round review. R1 caught critical schema blocker (Stella+Nova, Vega missed). R2 escalated error swallowing + test coverage to Major (3/3). R3 all blockers fixed, 2/3 Ready. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "3-round review. R1 caught critical schema blocker (Stella+Nova, Vega missed). R2 escalated error swallowing + test coverage to Major (3/3). R3 all blockers fixed, 2/3 Ready. Human approved without comments — iterative review was the quality gate."
     },
     "verdict": "needs_changes",
     "reviewers": 3,
@@ -1894,7 +1894,7 @@
       "human_reviewer": "daniyuu",
       "human_verdict": "closed_unmerged",
       "close_reason": "spec_revision",
-      "close_comment": "Closing \u2014 implementation doesn't align with revised design. #386 spec has been significantly revised (all-ID addressing, platform-side autoThread, no resolveTargetRoute). Will re-implement from scratch.",
+      "close_comment": "Closing — implementation doesn't align with revised design. #386 spec has been significantly revised (all-ID addressing, platform-side autoThread, no resolveTargetRoute). Will re-implement from scratch.",
       "our_findings_correct": [
         "reply_to.id unvalidated (B2/B1)",
         "no test coverage for new behavior",
@@ -1902,7 +1902,7 @@
       ],
       "human_findings": [],
       "blind_spots": [
-        "spec misalignment \u2014 the PR implemented a design that was about to be revised; our review focused on code quality, not whether the design itself was the right approach (this is arguably outside code-review scope, but a \"design questioning\" prompt could have caught it)"
+        "spec misalignment — the PR implemented a design that was about to be revised; our review focused on code quality, not whether the design itself was the right approach (this is arguably outside code-review scope, but a \"design questioning\" prompt could have caught it)"
       ],
       "noise": [],
       "accuracy": "correct_on_code",
@@ -1940,14 +1940,14 @@
         "Vega R1 approved Ready with 0 findings (5 criticals existed)",
         "Vega R3 approved LGTM claiming C4 resolved (tests unchanged)"
       ],
-      "calibration": "3-round review identified real issues. PR closed because author chose to rewrite as #400 with better approach (spec-first). Our review was the quality gate \u2014 findings across R1-R3 directly shaped the rewrite."
+      "calibration": "3-round review identified real issues. PR closed because author chose to rewrite as #400 with better approach (spec-first). Our review was the quality gate — findings across R1-R3 directly shaped the rewrite."
     },
     "last_checked": "2026-06-19T20:26+08:00",
     "pr_state": "CLOSED",
     "commits_since_review": 0,
     "review_decision": "REVIEW_REQUIRED",
     "ci_status": "all_green (test/deploy SUCCESS, redeploy SKIPPED)",
-    "notes": "R1-R3: 5 criticals found (dead adapter, streaming removed, tool progress noop, tests hollow, error recovery). R2 caught editQueue race. Closed \u2014 author rewrote as #400."
+    "notes": "R1-R3: 5 criticals found (dead adapter, streaming removed, tool progress noop, tests hollow, error recovery). R2 caught editQueue race. Closed — author rewrote as #400."
   },
   {
     "owner": "kagura-agent",
@@ -1973,14 +1973,14 @@
         "method-binding-loss"
       ],
       "noise": [
-        "C1 deps key hallucination (Nova+Vega R1 \u2014 inferred SDK types from naming, not actual types)",
-        "C2 formatting key hallucination (Vega R1 \u2014 same cause)"
+        "C1 deps key hallucination (Nova+Vega R1 — inferred SDK types from naming, not actual types)",
+        "C2 formatting key hallucination (Vega R1 — same cause)"
       ],
       "false_positives_r1": [
-        "C1 deps key cove vs sendText \u2014 SDK actually uses channel ID as key",
-        "C2 formatting textLimit vs textChunkLimit \u2014 SDK actually uses textLimit"
+        "C1 deps key cove vs sendText — SDK actually uses channel ID as key",
+        "C2 formatting textLimit vs textChunkLimit — SDK actually uses textLimit"
       ],
-      "calibration": "R1 had 2 false positives (C1/C2) from hallucinated SDK types \u2014 reviewers inferred from naming conventions and PR spec examples instead of checking actual SDK source. C3-C5 were genuine. R2 Vega correctly verified SDK types. Stella/Nova both timed out on large diff (~2300 lines). Human caught spec artifact cleanup we missed."
+      "calibration": "R1 had 2 false positives (C1/C2) from hallucinated SDK types — reviewers inferred from naming conventions and PR spec examples instead of checking actual SDK source. C3-C5 were genuine. R2 Vega correctly verified SDK types. Stella/Nova both timed out on large diff (~2300 lines). Human caught spec artifact cleanup we missed."
     },
     "round": 2,
     "last_checked": "2026-06-19T20:26+08:00",
@@ -2010,9 +2010,9 @@
         "typing-keepalive-ux"
       ],
       "noise": [
-        "Vega R2 false Critical C3 (freshSend always deletes draft) \u2014 guarded by if(draftMessageId)"
+        "Vega R2 false Critical C3 (freshSend always deletes draft) — guarded by if(draftMessageId)"
       ],
-      "calibration": "R1 caught 3 real criticals (all 3 consensus on chunking, Stella+Nova on double-delete, Stella unique on post-seal). R2 correctly held on chunking. Author accepted 2/3 fixes and justified deferring chunking to #406 (SDK callback broken in production). Human approved after author response \u2014 iterative review was the quality gate, author made informed decision to merge with known limitation tracked."
+      "calibration": "R1 caught 3 real criticals (all 3 consensus on chunking, Stella+Nova on double-delete, Stella unique on post-seal). R2 correctly held on chunking. Author accepted 2/3 fixes and justified deferring chunking to #406 (SDK callback broken in production). Human approved after author response — iterative review was the quality gate, author made informed decision to merge with known limitation tracked."
     },
     "last_checked": "2026-06-19T20:26+08:00",
     "verdict": "needs_changes",
@@ -2040,7 +2040,7 @@
         "atomic-publish-deferred"
       ],
       "noise": [],
-      "calibration": "R1 caught real no-op-cancels-deploy race (Nova unique). R2 correctly cleared 2:1 (Stella+Vega vs Nova on atomic publish). Nova atomic publish push was valid but over-held for staging context. Human approved without comments \u2014 iterative review was the quality gate."
+      "calibration": "R1 caught real no-op-cancels-deploy race (Nova unique). R2 correctly cleared 2:1 (Stella+Vega vs Nova on atomic publish). Nova atomic publish push was valid but over-held for staging context. Human approved without comments — iterative review was the quality gate."
     },
     "last_checked": "2026-06-19T20:26+08:00",
     "reviewers": 3,
@@ -2054,7 +2054,20 @@
     "pr": 409,
     "reviewed_at": "2026-06-19T22:00:00+08:00",
     "verdict": "ready",
-    "status": "open",
-    "ground_truth": null
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Unanimous 3/3 Ready R1. Human approved without comments. Clean SDK-delegation refactor correctly assessed as low-risk. First PR where all 3 reviewers required model fallback due to network failures."
+    },
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 3/3 unanimous Ready. Clean SDK refactor (-337 lines). All primary models failed (network), fallback models performed well. Merged 2026-06-19T14:51Z.",
+    "last_checked": "2026-06-20T02:26+08:00"
   }
 ]
