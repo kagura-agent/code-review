@@ -1,6 +1,6 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-19 08:35 (Asia/Shanghai)_
+_Last updated: 2026-06-19 14:27 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -259,7 +259,7 @@ _Last updated: 2026-06-19 08:35 (Asia/Shanghai)_
 | #399 | cove | 2026-06-17 | R1-R3 | ⏹️ Closed (rewrite as #400) | dead-adapter-code, draft-streaming-removed, editQueue-race, tests-dont-test-changes, no-error-recovery |
 | #400 | cove | 2026-06-18 | R1-R2 | ✅ Ready | SDK-type-hallucination, fallback-resendsFullText, delete-before-send, method-binding |
 | #405 | cove | 2026-06-18 | R1-R2 | ✅ Ready (1 blocker deferred) | lost-chunking, double-delete-draft, post-seal-staleness, typing-keepalive |
-| #408 | cove | 2026-06-18 | R1-R2 | ✅ Ready (2:1 split) | no-op-cancels-deploy-race, per-job-concurrency, atomic-publish-deferred |
+| #408 | cove | 2026-06-18 | R1-R2 | ✅ Ready (2:1 split) | no-op-cancels-deploy-race, per-job-concurrency, atomic-publish-deferred | Merged 2026-06-18 |
 
 ## Ground Truth Summary (63 merged + 2 closed-unmerged PRs)
 
@@ -291,7 +291,7 @@ _Last updated: 2026-06-19 08:35 (Asia/Shanghai)_
 
 7. **Throughput sustained.** 66 PRs (64 merged + 2 closed), ~240 review rounds, 24 days. ~2.8 PRs/day, ~10.0 reviewer-rounds/day.
 
-8. **Ground truth: human rubber-stamps 95% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). No open PRs in tracking as of this run.
+8. **Ground truth: human rubber-stamps 95% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). No open PRs in tracking as of this run. #409 is open but not yet reviewed by our service (CI failing).
 
 9. **Nova still leads unique find rate.** 20% unique find rate vs Stella 13% vs Vega 5%. Nova finds ~4× more unique issues than Vega. But #400 showed Nova can hallucinate too — the 20% needs adjustment for 2 false uniques in #400.
 
