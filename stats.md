@@ -261,6 +261,7 @@ _Last updated: 2026-06-20 02:26 (Asia/Shanghai)_
 | #405 | cove | 2026-06-18 | R1-R2 | ✅ Ready (1 blocker deferred) | lost-chunking, double-delete-draft, post-seal-staleness, typing-keepalive |
 | #408 | cove | 2026-06-18 | R1-R2 | ✅ Ready (2:1 split) | no-op-cancels-deploy-race, per-job-concurrency, atomic-publish-deferred | Merged 2026-06-18 |
 | #409 | cove | 2026-06-19 | R1 | ✅ Ready (3/3 unanimous) | sdk-progress-compositor, editQueue-removal-safe, fallback-model-resilience | Merged 2026-06-19 |
+| #410 | cove | 2026-06-20 | R1 | ✅ Ready (2/3) | durable-batch-chunking, draft-deletion-ordering, session-context-completeness |
 
 ## Ground Truth Summary (65 merged + 2 closed-unmerged PRs)
 
@@ -270,7 +271,7 @@ _Last updated: 2026-06-20 02:26 (Asia/Shanghai)_
 - **Iterative review as quality gate:** In 64/65 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 53/67 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
-- **Total review rounds:** ~241 across 67 PRs (65 merged + 2 closed-unmerged)
+- **Total review rounds:** ~244 across 68 PRs (65 merged + 2 closed-unmerged + 1 open)
 - **False-ready detection:** 5 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega) — self-correcting system working
 - **Escalation protocol validated:** 8 cases — all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
