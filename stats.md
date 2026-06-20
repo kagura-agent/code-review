@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-20 02:26 (Asia/Shanghai)_
+_Last updated: 2026-06-20 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 211 | 205/211 (97%) → | 6 failures total. #409: used fallback (gpt-4.1) due to network failures, clean output. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 213 | 210/213 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #409: used fallback (claude-sonnet-4) due to network failures, clean output. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 208 | 188/208 (91%) → | #409: used fallback (gemini-2.5-pro from gemini-3.1-pro-preview), clean output but no unique findings. |
+| 🌟 Stella | gpt-5.5 | 212 | 206/212 (97%) → | 6 failures total. #410: valid draft-deletion concern, over-classified severity. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 214 | 211/214 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #410: 5 unique suggestions, strongest reviewer this PR. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 209 | 189/209 (90%) → | #410: clean pass, no unique findings. 8th PR with gemini-2.5-pro. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -118,9 +118,9 @@ _Last updated: 2026-06-20 02:26 (Asia/Shanghai)_
 
 | Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#405) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 93/97 (96%) | ↓ Slight. #400 R1 timeout (2300 lines). Large-diff sensitivity. |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 96/99 (97%) | ↓ Slight. 3rd timeout on #400 R2. All on large PRs. |
-| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 87/94 (93%) | → Stable. #400 2/2 clean. #405 R1 crash (retried). Improved from gemini-3.1-pro era. |
+| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 94/98 (96%) | → Stable. #410: valid dissent, clean output. Large-diff sensitivity on >2000 lines. |
+| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 97/100 (97%) | → Stable. #410: 5 unique suggestions, gold standard. |
+| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 88/95 (93%) | → Stable. #410: clean pass, no unique finds. 8th gemini-2.5-pro PR. |
 
 ## Vega Calibration Swing Pattern
 
@@ -261,7 +261,7 @@ _Last updated: 2026-06-20 02:26 (Asia/Shanghai)_
 | #405 | cove | 2026-06-18 | R1-R2 | ✅ Ready (1 blocker deferred) | lost-chunking, double-delete-draft, post-seal-staleness, typing-keepalive |
 | #408 | cove | 2026-06-18 | R1-R2 | ✅ Ready (2:1 split) | no-op-cancels-deploy-race, per-job-concurrency, atomic-publish-deferred | Merged 2026-06-18 |
 | #409 | cove | 2026-06-19 | R1 | ✅ Ready (3/3 unanimous) | sdk-progress-compositor, editQueue-removal-safe, fallback-model-resilience | Merged 2026-06-19 |
-| #410 | cove | 2026-06-20 | R1 | ✅ Ready (2/3) | durable-batch-chunking, draft-deletion-ordering, session-context-completeness |
+| #410 | cove | 2026-06-20 | R1 | ✅ Ready (2/3) | durable-batch-chunking, draft-deletion-ordering, session-context-completeness | Open — awaiting human review |
 
 ## Ground Truth Summary (65 merged + 2 closed-unmerged PRs)
 
@@ -271,7 +271,7 @@ _Last updated: 2026-06-20 02:26 (Asia/Shanghai)_
 - **Iterative review as quality gate:** In 64/65 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 53/67 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
-- **Total review rounds:** ~244 across 68 PRs (65 merged + 2 closed-unmerged + 1 open)
+- **Total review rounds:** ~247 across 69 PRs (65 merged + 2 closed-unmerged + 2 open)
 - **False-ready detection:** 5 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega) — self-correcting system working
 - **Escalation protocol validated:** 8 cases — all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -292,9 +292,9 @@ _Last updated: 2026-06-20 02:26 (Asia/Shanghai)_
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 67 PRs (65 merged + 2 closed), ~241 review rounds, 25 days. ~2.7 PRs/day, ~9.6 reviewer-rounds/day.
+7. **Throughput sustained.** 69 PRs (65 merged + 2 closed + 2 open), ~247 review rounds, 26 days. ~2.7 PRs/day, ~9.5 reviewer-rounds/day.
 
-8. **Ground truth: human rubber-stamps 95% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). No open PRs in tracking. #409 merged — 3/3 Ready, clean refactor confirmed.
+8. **Ground truth: human rubber-stamps 95% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #410 open — R1 posted (2/3 Ready), awaiting human review.
 
 9. **Nova still leads unique find rate.** 20% unique find rate vs Stella 13% vs Vega 5%. Nova finds ~4× more unique issues than Vega. But #400 showed Nova can hallucinate too — the 20% needs adjustment for 2 false uniques in #400.
 
