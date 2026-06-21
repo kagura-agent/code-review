@@ -1,6 +1,6 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-21 02:26 (Asia/Shanghai)_
+_Last updated: 2026-06-21 08:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -82,13 +82,13 @@ _Last updated: 2026-06-21 02:26 (Asia/Shanghai)_
 5. **False positives on new code** — **#405 R2: raised false Critical C3 (freshSend always deletes draft) when code was guarded by `if(draftMessageId)`**
 6. **Bright spots** — **#400 was Vega's best PR**: correctly caught that C1/C2 were reviewer hallucinations, verified SDK source, gave accurate Ready verdict when Stella+Nova both timed out. Shows Vega can be the most accurate reviewer when verification is the key skill.**
 
-## Unique Find Rate (last 10 PRs: #330 through #369)
+## Unique Find Rate (last 10 PRs: #369 through #410)
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 25 | ~193 | ~13% | → Stable. #387: extra fields stripping (R2 dissent, valid hardening follow-up). Consistent edge-case finder. |
-| 🌠 Nova | 40 | ~193 | ~21% | ↑↑ Widening lead. #387: metadata schema owner + CLI usage string (2 unique). Dominant. |
-| 💫 Vega | 9 | ~193 | ~5% | ↓↓ Still below 10% threshold. Not used in #387. **Below 10% for 15+ consecutive periods. 4 PRs with gemini-2.5-pro: reliability up, unique finds still low.** |
+| 🌟 Stella | 6 | ~38 | ~16% | → Stable. post-seal (#405), draft-deletion (#410), extra fields (#387), schema (#369), ChannelId (#400). Consistent edge-case finder. |
+| 🌠 Nova | 12 | ~38 | ~32% | ↑↑ Dominant. 5 unique in #410 alone. no-op-cancels-deploy (#408), dead-code (#369), metadata+CLI (#387). Minus 2 FP (#400 hallucinations). |
+| 💫 Vega | 2 | ~38 | ~5% | ↓↓ Still below 10% threshold. **Below 10% for 20+ consecutive periods.** 1 valid unique (SDK verification #400 R2). Reliability improved but origination weak. |
 
 ## Consensus Participation
 
@@ -280,7 +280,7 @@ _Last updated: 2026-06-21 02:26 (Asia/Shanghai)_
 
 ## Actionable Notes
 
-1. **🟡 Vega: gemini-2.5-pro evaluation — 7 PRs complete.** #357-#405. Results: reliability improved (overall 91%), **calibration remains inconsistent**. #399 gave ✅ Ready with 0 findings (5 criticals existed). #400 was **Vega's best PR ever** — correctly caught hallucinated SDK types. #405 R1 crashed (retry worked), R2 false positive. **Revised verdict: Vega adds value in verification rounds (confirming/denying other reviewers' findings) but unreliable as primary reviewer. Consider: keep Vega but weight verdict lower in consolidation, or use Vega specifically for R2+ verification rounds.**
+1. **🟡 Vega: gemini-2.5-pro evaluation — 9 PRs complete.** #357-#410. Results: reliability improved (overall 91%), **calibration remains inconsistent**. #399 gave ✅ Ready with 0 findings (5 criticals existed). #400 was **Vega's best PR ever** — correctly caught hallucinated SDK types. #405 R1 crashed (retry worked), R2 false positive. #408-#410: clean passes, no unique finds. **Revised verdict: Vega adds value in verification rounds (confirming/denying other reviewers' findings) but unreliable as primary reviewer. Consider: keep Vega but weight verdict lower in consolidation, or use Vega specifically for R2+ verification rounds.**
 
 2. **🟠 NEW: SDK type hallucination failure mode.** #400 R1 had Nova+Vega both hallucinate SDK type names from naming conventions and PR spec examples. Neither checked actual SDK source. **Prompt action needed:** Add instruction to verify SDK/library types against actual source, not spec examples or naming inference. First systematic cross-reviewer hallucination.
 
