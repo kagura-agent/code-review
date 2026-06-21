@@ -2075,12 +2075,21 @@
     "repo": "cove",
     "pr": 410,
     "reviewed_at": "2026-06-20T19:25:00+08:00",
-    "status": "open",
-    "ground_truth": null,
-    "last_checked": "2026-06-21T20:26+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Unanimous outcome correct. 2/3 Ready (Stella dissent on draft deletion ordering downgraded — pre-existing pattern). Human approved without comments. Clean SDK integration review."
+    },
+    "last_checked": "2026-06-22T02:30+08:00",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 1,
-    "notes": "R1: 2/3 Ready (Stella dissent on draft deletion ordering, downgraded). SDK chunking migration. Awaiting human review."
+    "notes": "R1: 2/3 Ready (Stella dissent downgraded). SDK chunking migration. Merged 2026-06-21T12:53Z."
   }
 ]
