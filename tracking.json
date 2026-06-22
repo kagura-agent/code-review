@@ -2113,5 +2113,13 @@
     "rounds": 1,
     "notes": "R1: 3/3 unanimous Ready. Tar-pipe CI fix. Spec reviewed in 3 rounds (R2 false alarm from stale repo, corrected). Code review clean. Awaiting merge.",
     "last_checked": "2026-06-22T14:28+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 413,
+    "reviewed_at": "2026-06-22T15:00+08:00",
+    "status": "open",
+    "ground_truth": null
   }
 ]
