@@ -2091,5 +2091,13 @@
     "reviewers": 3,
     "rounds": 1,
     "notes": "R1: 2/3 Ready (Stella dissent downgraded). SDK chunking migration. Merged 2026-06-21T12:53Z."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 411,
+    "reviewed_at": "2026-06-22T14:13+08:00",
+    "status": "open",
+    "ground_truth": null
   }
 ]
