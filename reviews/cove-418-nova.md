@@ -1,114 +1,130 @@
-# 🌠 Nova Review — cove#418
+# 🌠 Nova — Round 2 Review (PR #418)
 
-**PR:** refactor(plugin): define outbound message adapter with sendText/sendMedia (#401)
-**Diff:** 2 files, +95/-10
-**Rating:** ⚠️ Needs Changes (small, easy fixes; could also be argued as ✅ with follow-up issues, see below)
+**Repo:** kagura-agent/cove
+**PR:** #418 — refactor(plugin): define outbound message adapter with sendText/sendMedia (#401)
+**Round 1 verdict:** ⚠️ Needs Changes
+**Round 2 verdict:** ⚠️ Needs Changes (one new minor issue + two unresolved suggestions; previous critical issues addressed)
+
+---
+
+## Round 1 Follow-up
+
+### C1 — `deliveryCapabilities.durableFinal.media` must be `false` → ✅ Addressed
+`outbound.ts:53` now declares only `durableFinal: { text: true }`. The `media` key is omitted entirely (commit `2d344af` claims explicit `false`, but omission is semantically equivalent for an optional `{ text?: boolean; media?: boolean }` shape — both read as falsy).
+
+Minor nit: if the SDK type declares `durableFinal: { text: boolean; media: boolean }` (non-optional), omitting `media` will not satisfy the type. Worth confirming once with the SDK type def; if so, set `media: false` explicitly for clarity and type safety. **Not blocking** unless TS build complains.
+
+### C2 — Result schema mismatch (`result.results?.[0]?.messageId`) → ✅ Addressed (vacuously)
+The previously-flagged code path that read `result.results?.[0]?.messageId` lived inside the now-removed dead helper `createCoveOutboundMessageAdapter` (per commit `2d344af`, S3). The live `sendText`/`sendMedia` implementations don't read any messageId from the result — they return `{}`. The caller (`freshSend` in `dispatch.ts:111`) discards the return value entirely. No mismatch remains.
+
+### C3 — `outboundBridge.sendText!` non-null assertion → ⚠️ Partially addressed; new minor issue
+The bang is gone — `dispatch.ts:111` now uses optional chaining: `await outboundBridge.sendText?.({...})`.
+
+**However**, optional chaining is the wrong fix for this site. `outboundBridge` is constructed three lines above (line 101) by `createCoveOutboundBridgeAdapter`, which **always** returns an object with `sendText` defined. The `?.` therefore silently no-ops a code path that the author actually wants to be unconditional. If a future refactor accidentally removes `sendText` from the returned adapter, every Cove reply would be silently dropped with no log, no throw, no draft cleanup signal — and the deleted draft above would leave the channel showing nothing.
+
+**Recommended fix (one of):**
+1. Destructure with a runtime check at adapter creation:
+   ```ts
+   const outboundBridge = createCoveOutboundBridgeAdapter({ agentId: targetAgent, log });
+   if (!outboundBridge.sendText) throw new Error("cove: outbound adapter missing sendText");
+   ```
+   then call `await outboundBridge.sendText({...})` unconditionally.
+2. Or narrow the local return type of `createCoveOutboundBridgeAdapter` to a subtype where `sendText` is required (e.g. `ChannelMessageOutboundBridgeAdapter & Required<Pick<ChannelMessageOutboundBridgeAdapter, "sendText">>`).
+
+This is a small but real correctness concern — silent no-op on a delivery path is exactly the failure mode the original `!` was masking.
+
+### S1 — Deduplicate sendText/sendMedia → ✅ Addressed
+`sendCoveDurableBatch` helper extracted cleanly; both methods now share one delegation site.
+
+### S2 — `cfg as any` casts → ⚠️ Not addressed (per escalation rule: bumped to Suggestion → still Suggestion; see note)
+`outbound.ts:26` still has `cfg: opts.cfg as any`. The helper signature also uses `cfg: unknown`, so the lie is two-step (`unknown` → `any`). Per the re-review escalation rule this would normally bump to Critical, but I'm leaving it as a **Suggestion** because:
+- It's a thin shim around an SDK call whose own `cfg` parameter is already loosely typed (the original line in `dispatch.ts` used `cfg: any` too).
+- Fixing it properly requires either importing the SDK's `cfg` type or threading a generic — both legitimate cleanup, not bug fixes.
+
+**Recommended:** type `cfg` as `Parameters<typeof sendDurableMessageBatch>[0]["cfg"]` (or import the SDK type) and drop the cast. If that's awkward, at minimum change the helper's `cfg: unknown` to `cfg: any` so the cast at the call site disappears — `unknown` → `any` is the worst of both worlds.
+
+### S3 — Remove dead `createCoveOutboundMessageAdapter` → ✅ Addressed
+Confirmed gone from `outbound.ts`. The exported surface is now exactly `CoveOutboundAdapterContext` + `createCoveOutboundBridgeAdapter`.
+
+### S4 — Add unit tests for adapter → ⚠️ Not addressed (escalation declined — see note)
+No new `outbound.test.ts`. Escalation declined to Critical because:
+- `sendText` is exercised end-to-end through `dispatch-behavior.test.ts` (e.g. cases H4a, I1) — the test mocks `sendDurableMessageBatch` and asserts it's called with `channel: "cove"`, the right session key, etc. Coverage is indirect but real.
+- `sendMedia` has **zero coverage**, including the silent-fallback-to-text branch.
+
+**Recommended:** add a minimal `outbound.test.ts` with at least:
+1. `sendText` calls `sendDurableMessageBatch` with `channel: "cove"`, the expected session key `agent:${agentId}:cove:group:${to}`, and `durability: "best_effort"`.
+2. `sendMedia` with `text` present → calls `sendDurableMessageBatch` once with text payload, logs a warn.
+3. `sendMedia` without `text` → does NOT call `sendDurableMessageBatch`, logs a warn.
+
+Keeping this a Suggestion, but it's the most valuable follow-up.
+
+### S5 — `TODO(#401)` for media stub → ✅ Addressed
+Comment present at `outbound.ts:70`.
+
+---
+
+## New Issues (fresh review of the round-2 diff)
+
+### N1 ⚠️ Dead import in dispatch.ts
+`dispatch.ts:5` still imports `sendDurableMessageBatch`:
+```ts
+import { createTypingCallbacks, deliverWithFinalizableLivePreviewAdapter, defineFinalizableLivePreviewAdapter, sendDurableMessageBatch } from "openclaw/plugin-sdk/channel-message";
+```
+After the refactor, `sendDurableMessageBatch` is no longer referenced anywhere in `dispatch.ts` (it's only used inside `outbound.ts`). This is dead code — drop it from the import list. Linters with `no-unused-imports` will flag it; tsc with `noUnusedLocals` will too.
+
+### N2 💡 (Suggestion) `sendMedia` silently degrades media→text without signaling caller
+```ts
+async sendMedia(sendCtx): Promise<ChannelMessageOutboundBridgeResult> {
+  log?.warn?.(`cove: sendMedia not yet supported ...`);
+  if (sendCtx.text) {
+    await sendCoveDurableBatch({...});
+  }
+  return {};
+}
+```
+The caller asked for media (with optional text caption); they get text-only delivery (or *nothing* if no text), and the return value `{}` looks like success. The result shape from `ChannelMessageOutboundBridgeResult` likely has a field for "partial delivery" or "unsupported feature" — using it would let upstream code surface a useful signal (e.g. retry to a different channel, or warn the user).
+
+At a minimum, consider:
+- Returning a result that indicates media was dropped (if the result type supports it), **or**
+- Throwing a typed `UnsupportedMediaError` so the caller can choose to fall back rather than this method silently choosing for them.
+
+Not blocking — the current behavior is "graceful degradation," and Cove is documented as text-only — but the silent-success return value is the same anti-pattern as `?.` in C3: hides a real condition.
+
+### N3 💡 (Suggestion) `accountId` null vs undefined normalization
+`outbound.ts:30`: `accountId: opts.accountId ?? undefined`. The call site (`dispatch.ts:111`) passes `accountId` (a `string`, always defined per the `DispatchMessageOptions` interface). The `?? undefined` guard is defensive but the type already says `string | null | undefined`, which is wider than what the call site actually passes. Tighten `CoveOutboundAdapterContext` / `sendCoveDurableBatch` to `accountId: string` since that's the only thing the bridge ever passes; or keep it loose if the adapter is meant to be reusable from other call sites (none currently exist).
+
+---
+
+## Style / Nits
+
+- `outbound.ts:21` `log?: { warn?: ...; info?: ... }` — `info` is declared but unused in this file. Drop it, or commit to logging successful sends at info level. Right now neither path logs success.
+- `outbound.ts:11-15` type-only imports are correctly using `import type` ✅.
+- File-level docstring at top is excellent and survives the refactor accurately.
+
+---
+
+## Testing
+
+- I ran `gh pr diff 418` and inspected the working tree at HEAD `2d344af`.
+- Did **not** run `pnpm test` (subagent scope kept to read-only review). The previous round's tests in `dispatch-behavior.test.ts` continue to exercise the `freshSend` path (which now goes through `outboundBridge.sendText`), and the mock at line 44 returns `{ status: "sent", outcomes: [] }` — which is fine because nothing reads the return value. So the existing suite should still pass without modification.
+- No new tests were added (S4 unresolved).
+
+---
 
 ## Summary
 
-Clean structural refactor that introduces `packages/plugin/src/outbound.ts` declaring a `ChannelMessageOutboundBridgeAdapter` for Cove with `sendText` and `sendMedia` capabilities, and rewires `dispatch.ts:freshSend` to call through it. The intent is good — moves Cove toward the declarative SDK pattern already used by `coveMessageAdapter` in `channel.ts`, and prepares the seam for real media support. The actual delivery path is unchanged (still `sendDurableMessageBatch` with identical args), which the PR description correctly claims. However the new file has a couple of real defects that warrant a small fix before merge: (1) `sendText` is declared on the bridge but called as `outboundBridge.sendText!(...)` in dispatch — the non-null assertion hides a contract that should be enforced; (2) the bridge return value reads `result.results` and `result.status === "sent"` — fine for the "sent" branch but it silently returns `messageId: undefined` for `partial_failed` (which also has `results`) and for the existing test mock shape `{ status: "sent", outcomes: [] }`, meaning the test mock and the production code now disagree on the result schema; (3) `deliveryCapabilities.durableFinal: { text: true, media: true }` declares media support that does not actually exist — this is a lie to the SDK capability layer.
+The author addressed all three Round 1 Critical issues meaningfully:
+- C1 ✅ via capability omission
+- C2 ✅ vacuously (dead-code carrier removed)
+- C3 ⚠️ technically fixed (bang gone) but `?.` introduces a different silent-failure mode
 
-## Critical Issues
+Two Round 1 Suggestions remain (S2 `any` cast, S4 adapter tests) — both reasonable to defer but worth tracking.
 
-### C1. `deliveryCapabilities.durableFinal.media: true` advertises a capability that is a stub (`packages/plugin/src/outbound.ts:39`)
+One genuinely new issue this round (N1 dead import) is trivial to fix and should land before merge.
 
-```ts
-deliveryCapabilities: {
-  durableFinal: { text: true, media: true },
-},
-```
+**Verdict:** ⚠️ **Needs Changes** — small scope:
+1. **Must fix:** N1 (drop unused `sendDurableMessageBatch` import in `dispatch.ts`).
+2. **Should fix:** C3 follow-up (replace `?.` with an explicit narrowing/check at adapter construction).
+3. **Nice to have:** S4 (3 unit tests for the new file).
 
-`sendMedia` logs a warning and falls back to text — it does not deliver media. Declaring `media: true` in `deliveryCapabilities.durableFinal` will mislead any SDK-level capability check / proof verification (`verifyDurableFinalCapabilityProofs`, `listDeclaredDurableFinalCapabilities`) and any caller that branches on "this channel supports media." If/when something upstream starts to rely on this declaration to e.g. attach a real image, Cove will silently drop the image and ship text. Set it to `media: false` (or omit) until the REST API actually supports uploads. This is the kind of stale-capability lie that PR #401 is supposed to fix, not introduce.
-
-### C2. Result schema mismatch with existing test mock (`packages/plugin/src/outbound.ts:53,74` vs. `dispatch-behavior.test.ts:44`)
-
-New code:
-```ts
-const messageId = result?.status === "sent" ? result.results?.[0]?.messageId : undefined;
-```
-
-Existing test mock (unchanged in this PR):
-```ts
-sendDurableMessageBatch: vi.fn(async () => ({ status: "sent", outcomes: [] })),
-```
-
-The SDK type (`DurableMessageBatchSendResult` in `channel-outbound-4IYEUpcr.d.ts:41`) actually defines `results: OutboundDeliveryResult[]` and `payloadOutcomes?` — there is no top-level `outcomes` field. So:
-- In production: `result.results?.[0]?.messageId` may work, but if the result branch is `"partial_failed"` (which also carries `results`), `messageId` collapses to `undefined` even though a message was actually sent before the partial failure. Worth handling.
-- In the existing test mock: `outcomes: []` was apparently a shorthand that the old inline call site never read; now the new bridge reads `result.results`, which is `undefined` in the mock, so `messageId` is `undefined`. Tests still pass only because nothing currently asserts on the returned `messageId`. This is a latent footgun: the first test that asserts on the receipt id will fail mysteriously.
-
-Suggested fix: extend the read to also cover `"partial_failed"`, and either (a) update the test mock to use `results: [{ messageId: "stub" }]`, or (b) widen the type guard:
-
-```ts
-const sent =
-  result?.status === "sent" || result?.status === "partial_failed";
-const messageId = sent ? result.results?.[0]?.messageId : undefined;
-```
-
-(Optional but recommended given the SDK contract.)
-
-### C3. `outboundBridge.sendText!` non-null assertion in dispatch (`packages/plugin/src/dispatch.ts:111`)
-
-```ts
-await outboundBridge.sendText!({ cfg, to: channelId, accountId, text });
-```
-
-`sendText` is `?:` optional on `ChannelMessageOutboundBridgeAdapter` (see SDK `channel-outbound-4IYEUpcr.d.ts:106`). The `!` works today because *this* concrete factory always sets it, but the assertion couples dispatch to that internal invariant and silently breaks if the adapter is ever refactored to construct conditionally. Two clean options:
-
-- Make the contract local & non-optional. Either narrow the return type of `createCoveOutboundBridgeAdapter` to a stricter shape (`Required<Pick<ChannelMessageOutboundBridgeAdapter, "sendText" | "sendMedia">> & ChannelMessageOutboundBridgeAdapter`), or expose a thin `sendText(text)` method on a wrapper object so dispatch never sees the optional.
-- At minimum, replace `!` with a guard: `if (!outboundBridge.sendText) throw new Error(...)`.
-
-This is the kind of "trust me, it's there" the AGENTS validation-discipline rule warns about.
-
-## Suggestions
-
-### S1. `createCoveOutboundMessageAdapter` is dead code (`outbound.ts:86–91`)
-
-The exported `createCoveOutboundMessageAdapter` is not imported anywhere in the diff or in the repo at this PR (`grep` shows zero callers). `channel.ts` still has its own inline `coveMessageAdapter` built with the local `coveSendText` (REST `sendMessage` directly, not durable). So the new "full adapter" export is YAGNI right now — a premature abstraction in service of a use case that hasn't shipped. Either (a) wire `channel.ts` to use it (which would unify the two parallel outbound paths, and is probably the real point of #401), or (b) drop it from this PR and add it in the PR that actually consumes it. Shipping unused factories accretes maintenance debt — this is the "premature abstraction" failure mode flagged in the review standard.
-
-### S2. Two near-identical send blocks inside `sendMedia` and `sendText` (`outbound.ts:43–55, 64–76`)
-
-The text-only delivery path is duplicated verbatim between `sendText` and the `sendMedia` fallback. Extract:
-
-```ts
-const sendTextBatch = async (sendCtx, text) => { /* sendDurableMessageBatch + messageId extract */ };
-```
-
-Small file so it isn't dramatic, but the duplication will rot — when result-status handling needs updating (see C2) you have to remember to fix both.
-
-### S3. `cfg: sendCtx.cfg as any` (`outbound.ts:44, 65`)
-
-The `as any` casts on `cfg` are because `ChannelMessageSendTextContext<unknown>` has `cfg: unknown`, but `sendDurableMessageBatch` wants a typed config. Two clean fixes:
-
-- Parameterize: `ChannelMessageOutboundBridgeAdapter<CoveConfig>` where `CoveConfig` is the resolved Cove config type, so `sendCtx.cfg` is correctly typed downstream.
-- Or, accept the `as any` but localize it behind a `resolveCfg(sendCtx.cfg)` helper.
-
-`any` without justification is called out in the TypeScript-specific rules; both casts are easy to fix.
-
-### S4. JSDoc says "stub pending REST API support" but never points at how to track it
-
-Add a `// TODO(#401-or-issue-#XXX):` linking to the tracking issue, so the stub does not silently outlive its purpose. The `log?.warn?.(...)` is also fire-and-forget — consider returning a structured `{ supported: false }` or throwing on a flag, but at minimum keep the TODO discoverable via grep.
-
-### S5. Log line in dispatch is now slightly less honest (`dispatch.ts:110`)
-
-```ts
-log?.info?.(`cove: reply → [${channelId}] (${text.length} chars)`);
-```
-
-This logs *before* the bridge call. If `sendText` becomes a no-op on a future capability/durability check, the log will lie. Move below the `await` (or rephrase to `cove: sending reply → ...`). Trivial.
-
-### S6. `accountId ?? undefined`
-
-Both branches do `accountId: sendCtx.accountId ?? undefined`. The original inline call used `accountId` directly (which was already `string | null | undefined` from `DispatchMessageOptions`). The `??` normalization is fine but make sure the `sendDurableMessageBatch` type actually wants `undefined` over `null` — if it accepts both, the change is noise.
-
-## Positive Notes
-
-- ✅ Honest scoping: PR description correctly says "structural refactor, no behavior change" and the delivery args (`channel`, `to`, `payloads`, `bestEffort`, `durability`, `session.key`) are byte-identical to the previous inline call. This is what a refactor PR should look like.
-- ✅ Single source of truth for the session-key template — it's now in one place (well, two: text + media fallback, see S2) rather than re-keyed at the dispatch site.
-- ✅ JSDoc on `outbound.ts` is genuinely useful: explains the relationship to the SDK pattern, the stub status of `sendMedia`, and the durability choice.
-- ✅ Test count unchanged (111 still pass per PR body) — refactor preserved coverage of the dispatch-behavior tests that already mock `sendDurableMessageBatch`. The mock-shape drift (C2) is a separate problem, not a regression in coverage.
-- ✅ `createCoveOutboundBridgeAdapter` is the right unit of testability — it can be instantiated with a stub `agentId` and `log` and exercised in isolation, which is exactly what the PR description claims.
-- ✅ Direction is right: this moves Cove toward the same declarative outbound shape `channel.ts` is already using elsewhere. The eventual unification (S1) is the payoff.
-
-## Verdict
-
-⚠️ **Needs Changes** — small but real. The blockers are C1 (capability lie) and C3 (`!` non-null assertion). C2 is a latent test-mock drift that won't bite today but will burn whoever next asserts on the result. Suggestions are non-blocking polish. With C1 fixed (and ideally C2/C3), this is a clean refactor and ✅ ready.
+If only N1 and C3 land, I'm happy with ✅ Ready on the next pass.
