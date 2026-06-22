@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-22 02:30 (Asia/Shanghai)_
+_Last updated: 2026-06-22 14:28 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 212 | 206/212 (97%) → | 6 failures total. #410: valid draft-deletion concern, over-classified severity. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 214 | 211/214 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #410: 5 unique suggestions, strongest reviewer this PR. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 209 | 189/209 (90%) → | #410: clean pass, no unique findings. 9th PR with gemini-2.5-pro. |
+| 🌟 Stella | gpt-5.5 | 213 | 207/213 (97%) → | 6 failures total. #411: clean unanimous Ready. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 215 | 212/215 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411: clean pass. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 210 | 190/210 (90%) → | #411: clean pass (used gemini-3.1-pro). 10th post-model-switch PR. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -86,9 +86,9 @@ _Last updated: 2026-06-22 02:30 (Asia/Shanghai)_
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 6 | ~38 | ~16% | → Stable. post-seal (#405), draft-deletion (#410), extra fields (#387), schema (#369), ChannelId (#400). Consistent edge-case finder. |
-| 🌠 Nova | 12 | ~38 | ~32% | ↑↑ Dominant. 5 unique in #410 alone. no-op-cancels-deploy (#408), dead-code (#369), metadata+CLI (#387). Minus 2 FP (#400 hallucinations). |
-| 💫 Vega | 2 | ~38 | ~5% | ↓↓ Still below 10% threshold. **Below 10% for 20+ consecutive periods.** 1 valid unique (SDK verification #400 R2). Reliability improved but origination weak. |
+| 🌟 Stella | 7 | ~41 | ~17% | → Stable. post-seal (#405), draft-deletion (#410), extra fields (#387), schema (#369), ChannelId (#400), run-scoped-temp (#411). Consistent edge-case finder. |
+| 🌠 Nova | 13 | ~41 | ~32% | ↑↑ Dominant. 5 unique in #410 alone. no-op-cancels-deploy (#408), dead-code (#369), metadata+CLI (#387), pipefail+line-refs (#411). Minus 2 FP (#400 hallucinations). |
+| 💫 Vega | 3 | ~41 | ~7% | ↓↓ Still below 10% threshold. **Below 10% for 20+ consecutive periods.** SDK verification (#400 R2), dotfile-cp (#411). Reliability improved but origination weak. |
 
 ## Consensus Participation
 
@@ -116,11 +116,11 @@ _Last updated: 2026-06-22 02:30 (Asia/Shanghai)_
 
 ## Reliability History
 
-| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#405) | Trend |
+| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#411) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 94/98 (96%) | → Stable. #410: valid dissent, clean output. Large-diff sensitivity on >2000 lines. |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 97/100 (97%) | → Stable. #410: 5 unique suggestions, gold standard. |
-| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 88/95 (93%) | → Stable. #410: clean pass, no unique finds. 8th gemini-2.5-pro PR. |
+| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 95/99 (96%) | → Stable. #411: clean unanimous Ready. Large-diff sensitivity on >2000 lines. |
+| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 98/101 (97%) | → Stable. #411: clean pass, pipefail note. |
+| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 89/96 (93%) | → Stable. #411: clean pass, dotfile-cp suggestion. 10th post-switch PR. |
 
 ## Vega Calibration Swing Pattern
 
@@ -262,16 +262,17 @@ _Last updated: 2026-06-22 02:30 (Asia/Shanghai)_
 | #408 | cove | 2026-06-18 | R1-R2 | ✅ Ready (2:1 split) | no-op-cancels-deploy-race, per-job-concurrency, atomic-publish-deferred | Merged 2026-06-18 |
 | #409 | cove | 2026-06-19 | R1 | ✅ Ready (3/3 unanimous) | sdk-progress-compositor, editQueue-removal-safe, fallback-model-resilience | Merged 2026-06-19 |
 | #410 | cove | 2026-06-20 | R1 | ✅ Ready (2/3) | durable-batch-chunking, draft-deletion-ordering, session-context-completeness | Merged 2026-06-21 |
+| #411 | cove | 2026-06-22 | R1 | ✅ Ready (3/3) | dotfile-semantics, concurrency-coupling, tar-pipe-ci-fix | Approved, awaiting merge |
 
 ## Ground Truth Summary (66 merged + 2 closed-unmerged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 2 — #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
-- **Human rubber-stamp rate:** 95% — human approved without findings in 64/66 merged cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
-- **Iterative review as quality gate:** In 65/66 merged PRs, our multi-round review was the actual quality gate
+- **Human rubber-stamp rate:** 95% — human approved without findings in 65/67 merged cases (+ #411 pending merge). Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
+- **Iterative review as quality gate:** In 66/67 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
-- **Multi-round PRs:** 53/68 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
-- **Total review rounds:** ~248 across 68 PRs (66 merged + 2 closed-unmerged)
+- **Multi-round PRs:** 53/69 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
+- **Total review rounds:** ~251 across 69 PRs (67 merged + 2 closed-unmerged) + #411 pending
 - **False-ready detection:** 5 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega) — self-correcting system working
 - **Escalation protocol validated:** 8 cases — all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -292,9 +293,9 @@ _Last updated: 2026-06-22 02:30 (Asia/Shanghai)_
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 68 PRs (66 merged + 2 closed), ~248 review rounds, 27 days. ~2.5 PRs/day, ~9.2 reviewer-rounds/day.
+7. **Throughput sustained.** 69 PRs (67 merged + 2 closed + #411 pending), ~251 review rounds, 28 days. ~2.5 PRs/day, ~9.0 reviewer-rounds/day.
 
-8. **Ground truth: human rubber-stamps 95% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #410 merged — 2/3 Ready confirmed correct.
+8. **Ground truth: human rubber-stamps 95% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #411: 3/3 Ready, human approved — CI/deploy spec PR, first time spec review + code review both on same PR.
 
 9. **Nova still leads unique find rate.** 20% unique find rate vs Stella 13% vs Vega 5%. Nova finds ~4× more unique issues than Vega. But #400 showed Nova can hallucinate too — the 20% needs adjustment for 2 false uniques in #400.
 

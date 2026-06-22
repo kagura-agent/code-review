@@ -2098,6 +2098,20 @@
     "pr": 411,
     "reviewed_at": "2026-06-22T14:13+08:00",
     "status": "open",
-    "ground_truth": null
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Unanimous 3/3 Ready R1. Human approved without comments. Clean CI/deploy spec fix correctly assessed as low-risk. Spec review (R1-R2 corrected) preceded code review."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 3/3 unanimous Ready. Tar-pipe CI fix. Spec reviewed in 3 rounds (R2 false alarm from stale repo, corrected). Code review clean. Awaiting merge.",
+    "last_checked": "2026-06-22T14:28+08:00"
   }
 ]
