@@ -1,0 +1,35 @@
+title:	refactor(plugin): clean up typing lifecycle management (#401)
+state:	OPEN
+author:	kagura-agent (Kagura)
+labels:	
+assignees:	
+reviewers:	daniyuu (Kagura) (Requested)
+projects:	
+milestone:	
+number:	417
+url:	https://github.com/kagura-agent/cove/pull/417
+additions:	6
+deletions:	3
+auto-merge:	disabled
+--
+## What
+
+Part of #401 (item 2: typing → framework heartbeat adapter).
+
+Consolidates the scattered `typingCallbacks.onCleanup?.()` calls into a single outer `finally` block, ensuring typing indicator stops reliably on **all** exit paths:
+- ✅ Success (final reply delivered)
+- ✅ Error (LLM failure, network, etc.)
+- ✅ Abort (superseded by newer message in same channel)
+- ✅ Unexpected early return
+
+### Before
+Cleanup was called in 3 separate locations — easy to miss a path.
+
+### After
+- `deliver()` calls cleanup early (typing stops before final message appears — required for existing test behavior)
+- Outer `finally` is the idempotent safety net covering all exits
+
+## Tests
+All 111 tests pass (63 behavioral tests in `dispatch-behavior.test.ts` included). No behavior change — structural cleanup only.
+
+Refs: #401

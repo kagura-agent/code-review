@@ -2169,11 +2169,53 @@
     "repo": "cove",
     "pr": 418,
     "reviewed_at": "2026-06-22",
-    "status": "open",
-    "ground_truth": null,
-    "last_checked": "2026-06-23T08:28+08:00",
-    "rounds": 2,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "media-capability-contract",
+        "sendText-silent-noop-guard",
+        "dead-import-cleanup",
+        "result-schema-consistency"
+      ],
+      "noise": [
+        "Stella R3 false positive: claimed durability TS2353 compile error — debunked (tsc --noEmit exits 0)"
+      ],
+      "calibration": "3-round review. R1 caught real contract violation (media: true lie) + sendText! assertion (3/3). R2 caught dead import + ?.silent no-op (2/3 — Vega missed both rounds). R3: all fixed, 3/3 approved. Stella R3 false positive debunked via local tsc verification. Human approved without comments — iterative review was the quality gate."
+    },
+    "last_checked": "2026-06-23T20:26+08:00",
+    "rounds": 3,
     "reviewers": 3,
-    "notes": "R1: media capability lie (2/3), sendText! assertion (3/3), result schema mismatch (Nova). R2: dead import + ?.silent no-op (2/3, Vega missed again). Still open — waiting on author fixes (dead import + guard)."
+    "notes": "R1: media capability lie (2/3), sendText! assertion (3/3), result schema mismatch (Nova). R2: dead import + ?.silent no-op (2/3, Vega missed again). R3: all fixed, 3/3 approved (Stella false positive debunked). Merged 2026-06-23T03:13Z.",
+    "verdict": "ready"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 423,
+    "reviewed_at": "2026-06-23T16:00+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Unanimous 3/3 Ready R1. Clean architectural refactor adopting SDK primitives. Nova found defensive attachment edge case (became #424). Human approved without comments."
+    },
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 3/3 unanimous Ready. SDK queue adoption. Nova attachment finding → #424 follow-up. Merged 2026-06-23T08:55Z.",
+    "last_checked": "2026-06-23T20:26+08:00"
   }
 ]

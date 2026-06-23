@@ -1,32 +1,19 @@
-### Review: `cove-418-vega.md`
+# Review of PR #418 (Round 3)
 
-- **Repo:** kagura-agent/cove
-- **PR:** #418: refactor(plugin): define outbound message adapter with sendText/sendMedia
-- **Reviewer:** 💫 Vega
-- **Round:** 2
-- **Verdict:** ✅ Ready to merge
+## 🏁 Verdict: ✅ Ready
 
-This round successfully addresses all feedback from the previous review. The introduction of the `ChannelMessageOutboundBridgeAdapter` is a solid architectural improvement, centralizing outbound logic and clearly defining capabilities.
+Great work! Both of the remaining blocking issues from Round 2 have been addressed correctly. The adapter integration looks solid.
 
----
+## ✅ Verified Fixes (Round 2 Blocking Issues)
 
-### Previous Issue Checklist
+1. **`?.` silent no-op (`dispatch.ts:111`)**: ✅ Fixed. You added the explicit guard `if (!outboundBridge.sendText) throw new Error(...)`, which correctly prevents silent dropping of replies if the capability is ever missing.
+2. **Dead import (`dispatch.ts`)**: ✅ Fixed. `sendDurableMessageBatch` was successfully removed from the `dispatch.ts` imports.
 
-Here’s a breakdown of how each point from the Round 1 review was addressed:
+## 📝 Remaining Non-Blocking Suggestions (For Future Consideration)
 
-| ID | Issue | Round 1 Status | Resolution | Round 2 Status |
-| :-- | :--- | :--- | :--- | :--- |
-| **C1** | `sendMedia` capability declared but not implemented | ⚠️ **Critical** | The `deliveryCapabilities` declaration was corrected to only advertise `text: true`, accurately reflecting the implementation. | ✅ **Fixed** |
-| **C2** | Result schema mismatch on `sendDurableMessageBatch` | ⚠️ **Critical** | Refactored to use the new adapter, which returns `Promise<{}>`. The calling code no longer tries to access a non-existent `messageId` property from the result. | ✅ **Fixed** |
-| **C3** | Non-null assertion on optional `outboundBridge.sendText` | ⚠️ **Critical** | The direct call was moved into `dispatch.ts`, where the code now correctly uses optional chaining (`outboundBridge.sendText?.(...)`). | ✅ **Fixed** |
-| **S1** | Deduplicate `sendText`/`sendMedia` logic | 💡 Suggestion | A new private helper, `sendCoveDurableBatch`, was created and is used by both `sendText` and the `sendMedia` fallback path. | ✅ **Implemented** |
-| **S2** | `cfg as any` type cast | 💡 Suggestion | The `cfg as any` cast remains within the private `sendCoveDurableBatch` helper. This is acceptable as it isolates the necessary evil into a single, internal function, pending upstream type fixes in the SDK. | ✅ **Acknowledged** |
-| **S3** | `createCoveOutboundMessageAdapter` was dead code | 💡 Suggestion | Renamed to `createCoveOutboundBridgeAdapter` and is now correctly wired into `dispatch.ts` to handle all outbound messages. | ✅ **Implemented** |
-| **S4** | Add unit tests for adapter | 💡 Suggestion | (No new tests were added, but this is acceptable for an internal refactor of this scope. The core logic is delegated to the SDK's `sendDurableMessageBatch`, which is assumed to be tested.) | ✅ **Deferred** |
-| **S5** | Add `TODO` link for `sendMedia` stub | 💡 Suggestion | A `TODO(#401)` comment was added to the `sendMedia` implementation, linking it back to the original tracking issue. | ✅ **Implemented** |
+These were not blocking for this PR, but tracking them for future cleanup:
+- **`cfg as any`**: Still present in `sendCoveDurableBatch` (`opts.cfg as any`). Consider narrowing this configuration type in a future refactoring.
+- **Unit Tests**: No adapter unit tests are included. Worth adding when the testing infrastructure for Cove outbound adapters is expanded.
+- **`sendMedia` silent success**: Currently, `sendMedia` logs a warning and returns `{}` if there's no fallback text. Since `media: true` is correctly omitted from `deliveryCapabilities`, standard pipelines won't hit this, but throwing `new Error("Media uploads not supported by Cove")` instead of returning `{}` might be a safer guard rail for unexpected direct invocations.
 
----
-
-### Final Assessment
-
-The code is now cleaner, safer, and more maintainable. The new adapter pattern is a significant step forward. No new issues were found. Well done.
+Safe to merge from my side! 🚀
