@@ -2171,7 +2171,7 @@
     "reviewed_at": "2026-06-22",
     "status": "open",
     "ground_truth": null,
-    "last_checked": "2026-06-23T02:31+08:00",
+    "last_checked": "2026-06-23T08:28+08:00",
     "rounds": 2,
     "reviewers": 3,
     "notes": "R1: media capability lie (2/3), sendText! assertion (3/3), result schema mismatch (Nova). R2: dead import + ?.silent no-op (2/3, Vega missed again). Still open — waiting on author fixes (dead import + guard)."
