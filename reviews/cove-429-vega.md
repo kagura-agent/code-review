@@ -1,194 +1,106 @@
-# Code Review: PR #429 — feat(client): URL-based channel routing (#428)
+# PR #429 Review — 💫 Vega (Round 3)
 
-**Reviewer:** 💫 Vega (Round 2)  
-**PR:** https://github.com/kagura-agent/cove/pull/429  
-**Branch:** feat/428-url-routing  
-**Commit under review:** 521858c (fix commit)  
-**Date:** 2026-06-24
+**PR:** kagura-agent/cove#429 — feat(client): URL-based channel routing (#428)
+**Branch:** feat/428-url-routing
+**Reviewed commits:** 521858c, 001433b (fixes since Round 2)
 
----
+## Summary
+
+Commit 001433b correctly fixes the React #185 infinite update loop in `ChannelView` and `RedirectToDefault` by replacing zustand selector subscriptions with `getState()` reads inside effects and stabilizing `navigate` via `navigateRef`. This is the right pattern. However, `ThreadPanel` was not updated with the same fix — it still subscribes to the entire `threads` store object as a useEffect dependency, creating the same class of unnecessary re-execution and redundant API calls on deep-linked threads. This was my Round 2 concern and remains unaddressed. The `useScrollRestoration` dead code from Round 2 is also still present.
 
 ## Previous Issues Status
 
-### 1. ✅ CHANNEL_DELETE race — Fixed
+### Round 2 Unresolved #1: useScrollRestoration dead code
+**Status: ⚠️ Still unaddressed — escalated**
 
-**Round 1 issue:** `getGuildForChannel(data.id)` was called after `removeChannel(data.id)`, causing wrong guild lookup in multi-guild scenarios.
+`useScrollRestoration.ts` is defined but never imported by any component. `MessageList.tsx` has its own independent scroll architecture (`scrollMemory` Map with distance-from-bottom tracking, lines 89+). The spec explicitly lists scroll restoration as a required behavior and provides this hook as the solution, but the existing `MessageList` implementation already handles it. The hook is dead code that should be removed (with a note that `MessageList` covers the behavior), or integrated if `MessageList`'s solution is intended to be replaced.
 
-**Fix verification:**
+### Round 2 Unresolved #2: ThreadPanel subscribes to entire `threads` store
+**Status: ⚠️ Still unaddressed — escalated to Needs Changes**
+
+`ThreadPanel.tsx` line 19: `const threads = useThreadStore((s) => s.threads);` subscribes to the entire threads-by-channel object. This is used in the useEffect at line 30 with deps `[threadId, threads]`.
+
+Commit 001433b fixed this exact anti-pattern in `ChannelView` — replacing zustand selectors with `getState()` reads inside effects, adding `navigateRef`, and using `threadFetchRef` to guard fetches. **ThreadPanel was not given the same treatment.**
+
+Concrete problem on deep-linked threads:
+1. `ThreadPanel` mounts → thread not in store → `fetchThread(threadId)` fires → returns thread → `setThread(t)` (local state only)
+2. `fetchThread` does NOT call `addThread()`, so the thread is never persisted to the store
+3. Any subsequent `threads` store change (e.g., `THREAD_CREATE` event for another channel) → new `threads` reference → effect re-runs → thread still not in store → `fetchThread` fires again
+
+Unlike ChannelView, ThreadPanel has **no `threadFetchRef` guard**. This means redundant API calls on every unrelated thread store mutation for deep-linked threads.
+
+**Fix:** Apply the same 001433b pattern — read `threads` via `getState()` inside the effect, add a fetch guard ref, reduce deps to `[threadId]`.
+
+### Previously Fixed (confirmed ✅)
+- CHANNEL_DELETE race condition — `getGuildForChannel` called before `removeChannel` ✅
+- ChannelView thread fetch loop — `threadFetchRef` guard + `getState()` reads ✅
+- Unhandled `fetchThread` rejection — `.catch()` added ✅
+
+## Critical Issues
+
+None blocking.
+
+## Product Impact
+
+1. **Deep-linked threads may trigger redundant fetches** — If a user opens a thread via deep link and the thread store updates from other channels' activity, ThreadPanel will re-fetch the same thread from the API. User sees no visual issue, but it generates unnecessary network traffic. Low frequency in practice (thread store changes are infrequent), but it's the same bug class that 001433b fixed in ChannelView.
+
+## Issues Requiring Changes
+
+### 1. ThreadPanel: Apply 001433b pattern (Medium — escalated from Round 2)
+**File:** `packages/client/src/components/ThreadPanel.tsx`, lines 19, 30-42
+
+ThreadPanel uses the pre-001433b pattern that caused the infinite update loop in ChannelView. While it's not an infinite loop here (the fetch doesn't mutate the store), it's unnecessary re-execution and redundant API calls.
+
 ```typescript
-subscribe("CHANNEL_DELETE", (data) => {
-    const { channelId: activeChannelId } = getActiveIdsFromRouter();
-    // Resolve guild BEFORE removing the channel from the store
-    const guildId = getGuildForChannel(data.id) ?? Object.keys(useGuildStore.getState().guilds)[0];
-    useChannelStore.getState().removeChannel(data.id);
-    // ...
-```
+// Current (problematic):
+const threads = useThreadStore((s) => s.threads);  // subscribes to ALL channels' threads
+useEffect(() => { /* search + fetch */ }, [threadId, threads]);  // fires on any thread change
 
-Guild is now resolved **before** `removeChannel()` is called. Fallback to first guild if not found. Correct redirect logic follows: navigates to next available channel in the same guild, or root if none available. ✅ Complete and correct fix.
-
----
-
-### 2. ⚠️ ThreadPanel fetch loop — Partially Fixed
-
-**Round 1 issue:** `threads` (entire store object) as dependency causes every unrelated thread update to re-fire effect + fetchThread.
-
-**Current state in ThreadPanel:**
-```typescript
-const threads = useThreadStore((s) => s.threads);  // ALL threads, all channels
-// ...
+// Should be (matching ChannelView pattern):
+const fetchRef = useRef<string | null>(null);
 useEffect(() => {
-    let found: Channel | null = null;
-    for (const channelThreads of Object.values(threads)) {
-      const t = channelThreads.find((t) => t.id === threadId);
-      if (t) { found = t; break; }
-    }
-    if (found) {
-      setThread(found);
-    } else {
-      useThreadStore.getState().fetchThread(threadId).then((t) => {
-        if (t) setThread(t);
-      });
-    }
-}, [threadId, threads]);  // ← entire threads object as dep
+  // read from getState() inside effect
+  const threads = useThreadStore.getState().threads;
+  // ... search logic ...
+  if (fetchRef.current === threadId) return;
+  fetchRef.current = threadId;
+  // ... fetch logic ...
+}, [threadId]);
 ```
 
-**Problems remaining:**
-1. **Still subscribes to entire `threads` store** — any thread update in any channel triggers a re-run.
-2. **No fetch guard ref** — unlike ChannelView which uses `threadFetchRef`, ThreadPanel has no guard. If thread is not in the store (deep-link to archived/removed thread) and any unrelated thread update fires, it will re-fetch repeatedly.
-3. **`fetchThread` doesn't persist to store** — it returns the channel but doesn't call `addThread()`. So in the deep-link case where the thread isn't included in READY data, `threads` will never contain it, and every store update re-triggers a fetch.
+### 2. useScrollRestoration: Remove dead code or integrate (Low — escalated from Round 2)
+**File:** `packages/client/src/hooks/useScrollRestoration.ts`
 
-**Severity escalation:** The ChannelView pattern was correctly fixed (targeted selector + ref guard). But ThreadPanel still has the same fundamental issue. The practical impact is reduced (once READY loads threads, the thread is usually found), but for edge cases (archived threads, deep-links to threads from other channels), this remains a fetch loop.
+Defined but never imported. `MessageList` already handles scroll restoration independently. Either delete the file (clean dead code) or file a follow-up issue to integrate it. Shipping unused code from a spec requirement creates confusion about whether the spec item was delivered.
 
----
+## Suggestions (non-blocking)
 
-### 3. ✅ ChannelView thread validation fetch loop — Fixed
+1. **Double fetch on deep-linked threads** — Both `ChannelView` (line 60-71) and `ThreadPanel` (line 38) call `fetchThread(threadId)` independently. Consider having ChannelView's fetch call `addThread()` to persist the result, which would let ThreadPanel find it in the store on its next check.
 
-**Round 1 issue:** Same pattern as #2 — `threads` dependency causes repeated fetchThread calls.
+2. **`fetchThread` doesn't persist to store** — `useThreadStore.fetchThread()` returns the channel but doesn't call `addThread()`. If it did, the thread would be in the store for subsequent lookups, eliminating the repeated-fetch issue entirely.
 
-**Fix verification:**
-```typescript
-// Targeted selector — only this channel's threads
-const channelThreads = useThreadStore((s) => s.threads[channelId ?? ""] ?? []);
-const threadFetchRef = useRef<string | null>(null);
+3. **`window.history.state?.idx`** — Used in `closeThread` (ChannelView line 76). This is a React Router internal implementation detail, not part of the public API. Could break on RR upgrades. Consider tracking entry state via a ref set on mount instead.
 
-useEffect(() => {
-    if (!threadId || !channelId) return;
-    const threadExists = channelThreads.some((t) => t.id === threadId);
-    if (channelsLoaded && !threadExists) {
-      // Guard: don't re-fetch if already in progress or completed for this threadId
-      if (threadFetchRef.current === threadId) return;
-      threadFetchRef.current = threadId;
-      useThreadStore.getState().fetchThread(threadId).then(/* ... */);
-    }
-}, [threadId, channelId, guildId, channelsLoaded, channelThreads, navigate]);
-```
+4. **Add `errorElement` to lazy routes** — `router.tsx` uses `lazy()` for all routes but has no `errorElement`. A chunk-load failure (common after deployments) would show a blank screen. Add an error boundary that prompts reload.
 
-Two-pronged fix: (1) targeted selector `s.threads[channelId]` avoids re-fires from unrelated channels, (2) `threadFetchRef` guard prevents re-fetching even if the effect does re-fire. ✅ Complete fix.
+5. **No 404/catch-all route** — Unrecognized URLs under `/` render `AppShell` with no child match. Consider adding a catch-all that redirects to `/`.
 
----
+6. **OAuth return path** — `cove_return_path` from sessionStorage is used without validation (`App.tsx` line 150). Since sessionStorage is same-origin only, this is low-risk, but a simple `returnPath.startsWith('/')` check would prevent any edge cases.
 
-## New Critical Issues
+7. **`RedirectToDefault` guild ordering** — `Object.keys(guilds)[0]` relies on JS insertion order. Works for single-guild setups but should be explicit if multi-guild is planned.
 
-### None
+## Positive Notes
 
-No new blocking issues identified in the fix commit.
-
----
-
-## Suggestions (Non-blocking)
-
-### 1. ThreadPanel: Add fetch guard ref (consistency with ChannelView)
-
-ThreadPanel should mirror ChannelView's pattern:
-```typescript
-const threadFetchRef = useRef<string | null>(null);
-// In effect's else branch:
-if (threadFetchRef.current === threadId) return;
-threadFetchRef.current = threadId;
-useThreadStore.getState().fetchThread(threadId).then(/* ... */);
-```
-
-This prevents the edge-case re-fetch loop and aligns both components.
-
-### 2. ThreadPanel: Use targeted selector instead of entire `threads` object
-
-Instead of:
-```typescript
-const threads = useThreadStore((s) => s.threads);
-```
-
-Consider passing `channelId` (parent) from props or URL and doing:
-```typescript
-const channelThreads = useThreadStore((s) => s.threads[parentChannelId ?? ""] ?? []);
-```
-
-ThreadPanel already receives `threadId` — deriving `parentChannelId` from the URL (`channelId` param) would enable a targeted selector and prevent unnecessary re-renders.
-
-### 3. `useScrollRestoration` — missing `scrollRef` in deps array
-
-```typescript
-useEffect(() => {
-    const el = scrollRef.current;
-    return () => { if (el) scrollPositions.set(channelId, el.scrollTop); };
-}, [channelId]);  // scrollRef not listed
-```
-
-While `RefObject` is stable (so functionally fine), the exhaustive-deps lint rule will flag this. Adding `scrollRef` silences the warning without behavior change.
-
-### 4. RedirectToDefault — broad selectors cause unnecessary re-renders
-
-```typescript
-const guilds = useGuildStore((s) => s.guilds);
-const channelsByGuildId = useChannelStore((s) => s.channelsByGuildId);
-```
-
-Any guild/channel change re-renders this component and re-runs the effect. Since it only needs the first guild's first channel, a targeted selector would be more efficient:
-```typescript
-const firstGuildId = useGuildStore((s) => Object.keys(s.guilds)[0] ?? null);
-const firstChannel = useChannelStore((s) => firstGuildId ? (s.channelsByGuildId[firstGuildId]?.[0] ?? null) : null);
-```
-
-### 5. `navigate(-1)` relies on `window.history.state?.idx` (React Router internal)
-
-```typescript
-if (window.history.state?.idx === 0) {
-    navigate(routes.channel(guildId, channelId), { replace: true });
-} else {
-    navigate(-1);
-}
-```
-
-`idx` is an internal React Router implementation detail. Consider tracking whether the thread was opened via push in component state instead (e.g., a ref set to `true` on thread open navigation).
-
-### 6. OAuth return path — no validation
-
-```typescript
-const returnPath = sessionStorage.getItem("cove_return_path");
-if (returnPath && returnPath !== "/") {
-    router.navigate(returnPath, { replace: true });
-}
-```
-
-While React Router's `navigate()` only handles in-app paths (so external URLs won't cause a redirect), adding basic validation (e.g., `returnPath.startsWith("/channels/")`) provides defense-in-depth against session storage manipulation.
-
-### 7. Spec mentions Safari bfcache handler — not implemented
-
-The spec includes:
-> Add `window.addEventListener("pageshow", (e) => { if (e.persisted) window.location.reload(); })` in auth flow.
-
-This is not present in the implementation. Low priority but worth tracking as a follow-up.
-
----
+- **001433b is a high-quality fix.** The `navigateRef` + `getState()` + reduced deps pattern is exactly right for breaking React render cycles. Clean surgical fix.
+- **Architectural split is excellent.** `AppShell` / `ChannelView` / `RedirectToDefault` separation is clean and matches the spec's route definitions. Each component has a clear responsibility.
+- **Store cleanup is thorough.** Removing `activeChannelId`, `activeGuildId`, and `activeThread` from stores in favor of URL params is the correct architectural decision. No half-measures.
+- **`getActiveIdsFromRouter` for non-React code** is well-designed — uses `router.state.matches` (type-safe) rather than regex parsing.
+- **CHANNEL_DELETE race fix** is solid — resolving guild before removing channel from store.
+- **Route path helpers** (`routes.ts`) prevent URL template string duplication.
+- **Test mocks updated** to match new store/router shape — tests aren't left broken.
 
 ## Verdict
 
-### ⚠️ Needs Minor Changes
+**⚠️ Needs Changes**
 
-The three Round 1 critical issues have been substantively addressed:
-- **CHANNEL_DELETE race**: ✅ Fully fixed
-- **ChannelView fetch loop**: ✅ Fully fixed  
-- **ThreadPanel fetch loop**: ⚠️ Partially fixed (ChannelView is correct, but ThreadPanel still lacks the guard ref and uses a broad selector)
-
-The ThreadPanel issue is no longer **critical** in the strict sense — the realistic impact is limited to edge cases (deep-links to threads not in READY data + concurrent thread updates). However, per escalation rules, I cannot downgrade it. The fix pattern exists in ChannelView and should be consistently applied to ThreadPanel.
-
-**Recommendation:** Add a `threadFetchRef` guard to ThreadPanel's fetch path (2-line change), matching the pattern already established in ChannelView. After that, this PR is ready to merge.
+ThreadPanel still uses the pre-fix subscription pattern that 001433b corrected in ChannelView. Same anti-pattern, same fix needed. The `useScrollRestoration` dead code is a minor cleanliness issue that should also be resolved. Neither is a merge-blocking bug in isolation, but the ThreadPanel issue is a real latent bug (redundant API calls) in the same code that was just explicitly fixed elsewhere, and it was flagged in Round 2 without being addressed.
