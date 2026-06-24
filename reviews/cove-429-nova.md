@@ -1,122 +1,94 @@
-# Code Review: PR #429 — feat(client): URL-based channel routing
+# Code Review: PR #429 — feat(client): URL-based channel routing (#428)
 
 **Reviewer:** 🌠 Nova  
-**Date:** 2026-06-24  
-**PR:** https://github.com/kagura-agent/cove/pull/429  
-**Branch:** feat/428-url-routing  
-**Files changed:** 27 (+532 / -283)
+**Round:** 2 (re-review after commit 521858c)  
+**Date:** 2026-06-24
 
 ---
 
-## Summary
+## 1. Previous Issues Status
 
-This PR introduces URL-based routing to the Cove client using react-router-dom v6, making the URL the single source of truth for navigation state. It cleanly removes `activeChannelId`, `activeGuildId`, and `activeThread` from zustand stores, introduces a `useActiveIds()` hook and `getActiveIdsFromRouter()` for non-React code, handles deep linking, thread panel via URL params, OAuth path restoration, lazy route loading, and proper READY handler behavior. The implementation closely follows the spec and is well-structured overall. The store cleanup is thorough and the migration to URL-driven state is consistent across all consumers.
+### Critical Issue 1: `useScrollRestoration` hook defined but never integrated
+**❌ Not fixed**
 
----
+The hook is still defined in `packages/client/src/hooks/useScrollRestoration.ts` but is never imported or called from any component. `grep` confirms zero imports of `useScrollRestoration` across the entire diff. This is dead code that the spec explicitly lists as needed behavior (per-channel scroll position memory). Either integrate it into `MessageList` / `ChannelView`, or remove it from this PR and track as a separate issue.
 
-## Critical Issues
+**Severity escalation:** This was Critical in Round 1 and remains unaddressed → stays Critical. The spec's acceptance criteria implies scroll restoration as part of the routing feature (users switching channels lose scroll position without it).
 
-### 1. `useScrollRestoration` hook is defined but never integrated
-**File:** `packages/client/src/hooks/useScrollRestoration.ts`  
-**Impact:** The hook is brand new but no component uses it. The spec calls for per-channel scroll position memory (Discord-like behavior). Without integration into `MessageList` or `ChannelView`, switching channels will lose scroll position — a user-facing regression vs. the expected behavior described in the spec.
+### Critical Issue 2: Race condition in ChannelView thread validation
+**✅ Fixed**
 
-**Verdict:** Not blocking merge (behavior is same as before this PR since no scroll restoration existed), but the dead code should be removed or wired in. Listed here because the spec implies it's part of this feature.
+Two effective mitigations applied:
+1. **Targeted selector** — `useThreadStore((s) => s.threads[channelId ?? ""] ?? [])` instead of subscribing to the full `threads` object. This prevents the effect from re-firing on unrelated channel thread updates.
+2. **Ref guard** — `threadFetchRef` prevents duplicate/infinite fetch loops for the same threadId.
 
-### 2. Race condition in `ChannelView` thread validation
-**File:** `packages/client/src/components/ChannelView.tsx` (lines 55-65)  
-```
-useEffect(() => {
-  if (!threadId || !channelId) return;
-  const channelThreads = threads[channelId] ?? [];
-  const threadExists = channelThreads.some((t) => t.id === threadId);
-  if (channelsLoaded && !threadExists) {
-    useThreadStore.getState().fetchThread(threadId).then((thread) => {
-      if (!thread && guildId && channelId) {
-        navigate(routes.channel(guildId, channelId), { replace: true });
-      }
-    });
-  }
-}, [threadId, channelId, guildId, channelsLoaded, threads, navigate]);
-```
-The `threads` dependency means this effect re-runs on every thread store update. If `fetchThread` resolves and adds the thread to a different parent key than `channelId`, the effect will keep firing and keep calling `fetchThread` in a loop. Additionally, if the fetch succeeds but doesn't populate `threads[channelId]` (because the thread belongs to `channelId` but the store keying uses `parent_id`), the next render still sees `!threadExists` and re-fetches.
+The combination eliminates the infinite fetch loop risk. Good fix.
 
-**Fix:** Add a `fetchedRef` or guard to prevent re-fetching after the first attempt. Or move the validation to only run once when `channelsLoaded` flips to true.
+### Critical Issue 3: CHANNEL_DELETE handler reads stale channel list
+**✅ Fixed**
 
-### 3. `CHANNEL_DELETE` handler reads stale channel list
-**File:** `packages/client/src/lib/gateway-subscriptions.ts` (CHANNEL_DELETE handler)  
-```
+The handler now resolves the guild **before** removing the channel:
+```typescript
+const guildId = getGuildForChannel(data.id) ?? Object.keys(useGuildStore.getState().guilds)[0];
 useChannelStore.getState().removeChannel(data.id);
-// ...
-if (data.id === activeChannelId) {
-  const guildId = getGuildForChannel(data.id) ?? ...;
-  const channels = useChannelStore.getState().getChannels(guildId);
 ```
-`getGuildForChannel(data.id)` is called *after* `removeChannel(data.id)`. The channel was just removed from the store, so `getGuildForChannel` will return `null` since it iterates `channelsByGuildId`. The fallback to `Object.keys(guilds)[0]` saves it, but the intent is fragile — if the user is in a non-first guild, they'd get navigated to the wrong guild's channel.
 
-**Fix:** Call `getGuildForChannel(data.id)` *before* `removeChannel(data.id)`, or pass the `guild_id` from the WS event payload if available.
-
----
-
-## Product Impact
-
-1. **Deep linking now works** — users can share channel/thread URLs, bookmark them, and open in new tabs. This is a significant UX improvement.
-2. **Browser back/forward works** — channel switches are pushes, thread opens are pushes, thread close via X is go(-1). The yo-yo prevention with `history.state.idx === 0` fallback is correct.
-3. **OAuth flow preserves path** — `sessionStorage` based, clean implementation.
-4. **No visible regression for existing users** — the `/` auto-redirect means existing bookmarks still work.
-5. **Mobile sidebar/members panels**: The `membersOpen` and `filesOpen` state is now local to `ChannelView` rather than `App`. This means they reset on channel switch (they're `useState` in a route component). This is probably fine (Discord does this too) but is a behavior change worth noting.
-6. **`InviteCodePage` no longer does `window.history.replaceState({}, "", "/")`** before reload — this is correct since the router now owns URL state.
+The ordering is correct and the fallback to first guild is a sensible default. Clean fix.
 
 ---
 
-## Suggestions
+## 2. New Critical Issues
 
-### 1. `getGuildForChannel` linear scan
-**File:** `packages/client/src/lib/router.tsx` (lines 43-50)  
-Iterates all guilds × all channels. Fine for small servers but could add a reverse index (`channelId → guildId` map) if guild/channel counts grow. Low priority.
+### 2.1 None identified as blocking.
 
-### 2. Missing `scrollRef` in `useScrollRestoration` dependencies
-**File:** `packages/client/src/hooks/useScrollRestoration.ts`  
-Both effects use `scrollRef.current` but only list `[channelId]` in deps. Since `scrollRef` is a stable ref this works in practice, but the lint rule `react-hooks/exhaustive-deps` may warn. Consider adding a comment suppression or including it.
-
-### 3. Lazy imports could fail silently
-**File:** `packages/client/src/lib/router.tsx`  
-The `lazy` route loaders don't have error boundaries. If a chunk fails to load (network error), the user gets a blank screen. Consider adding an `errorElement` at the root route level.
-
-### 4. `RedirectToDefault` always picks `guildIds[0]`
-**File:** `packages/client/src/components/RedirectToDefault.tsx`  
-Object key order for `guilds` depends on insertion order. If the user has a "last visited guild" preference in the future, this is the place to add it. Fine for now (single-guild setup).
-
-### 5. Thread deep link: no loading state
-**File:** `packages/client/src/components/ThreadPanel.tsx`  
-When `thread` is `null` (deep link, fetch in progress), the component returns `null` — the thread panel area is empty. A loading skeleton or spinner would improve perceived performance.
-
-### 6. Consider `useSyncExternalStore` for router state in non-React code
-**File:** `packages/client/src/lib/router.tsx`  
-`getActiveIdsFromRouter()` reads `router.state.matches` synchronously. This is fine for event handlers but if ever used in a render path outside React Router context, it won't trigger re-renders. Current usage (gateway subscriptions) is correct.
-
-### 7. Test mock for `router.navigate` doesn't verify calls
-**File:** `packages/client/src/lib/gateway-subscriptions.test.ts`  
-The mock `router: { navigate: vi.fn() }` is set up but no test assertions verify that navigation happens correctly on CHANNEL_DELETE or READY. Consider adding assertions for the redirect logic.
+The remaining unresolved issue (useScrollRestoration) is escalated from Round 1 rather than a new finding.
 
 ---
 
-## Positive Notes
+## 3. Suggestions (Non-blocking)
 
-1. **Excellent spec** — `docs/specs/428-url-routing.md` is thorough, covers edge cases, has explicit decisions on push vs. replace semantics, and includes a test plan. Model spec-driven development.
-2. **Clean store cleanup** — All navigation state removed from zustand with zero half-measures. No "bridge" code keeping both systems alive.
-3. **`routes.ts` path helpers** — Centralized URL construction prevents scattered template strings. Easy to refactor if URL structure changes.
-4. **`getActiveIdsFromRouter()`** — Elegant solution for non-React code (gateway subscriptions) to read current navigation state without hooks.
-5. **Lazy route loading** — Code splitting out of the box. Good for future growth.
-6. **Thread history semantics** — The yo-yo prevention (close via X = go(-1), deep link fallback = replace) is well thought out and matches Discord behavior.
-7. **Test file updated** — Mocks properly updated to reflect new module structure. Not just "make it compile" — the mocks match the new API surface.
-8. **Net deletion** — +532 / -283 for a feature this significant shows good refactoring discipline. The old App.tsx monolith is properly decomposed.
+### 3.1 ThreadPanel subscribes to entire `threads` record (performance)
+```typescript
+const threads = useThreadStore((s) => s.threads);
+```
+Unlike ChannelView which uses a targeted selector, ThreadPanel subscribes to ALL threads across all channels. Any thread update anywhere triggers a re-render + effect re-evaluation. Consider using a targeted selector like ChannelView does, or computing a stable derived value.
+
+### 3.2 Lazy routes have no `errorElement` / error boundary
+The router uses `lazy()` for all route components but provides no `errorElement` on any route. If chunk loading fails (network blip, stale deployment), the user gets an unhandled crash with no recovery path. Add at minimum:
+```typescript
+{
+  path: "/",
+  errorElement: <RouteErrorBoundary />,
+  lazy: () => import("../AppShell")...
+}
+```
+
+### 3.3 Double-fetch on deep-linked threads
+Both `ChannelView` (validation effect) and `ThreadPanel` (lookup effect) independently call `fetchThread(threadId)` on deep link. This results in 2 API calls for the same resource. Consider having ChannelView's fetch also call `addThread()` to seed the store, so ThreadPanel finds it without a second fetch.
+
+### 3.4 `fetchThread` doesn't update the store
+`useThreadStore.fetchThread()` returns the channel but never calls `addThread()`. This means the fetched thread data is ephemeral — it lives only in local component state (ThreadPanel) and is lost if the component remounts. If the user navigates away and back, it fetches again.
+
+### 3.5 `RedirectToDefault` relies on Object.keys() ordering
+`Object.keys(guilds)[0]` for selecting the default guild. If guild IDs are numeric strings, V8's object key ordering rules may not match expected "first guild" semantics. Consider storing guild order explicitly or using an array.
+
+### 3.6 `useBotStore` imports from `../lib/router` — coupling concern
+`useBotStore` now imports `getActiveIdsFromRouter` directly from the router module. This couples a data store to the routing layer. Minor, but worth noting if you plan to unit-test stores independently.
+
+### 3.7 Test mock for `router.navigate` doesn't verify calls
+The test file mocks `router: { navigate: vi.fn() }` but no assertions check that navigation was called with correct arguments in CHANNEL_DELETE or READY scenarios. Consider adding assertions for the critical navigation paths.
 
 ---
 
-## Verdict
+## 4. Verdict
 
-⚠️ **Needs Changes**
+**⚠️ Needs Changes**
 
-The CHANNEL_DELETE stale-read (#3) can cause wrong-guild navigation in multi-guild setups. The thread fetch loop (#2) is a potential infinite-fetch bug on deep links with edge-case thread store keying. Both are straightforward fixes (reorder one line; add a fetch guard). The scroll hook (#1) is dead code that should be wired in or removed.
+Two of three Round 1 critical issues are properly fixed. However, `useScrollRestoration` remains dead code — the hook exists but is never wired into the component tree. Per the escalation rule, this stays Critical since it was raised in Round 1 and not addressed.
 
-None of these are architectural — the overall design is solid and the implementation is high quality.
+**Required for approval:**
+- Either integrate `useScrollRestoration` into the relevant component (likely `MessageList` or `ChannelView`), OR remove it from this PR and create a follow-up issue acknowledging it as incomplete scope.
+
+**Nice-to-have before merge:**
+- Add `errorElement` to the root route for lazy-load failure resilience
+- Fix ThreadPanel's broad store subscription

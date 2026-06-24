@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-23 20:26 (Asia/Shanghai)_
+_Last updated: 2026-06-24 20:29 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 220 | 214/220 (97%) → | 6 failures total. #411-#423: all clean. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 222 | 219/222 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#423: all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 217 | 197/217 (91%) → | #411-#423: all clean output, but 2 under-detections in #418 (R1+R2 approved Ready when blockers existed). 14th post-switch. |
+| 🌟 Stella | gpt-5.5 | 221 | 215/221 (97%) → | 6 failures total. #411-#429: all clean. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 223 | 220/223 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#429: all clean. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 218 | 198/218 (91%) → | #411-#429: all clean output. 15th post-switch PR. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -275,6 +275,7 @@ _Last updated: 2026-06-23 20:26 (Asia/Shanghai)_
 | #417 | cove | 2026-06-22 | R1 | ✅ Ready (3/3) | typing-cleanup-finally-block, sdk-idempotency-verification | Merged 2026-06-22 |
 | #418 | cove | 2026-06-22 | R1-R3 | ✅ Ready (3/3) | media-capability-lie, sendText-silent-noop, dead-import | Merged 2026-06-23T03:13Z |
 | #423 | cove | 2026-06-23 | R1 | ✅ Ready (3/3 unanimous) | sdk-queue-adoption, attachment-defense, queue-depth-race | Merged 2026-06-23T08:55Z |
+| #429 | cove | 2026-06-24 | R1 | ⚠️ Needs Changes (3/3 unanimous) | CHANNEL_DELETE-race, thread-fetch-loop, unhandled-fetchThread-rejection | Open |
 
 ## Ground Truth Summary (71 merged + 2 closed-unmerged PRs)
 
@@ -284,7 +285,7 @@ _Last updated: 2026-06-23 20:26 (Asia/Shanghai)_
 - **Iterative review as quality gate:** In 71/71 merged PRs, our multi-round review was the actual quality gate
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 54/71 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
-- **Total review rounds:** ~263 across 73 PRs (71 merged + 2 closed-unmerged)
+- **Total review rounds:** ~266 across 74 PRs (71 merged + 2 closed-unmerged + 1 open)
 - **False-ready detection:** 7 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega) — self-correcting system working (Vega is 6 of 7)
 - **Escalation protocol validated:** 8 cases — all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -306,7 +307,7 @@ _Last updated: 2026-06-23 20:26 (Asia/Shanghai)_
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 73 PRs (71 merged + 2 closed), ~263 review rounds, 29 days. ~2.5 PRs/day, ~9.1 reviewer-rounds/day.
+7. **Throughput sustained.** 74 PRs (71 merged + 2 closed + 1 open), ~266 review rounds, 30 days. ~2.5 PRs/day, ~8.9 reviewer-rounds/day.
 
 8. **Ground truth: human rubber-stamps 96% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs.
 
