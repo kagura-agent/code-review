@@ -2225,10 +2225,32 @@
     "reviewed_at": "2026-06-24T18:15:00+08:00",
     "status": "open",
     "ground_truth": null,
-    "last_checked": "2026-06-24T20:29+08:00",
+    "last_checked": "2026-06-25T02:28+08:00",
     "verdict": "needs_changes",
     "reviewers": 3,
     "rounds": 1,
-    "notes": "R1: 3/3 unanimous needs_changes (CHANNEL_DELETE race, thread fetch loop, unhandled fetchThread rejection). QA 7/7 pass. Awaiting fixes."
+    "notes": "R1: 3/3 unanimous needs_changes (CHANNEL_DELETE race, thread fetch loop, unhandled fetchThread rejection). QA 7/7 pass. Fix commit pushed (521858c). Awaiting R2 review."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 424,
+    "reviewed_at": "2026-06-23T18:00+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Quick single-file review (Kagura only, not 3-reviewer panel). Fix for #423 Nova finding (attachment preservation). 111 tests pass. Human approved without comments."
+    },
+    "last_checked": "2026-06-25T02:28+08:00",
+    "verdict": "ready",
+    "reviewers": 1,
+    "rounds": 1,
+    "notes": "Quick review (Kagura only). 3-line fix for #423 attachment follow-up. 111 tests pass. Merged 2026-06-23T14:47Z."
   }
 ]
