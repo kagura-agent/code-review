@@ -2327,5 +2327,14 @@
     "reviewers": 3,
     "rounds": 2,
     "notes": "R1: privilege escalation (bulk position), dispatcher fail-open, cross-guild. R2: all 5 fixes confirmed, 2/3 Ready (Stella wants tests). Also had spec review rounds 1-4 prior. Merged 2026-06-25T08:56Z."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 435,
+    "reviewed_at": "2026-06-25T22:50+08:00",
+    "status": "open",
+    "round": 1,
+    "ground_truth": null
   }
 ]
