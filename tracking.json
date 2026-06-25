@@ -2336,6 +2336,8 @@
     "status": "open",
     "round": 2,
     "ground_truth": null,
-    "last_reviewed_at": "2026-06-25T23:13+08:00"
+    "last_reviewed_at": "2026-06-25T23:13+08:00",
+    "last_checked": "2026-06-26T02:26+08:00",
+    "notes": "Spec R1-R2 (spec approved). Code R1: C1 GUILD_MEMBER_UPDATE corruption, C2 hardcoded permission bypass. Code R2: R1 criticals fixed, gear icon + form sync + fetchRoles error remain. QA: React #185 found+fixed (4 iterations). Still open."
   }
 ]
