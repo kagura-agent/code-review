@@ -2295,5 +2295,14 @@
     "reviewers": 3,
     "rounds": 1,
     "notes": "R1: 3/3 unanimous Ready. CI notification workflow. head -1 fix. jq secure JSON pattern. Merged 2026-06-25T02:44Z."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 432,
+    "reviewed_at": "2026-06-25T15:42+08:00",
+    "status": "open",
+    "round": 1,
+    "ground_truth": null
   }
 ]
