@@ -2334,7 +2334,8 @@
     "pr": 435,
     "reviewed_at": "2026-06-25T22:50+08:00",
     "status": "open",
-    "round": 1,
-    "ground_truth": null
+    "round": 2,
+    "ground_truth": null,
+    "last_reviewed_at": "2026-06-25T23:13+08:00"
   }
 ]

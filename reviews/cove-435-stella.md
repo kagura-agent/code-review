@@ -1,131 +1,136 @@
-# Code Review: PR #435 — Permissions Management UI (#282)
+# PR #435 Re-Review — feat: Permissions Management UI (#282)
 
-**Reviewer:** 🌟 Stella
-**PR:** https://github.com/kagura-agent/cove/pull/435
-**Commit:** d644be1
-**Date:** 2026-06-25
-
-## Verdict: ⚠️ Needs Changes
-
-Solid architecture overall — the zustand store design is clean, gateway event wiring is correct, the module-level `EMPTY_ROLES`/`EMPTY_MEMBERS` constants properly fix the React #185 selector stability issue, and the component decomposition (RoleList / RoleEditor / MembersRoleSection / ChannelPermissionsEditor) follows good separation of concerns. The spec document is thorough and well-structured.
-
-However, there are several issues that need to be addressed before merge, most notably a data-corruption bug in the GUILD_MEMBER_UPDATE handler and hardcoded permission bypasses that disable all client-side permission gating.
+**Reviewer:** 🌟 Stella (Round 2)  
+**Commit:** d12bfdc  
+**Date:** 2025-06-25  
+**QA:** 24/27 passed (3 false positive)  
 
 ---
 
-## 🔴 Needs Changes (4 issues)
+## Verdict: ⚠️ Needs Changes
 
-### NC-1: GUILD_MEMBER_UPDATE handler corrupts member data
-**File:** `packages/client/src/lib/gateway-subscriptions.ts` (lines ~250-258)
-**Severity:** Bug — data corruption
+C1 is fixed. C2 is substantially improved but has permission-gating gaps in the Sidebar and ServerSettings. M1 is only partially fixed. M2–M4 remain unaddressed from Round 1 and should be escalated.
+
+---
+
+## Round 1 Fix Verification
+
+### 🔴 C1: GUILD_MEMBER_UPDATE data corruption → ✅ FIXED
+
+The handler now correctly merges with existing member data:
 
 ```typescript
 subscribe("GUILD_MEMBER_UPDATE", (data) => {
+  const existing = useMemberStore.getState().membersByGuildId[data.guild_id]?.[data.user.id];
+  const existingUser = existing?.user ?? { id: data.user.id, username: data.user.id, ... };
+  const mergedUser = { ...existingUser, ...data.user } as typeof existingUser;
   useMemberStore.getState().upsertMember(data.guild_id, {
-    user: { id: data.user.id, username: data.user.id, avatar: null, bot: false, discriminator: "0", global_name: null },
-    nick: data.nick,
-    roles: data.roles,
-    joined_at: "",
+    user: mergedUser,
+    nick: data.nick ?? existing?.nick ?? null,
+    roles: data.roles ?? existing?.roles ?? [],
+    joined_at: existing?.joined_at ?? "",
   });
 });
 ```
 
-**Problem:** When a member's roles are updated, this handler overwrites the member record with fabricated data:
-- `username` is set to the user's **ID** (not their actual username)
-- `avatar`, `bot`, `discriminator`, `global_name` are all hardcoded to wrong values
-- `joined_at` is set to empty string
+**What's correct:**
+- Falls back to existing user data when available
+- Spreads `data.user` over existing (so any server-sent fields like username take precedence)
+- Preserves `joined_at`, `nick`, `roles` from existing if not in the event payload
+- Uses `upsertMember` (already exists in store) instead of a new method
 
-This means any role assignment/removal will corrupt the member's display data — their name will show as a snowflake ID, bot badges will disappear, and avatars will be lost.
-
-**Fix:** Look up the existing member first, then merge only the changed fields:
-
-```typescript
-subscribe("GUILD_MEMBER_UPDATE", (data) => {
-  const store = useMemberStore.getState();
-  const existing = store.membersByGuildId[data.guild_id]?.[data.user.id];
-  if (existing) {
-    store.upsertMember(data.guild_id, {
-      ...existing,
-      nick: data.nick,
-      roles: data.roles,
-    });
-  }
-  // If no existing member, consider fetching or ignoring
-});
-```
+**Minor note:** Fallback `username: data.user.id` when no existing member exists is slightly odd but only hits a race condition edge case (UPDATE before any member data loaded). Acceptable.
 
 ---
 
-### NC-2: Hardcoded permission bypass — all users treated as owner
-**File:** `packages/client/src/components/ServerSettings.tsx` (lines ~37-38, ~59)
-**Severity:** Security/UX — client-side permission gating disabled
+### 🔴 C2: Hardcoded permission bypass → 🔸 MOSTLY FIXED (gaps remain)
 
-```typescript
-// TODO: derive from actual member roles; hardcode high value for now (owner sees all)
-const userHighestPosition = 999;
-const userPermissions = ~0n; // all bits set for owner
+The new `useUserPermissions` hook (`packages/client/src/lib/useUserPermissions.ts`) is a **proper implementation** that replaces the hardcoded `userHighestPosition=999` and `userPermissions=~0n`:
+
+**What's correct:**
+- **Owner bypass:** `guild.owner_id === userId` → returns `Infinity` position + `ALL_PERMISSIONS` ✅
+- **@everyone role:** Found via `r.id === guildId` (Discord convention) ✅
+- **Role accumulation:** Iterates member's roles, ORs permissions, tracks highest position ✅
+- **ADMINISTRATOR grant:** If accumulated perms include ADMINISTRATOR, returns ALL_PERMISSIONS ✅
+- **No-member fallback:** highestPosition=0 + only @everyone perms. Correct default-deny ✅
+- **Memoization:** `useMemo` with proper dependencies `[guild, userId, roles, memberMap, guildId]` ✅
+
+**What's NOT fixed — new issues from C2 remediation:**
+
+#### 🟠 N1: Gear icon has no permission gating (Medium — Security)
+
+**File:** `Sidebar.tsx` (line ~129 in diff)
+
+```tsx
+{guildId && (
+  <Button
+    type="text"
+    size="small"
+    icon={<SettingOutlined />}
+    onClick={() => setServerSettingsOpen(true)}
+    // ...
+  />
+)}
 ```
 
-And in `MembersSection`:
-```typescript
-const userHighestPosition = 999; // owner sees all
-```
+The gear icon is shown to **ALL users** regardless of permissions. The spec requires:
+> "Visibility: shown if the user has ANY of `MANAGE_GUILD` or `MANAGE_ROLES` (or is guild owner)."
 
-**Problem:** Every user sees all roles as editable, can reorder any role, and the permission toggle `canToggle` check always passes. While the server should enforce these restrictions, the spec explicitly requires client-side hierarchy enforcement:
-- "roles at or above the user's highest role are visible but grayed out (not selectable for editing)"
-- "dropdown only shows roles below user's highest role"
-- Permission toggles should be disabled for bits the user doesn't have
+This means every user can open Server Settings. While the individual components are partially read-only for unprivileged users, exposing the full role list and member list to all users is a **information disclosure** issue — users can see all roles, their permissions, and all members' role assignments.
 
-This means regular members will see edit controls, attempt edits, and get 403 errors — a confusing experience.
+**Fix:** Import `useUserPermissions` in Sidebar, check for `MANAGE_GUILD | MANAGE_ROLES` or `isOwner` before rendering the gear button.
 
-**Fix:** Derive `userHighestPosition` and `userPermissions` from the current user's member data in the store:
+#### 🟠 N2: ServerSettings nav items have no section-level permission gating (Medium)
+
+**File:** `ServerSettings.tsx`
 
 ```typescript
-const selfId = useUserStore((s) => s.id);
-const selfMember = useMemberStore((s) => s.membersByGuildId[guildId]?.[selfId]);
-const selfRoles = roles.filter((r) => selfMember?.roles.includes(r.id));
-const userHighestPosition = Math.max(0, ...selfRoles.map((r) => r.position));
-const userPermissions = selfRoles.reduce((acc, r) => acc | BigInt(r.permissions), 0n);
+const NAV_ITEMS: NavItem[] = [
+  { key: "roles", label: "Roles", header: "SERVER SETTINGS" },
+  { key: "members", label: "Members", header: "USER MANAGEMENT" },
+];
 ```
+
+No filtering. Both sections visible to all users. The spec requires:
+- Roles section: requires `MANAGE_ROLES`
+- Members section (role assignment): requires `MANAGE_ROLES`
+
+Even if N1 is addressed and the gear icon is hidden, defense-in-depth requires section-level gating too (the panel can be opened via other paths in future, and URL deep-links are common).
 
 ---
 
-### NC-3: Silent error handling on destructive operations
-**Files:** `RoleEditor.tsx`, `RoleList.tsx`
-**Severity:** UX — violates spec requirement "No silent console.error"
+### 🟠 M1: console.error instead of toasts → 🔸 PARTIALLY FIXED
 
-Multiple handlers catch errors and only log to console with no user feedback:
+**Improvement:** Most `console.error` calls replaced with `alert()`:
+- RoleEditor: `alert("Failed to save role")`, `alert("Failed to delete role")`
+- RoleList: `alert("Failed to create role")`, `alert("Failed to reorder roles")`
+- MembersRoleSection: `alert("Failed to assign role")`, `alert("Failed to remove role")`
+- ChannelPermissionsEditor: `alert("Failed to save permissions")`, `alert("Failed to remove overwrite")`
 
-| File | Function | Error handling |
-|------|----------|---------------|
-| `RoleEditor.tsx` | `handleSave` | `console.error("update role:", err)` |
-| `RoleEditor.tsx` | `handleDelete` | `console.error("delete role:", err)` |
-| `RoleList.tsx` | `handleCreate` | `console.error("create role:", err)` |
-| `RoleList.tsx` | `handleMoveUp` | `console.error("move role up:", err)` |
-| `RoleList.tsx` | `handleMoveDown` | `console.error("move role down:", err)` |
+**Remaining issues:**
 
-The spec requires: "403 → toast 'Missing Permissions', 404 → toast 'Role no longer exists', network error → generic toast."
+1. **One `console.error` left** — `ServerSettings.tsx`, RolesSection:
+   ```typescript
+   api.fetchRoles(guildId).then((r) => ...).catch(console.error);
+   ```
+   If the initial role fetch fails, user sees nothing and error is silently swallowed.
 
-**Fix:** Use antd's `message` API or a toast component to show feedback:
+2. **No error differentiation** — all errors get the same generic message. The spec requires:
+   - 403 → "Missing Permissions"
+   - 404 → "Role no longer exists"
+   - Network error → generic toast
 
-```typescript
-import { message } from "antd";
+3. **`alert()` blocks the UI thread** — functionally better than console.error but poor UX. The codebase likely has a toast/notification system (antd has `message.error()` / `notification.error()`). `alert()` is acceptable as a temporary measure but should be tracked for upgrade.
 
-// in catch blocks:
-if (err instanceof Response && err.status === 403) {
-  message.error("Missing permissions");
-} else {
-  message.error("Failed to update role");
-}
-```
-
-Note: `MembersRoleSection.tsx` and `ChannelPermissionsEditor.tsx` use `alert()` which at least provides feedback, but should also be migrated to toast/antd message for consistent UX.
+**Severity:** Downgrade to Minor since `alert()` is a clear improvement over silent failure. The remaining `console.error` on fetch is the main concern.
 
 ---
 
-### NC-4: Gateway events silently overwrite unsaved edits in RoleEditor
-**File:** `packages/client/src/components/RoleEditor.tsx` (lines ~79-84)
-**Severity:** UX — spec requires conflict detection
+## Round 1 Unaddressed Issues — ESCALATED
+
+### 🟠→🔴 M2: RoleEditor form sync overwrites unsaved edits (ESCALATED to Critical)
+
+**Still present in `RoleEditor.tsx`:**
 
 ```typescript
 useEffect(() => {
@@ -136,156 +141,106 @@ useEffect(() => {
 }, [role?.id, role?.name, role?.color, role?.permissions]);
 ```
 
-**Problem:** When the role store updates (e.g., another admin edits the same role), this effect fires and overwrites any unsaved changes the current user has made — without warning or confirmation.
+The dependency array includes `role?.name`, `role?.color`, `role?.permissions`. When a gateway event updates the role in the store (e.g., another admin edits the same role), this effect fires and **silently overwrites** whatever the user has typed. This is data loss.
 
-The spec explicitly requires conflict detection:
-> "If a GUILD_ROLE_UPDATE gateway event arrives for the role being edited:
-> - If the changed fields don't overlap with dirty fields → silently update baseline
-> - If they overlap → show a banner: 'This role was updated by someone else.'"
+The spec explicitly handles this case:
+> "Concurrent update: if a GUILD_ROLE_UPDATE gateway event arrives for the role being edited:
+>   - If the changed fields don't overlap with dirty fields → silently update baseline
+>   - If they overlap → show a banner: 'This role was updated by someone else.'"
 
-**Fix:** Track a `baseline` state separate from form state. When the role updates from the store, compare against baseline to detect conflicts:
+**Escalation rationale:** This is now the second review round with this issue unacknowledged. In a multi-admin environment, this causes silent data loss — a user carefully configuring permissions could have their work wiped without warning.
 
-```typescript
-const [baseline, setBaseline] = useState({ name: "", colorHex: "", permissions: 0n });
+**Fix approach:** Track a `baseline` ref alongside form state. On role store changes, diff against baseline. If changes overlap with dirty fields, show warning. If not, silently update baseline without touching form state.
 
-useEffect(() => {
-  if (!role) return;
-  const incoming = {
-    name: role.name,
-    colorHex: role.color ? role.color.toString(16).padStart(6, "0") : "",
-    permissions: BigInt(role.permissions),
-  };
-  if (!isDirty) {
-    // No local changes — safe to overwrite
-    setName(incoming.name);
-    setColorHex(incoming.colorHex);
-    setPermissions(incoming.permissions);
-  } else {
-    // Check for field overlap with dirty fields
-    const conflicts = (name !== baseline.name && incoming.name !== baseline.name)
-      || (colorHex !== baseline.colorHex && incoming.colorHex !== baseline.colorHex)
-      || (permissions !== baseline.permissions && incoming.permissions !== baseline.permissions);
-    if (conflicts) {
-      // Show conflict banner
-    }
-  }
-  setBaseline(incoming);
-}, [role?.id, role?.name, role?.color, role?.permissions]);
+---
+
+### 🟠 M3: No discard changes dialog (unchanged)
+
+When user clicks a different role in the role list while having unsaved edits, changes are silently discarded. The spec requires:
+> "Navigate away with changes: if user clicks a different role... → confirmation dialog: 'You have unsaved changes. Discard?'"
+
+The `isDirty` state is already computed — this just needs a guard in `onSelectRole`.
+
+---
+
+### 🟠 M4: Delete confirmation missing member count (unchanged)
+
+```tsx
+<p>Are you sure you want to delete <strong>{role.name}</strong>? This cannot be undone.</p>
 ```
 
+The spec requires:
+> "Delete [role name]? **X members** have this role. Channel permission overwrites for this role will be removed."
+
+Member count can be derived from `useMemberStore` — count members whose `roles` array includes the role ID.
+
 ---
 
-## 🟡 Suggestions (7 items)
+## New Issues Found
 
-### S-1: ThreeStateToggle label color ternary is a no-op
-**File:** `packages/client/src/components/ThreeStateToggle.tsx` (line 27)
+### 🟡 N3: ThreeStateToggle label color always muted (Low)
 
-```typescript
-color: disabled ? "var(--text-muted)" : "var(--text-muted)"
+**File:** `ThreeStateToggle.tsx`, line 24:
+
+```tsx
+<span style={{ color: disabled ? "var(--text-muted)" : "var(--text-muted)", fontSize: 14 }}>{label}</span>
 ```
 
-Both branches are identical. The enabled label should use `var(--text-normal)` or similar to distinguish from disabled state.
-
----
-
-### S-2: Use antd Modal/message instead of browser `alert()`/`confirm()`
-**Files:** `ChannelPermissionsEditor.tsx`, `MembersRoleSection.tsx`
-
-Browser `alert()` and `confirm()` block the main thread, look inconsistent across platforms, and don't match the app's design system. The `RoleEditor.tsx` already uses antd `Modal` for delete/admin confirmation — the other components should follow the same pattern for consistency.
-
----
-
-### S-3: Accessibility — clickable divs missing keyboard/ARIA support
-**Files:** `ChannelPermissionsEditor.tsx` (overwrite target list), `MembersRoleSection.tsx` (role dropdown items)
-
-Several interactive elements use `<div onClick>` without:
-- `role="button"` or `tabIndex={0}`
-- `onKeyDown` handler for Enter/Space
-- ARIA labels describing the action
-
-```typescript
-// ChannelPermissionsEditor.tsx line ~146
-<div onClick={() => setSelectedTarget(...)}>  // not keyboard-accessible
-
-// MembersRoleSection.tsx line ~165
-<div onClick={() => handleAddRole(...)}>  // not keyboard-accessible
+Ternary evaluates to the same value regardless of `disabled`. Should be:
+```tsx
+color: disabled ? "var(--text-muted)" : "var(--text-normal)"
 ```
 
-The `ThreeStateToggle` buttons and `ServerSettings` close button have proper elements — extend this pattern to the rest.
+This means active, interactive permission labels look the same as disabled ones — poor visual affordance.
 
----
+### 🟡 N4: RolesSection swallows fetch error (Low)
 
-### S-4: Extract color-to-hex utility
-**Files:** `RoleList.tsx`, `RoleEditor.tsx`, `MembersRoleSection.tsx`, `ChannelPermissionsEditor.tsx`
-
-The expression `role.color.toString(16).padStart(6, "0")` appears ~8 times across 4 files. Extract to a shared utility:
+**File:** `ServerSettings.tsx`, RolesSection:
 
 ```typescript
-// lib/utils.ts
-export function colorToHex(color: number): string {
-  return color.toString(16).padStart(6, "0");
-}
+api.fetchRoles(guildId).then((r) => useRoleStore.getState().setRoles(guildId, r)).catch(console.error);
 ```
 
----
+If `fetchRoles` fails (network error, 403), the roles section shows empty with no user feedback. Should at minimum show an error state or retry UI.
 
-### S-5: Rapid reorder clicks can race
-**File:** `packages/client/src/components/RoleList.tsx`
+### 💡 S1: `SettingOutlined` import not visible in diff
 
-`handleMoveUp` and `handleMoveDown` each fire an immediate API call with no debounce or queue. A user clicking the up arrow 5 times rapidly will fire 5 concurrent PATCH requests that may resolve out of order, leaving roles in an unexpected position.
+The Sidebar.tsx diff adds `<SettingOutlined />` but the import isn't shown in the diff. This works if `SettingOutlined` was already imported (likely from antd icons for channel settings). Just flagging for build verification — not a review issue if it compiles.
 
-Consider adding a brief debounce, or disabling the arrows while a reorder is in-flight (similar to how `creating` state disables the create button).
+### 💡 S2: Consider memoization for member-derived data
 
----
-
-### S-6: No loading state for role list
-**File:** `packages/client/src/components/ServerSettings.tsx`
-
-When `RolesSection` mounts and calls `api.fetchRoles()`, there's no loading indicator. The user sees an empty role list until the response arrives. Add a loading state or skeleton.
-
-Also, the `useEffect` fetch doesn't abort on unmount:
-```typescript
-useEffect(() => {
-  api.fetchRoles(guildId).then((r) => useRoleStore.getState().setRoles(guildId, r)).catch(console.error);
-}, [guildId]);
-```
-
-Consider using an `AbortController` or at minimum a mounted check.
+`MembersRoleSection` creates `members = Object.values(memberMap)` with `useMemo` ✅ — good. But `assignableRoles` is recomputed on every render without memoization. For guilds with many roles, this is fine, but `useMemo` would be cleaner.
 
 ---
 
-### S-7: Member list not virtualized
-**File:** `packages/client/src/components/MembersRoleSection.tsx`
+## Summary Table
 
-The member list renders all members at once. For servers with hundreds of members, this could cause performance issues. For typical Cove use (small communities) this is fine, but worth noting for future scaling. Consider `react-window` or pagination if the member count grows.
+| ID | Severity | Status | Description |
+|----|----------|--------|-------------|
+| C1 | 🔴 Critical | ✅ Fixed | GUILD_MEMBER_UPDATE now merges existing data |
+| C2 | 🔴 Critical | 🔸 Mostly fixed | useUserPermissions hook correct; gear icon + section gating missing |
+| M1 | 🟠 Medium | 🔸 Partial | alert() replaces most console.error; one console.error remains; no differentiation |
+| M2 | 🟠→🔴 Escalated | ❌ Not addressed | Gateway updates still overwrite unsaved form edits |
+| M3 | 🟠 Medium | ❌ Not addressed | No discard changes dialog |
+| M4 | 🟠 Medium | ❌ Not addressed | Delete dialog missing member count |
+| N1 | 🟠 Medium | NEW | Gear icon shown to all users (no permission gate) |
+| N2 | 🟠 Medium | NEW | ServerSettings sections not permission-gated |
+| N3 | 🟡 Low | NEW | ThreeStateToggle label always muted color |
+| N4 | 🟡 Low | NEW | RolesSection swallows fetchRoles error |
 
----
+## Required for Merge
 
-## ✅ What's Done Well
+1. **N1 + N2**: Gate gear icon and settings sections by `MANAGE_ROLES | MANAGE_GUILD` (security)
+2. **M2** (escalated): Don't overwrite unsaved form state on gateway events
 
-1. **Module-level constants pattern** — `EMPTY_ROLES` and `EMPTY_MEMBERS` correctly prevent unstable selector references (the React #185 fix). This is applied consistently across all components.
+## Strongly Recommended
 
-2. **Zustand store design** — `useRoleStore` is clean, properly sorts by position, and handles all CRUD operations immutably. The `sortRoles` helper with `id` tiebreaker is a nice touch for deterministic ordering.
+3. **M3**: Discard confirmation when switching roles with dirty state
+4. **N4**: Replace remaining `console.error` with user-visible error
+5. **N3**: Fix ThreeStateToggle label color ternary
 
-3. **Gateway event wiring** — The READY payload seeding properly extracts roles alongside channels, and the three role lifecycle events (CREATE/UPDATE/DELETE) correctly sync the store. The `roles` field in `ReadyGuild` is properly marked optional.
+## Can Ship Without
 
-4. **Component decomposition** — Clean separation between RoleList, RoleEditor, MembersRoleSection, and ChannelPermissionsEditor. Each component has a focused responsibility.
-
-5. **CSS variables** — Consistent use of design system variables (`--text-normal`, `--bg-modifier-active`, `--border-subtle`, etc.) across all components. No hardcoded color values.
-
-6. **Permission bit manipulation** — The `setBit` helper and `getToggleState` in ChannelPermissionsEditor correctly handle BigInt bitwise operations for three-state toggles.
-
-7. **Spec document** — Comprehensive spec with clear phases, edge cases, and test plan. Good Discord-parity reference.
-
-8. **Save bar pattern** — Dirty detection with Reset/Save in RoleEditor uses proper `useMemo` comparison against the role state.
-
----
-
-## Summary
-
-| Category | Count |
-|----------|-------|
-| 🔴 Needs Changes | 4 |
-| 🟡 Suggestions | 7 |
-
-The PR needs fixes for the **GUILD_MEMBER_UPDATE data corruption bug** (NC-1) and **hardcoded permission bypass** (NC-2) before merge. The **silent error handling** (NC-3) and **gateway conflict overwrite** (NC-4) are also important for UX quality but less urgent. The suggestions are polish items that can be addressed in follow-up PRs.
+6. **M4**: Member count in delete dialog (nice-to-have)
+7. **M1 differentiation**: 403 vs 404 error messages (polish)
+8. **S2**: Memoization of assignableRoles
