@@ -2254,5 +2254,14 @@
     "reviewers": 1,
     "rounds": 1,
     "notes": "Quick review (Kagura only). 3-line fix for #423 attachment follow-up. 111 tests pass. Merged 2026-06-23T14:47Z."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 431,
+    "reviewed_at": "2026-06-25T10:43+08:00",
+    "status": "open",
+    "round": 1,
+    "ground_truth": null
   }
 ]
