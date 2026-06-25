@@ -1,14 +1,14 @@
 # Code Review Service — Reviewer Stats
 
-_Last updated: 2026-06-25 14:31 (Asia/Shanghai)_
+_Last updated: 2026-06-25 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 225 | 219/225 (97%) → | 6 failures total. #411-#431: all clean. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 227 | 224/227 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#431: all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 222 | 202/222 (91%) → | #411-#431: all clean output. 16th post-switch PR. |
+| 🌟 Stella | gpt-5.5 | 227 | 221/227 (97%) → | 6 failures total. #411-#432: all clean. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 229 | 226/229 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#432: all clean. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 224 | 204/224 (91%) → | #411-#432: all clean output. 17th post-switch PR. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -17,7 +17,7 @@ _Last updated: 2026-06-25 14:31 (Asia/Shanghai)_
 |-----------|----------|----------|
 | DB/Migration | ⭐⭐⭐ | SQLite ALTER TABLE (#168), migration ordering (#144), FK pragma-in-transaction (#178 R1 — reproduced locally), FK safety (#174), migration seq overflow (#202 R1) |
 | Build Verification | ⭐⭐⭐ | Only reviewer who runs `pnpm -r build` — caught tsc failure (#165 R1), verified tests every round. #255: verified 152 server + 38 plugin tests. #261: verified server + client build |
-| Security (Auth) | ⭐⭐⭐ | Ghost presence (#167), presences membership (#168), stale guildIds (#179 R1), snowflake-as-auth-token (#202 R1), bot permission bypass (#352 R1) |
+| Security (Auth) | ⭐⭐⭐ | Ghost presence (#167), presences membership (#168), stale guildIds (#179 R1), snowflake-as-auth-token (#202 R1), bot permission bypass (#352 R1), missing-security-tests-as-Critical (#432 R1) |
 | Async/Concurrency | ⭐⭐ | Async handler ordering race (#190 R5), queued side-effect race (#190 R4), auto-ack race (#192 R1) |
 | Testing Gaps | ⭐⭐⭐ | Ack endpoint test coverage (#192 R1), fake test detection (#178 R2), product-impact of .catch swallowing (#192 R1) |
 | Accessibility/A11y | ⭐⭐ | Focus ring WCAG violation (#191 R2), high-contrast mode (#191 R3), send button aria-label (#191 R3) |
@@ -57,7 +57,7 @@ _Last updated: 2026-06-25 14:31 (Asia/Shanghai)_
 | Plugin/Integration Analysis | ⭐⭐⭐ | **NEW: dispatch.ts catch-all re-swallow defeats rest-client fix (#352 R3 — unique). Regex status matching fragile (#352 R3 — unique). 30s×3 timeout on hot dispatch path (#352 R3). Size cap asymmetry 100KB/8KB (#352 R1 — unique). UntrustedStructuredContext production verification (#352 R6). 5xx CoveApiError inconsistency (#352 R4). UTF-16 vs byte measurement (#352 R1 — unique).** |
 | Config/Schema Validation | ⭐⭐⭐ | **NEW: Plugin manifest schema missing `accounts` field (#369 R1 — consensus with Stella). Dead code fallback in account resolution (#369 R1 — unique). Deep SDK trace to verify resolution path.** |
 
-**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security model design, async lifecycle, UX-level analysis, feature correctness, regression detection, plugin integration analysis, and config/schema validation. #352 R3's dispatch re-swallow find was the most impactful unique of that PR. #369 schema blocker caught alongside Stella.
+**Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security model design, async lifecycle, UX-level analysis, feature correctness, regression detection, plugin integration analysis, and config/schema validation. #352 R3's dispatch re-swallow find was the most impactful unique of that PR. #369 schema blocker caught alongside Stella. #432 R1: detailed attack scenario for bulk position escalation was the session's star security find.
 **Nova's weakness:** Three timeouts now (#352 R5, #369 R1, #400 R2 — 49 tool calls without writing output). All on large/complex PRs. **#400 R1 had 2 false positives** (hallucinated SDK types from naming conventions) — first FP record for Nova. Still exceptional overall but large-diff handling needs attention.
 
 ### 💫 Vega (Gemini 2.5 Pro — switched 2026-06-15, was Gemini 3.1 Pro)
@@ -86,9 +86,9 @@ _Last updated: 2026-06-25 14:31 (Asia/Shanghai)_
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 9 | ~50 | ~18% | → Stable. post-seal (#405), draft-deletion (#410), extra fields (#387), schema (#369), ChannelId (#400), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2). Consistent edge-case finder. |
-| 🌠 Nova | 17 | ~50 | ~34% | ↑↑ Dominant. 5 unique in #410 alone. no-op-cancels-deploy (#408), dead-code (#369), metadata+CLI (#387), pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch (#418 R1), dead-import (#418 R2). |
-| 💫 Vega | 4 | ~50 | ~8% | ↓↓ Below 10% for 24+ consecutive periods. SDK verification (#400 R2), dotfile-cp (#411), curl-sfS (#413). #418: missed blocking issues BOTH rounds (R1 media capability lie, R2 silent no-op). Origination critically weak. |
+| 🌟 Stella | 10 | ~55 | ~18% | → Stable. post-seal (#405), draft-deletion (#410), extra fields (#387), schema (#369), ChannelId (#400), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2), missing-security-tests-as-Critical (#432 R1). Consistent edge-case finder. |
+| 🌠 Nova | 18 | ~55 | ~33% | ↑↑ Dominant. 5 unique in #410 alone. no-op-cancels-deploy (#408), dead-code (#369), metadata+CLI (#387), pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch (#418 R1), dead-import (#418 R2), bulk-position-escalation-attack-scenario (#432 R1). |
+| 💫 Vega | 4 | ~55 | ~7% | ↓↓ Below 10% for 26+ consecutive periods. SDK verification (#400 R2), dotfile-cp (#411), curl-sfS (#413). #418: missed blocking issues BOTH rounds. #432: found same bulk-position bug as Nova (no unique finds). Origination critically weak. |
 
 ## Consensus Participation
 
@@ -118,9 +118,9 @@ _Last updated: 2026-06-25 14:31 (Asia/Shanghai)_
 
 | Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#431) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 104/108 (96%) | → Stable. #411-#431: all clean. Large-diff sensitivity on >2000 lines. |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 107/110 (97%) | → Stable. #411-#431: all clean. |
-| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 98/105 (93%) | → Stable output. #411-#431: all clean. 16th post-switch PR. |
+| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 106/110 (96%) | → Stable. #411-#432: all clean. Large-diff sensitivity on >2000 lines. |
+| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 109/112 (97%) | → Stable. #411-#432: all clean. |
+| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 100/107 (93%) | → Stable output. #411-#432: all clean. 17th post-switch PR. |
 
 ## Vega Calibration Swing Pattern
 
@@ -278,22 +278,24 @@ _Last updated: 2026-06-25 14:31 (Asia/Shanghai)_
 | #424 | cove | 2026-06-23 | R1 | ✅ Ready (Kagura quick review) | attachment-preservation-single-entry-flush | Merged 2026-06-23 |
 | #429 | cove | 2026-06-24 | R1-R4 | ✅ Ready (3/3 R4) | CHANNEL_DELETE-race, thread-fetch-loop, ThreadPanel-fetch-loop, React-185-loop | Merged 2026-06-25 |
 | #431 | cove | 2026-06-25 | R1 | ✅ Ready (3/3 unanimous) | ci-notify-approve, jq-secure-json, head-1-fix | Merged 2026-06-25 |
+| #432 | cove | 2026-06-25 | R1-R2 | ✅ Ready (2/3) | bulk-position-privilege-escalation, dispatcher-fail-open, cross-guild-access | Merged 2026-06-25 |
 
-## Ground Truth Summary (74 merged + 2 closed-unmerged PRs)
+## Ground Truth Summary (75 merged + 2 closed-unmerged PRs)
 
 - **Human blind spots found by us:** 0 — human has never caught something we missed
 - **Our blind spots:** 2 — #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
-- **Human rubber-stamp rate:** 96% — human approved without findings in 73/74 merged cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
-- **Iterative review as quality gate:** In 73/74 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review)
+- **Human rubber-stamp rate:** 96% — human approved without findings in 74/75 merged cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
+- **Iterative review as quality gate:** In 74/75 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review)
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
-- **Multi-round PRs:** 55/74 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
-- **Total review rounds:** ~271 across 76 PRs (74 merged + 2 closed-unmerged)
+- **Multi-round PRs:** 56/75 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
+- **Total review rounds:** ~273 across 77 PRs (75 merged + 2 closed-unmerged)
 - **False-ready detection:** 7 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega) — self-correcting system working (Vega is 6 of 7)
 - **Escalation protocol validated:** 8 cases — all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
 - **SDK type hallucination pattern.** #400 R1 had 2 false positives where Nova+Vega inferred SDK types from naming conventions instead of verifying against source. First systematic hallucination failure across all reviewers.
 - **Fallback model resilience.** #409: all 3 primary models (gpt-5.5, claude-opus-4.7, gemini-3.1-pro-preview) failed due to network issues. Fallback models (gpt-4.1, claude-sonnet-4, gemini-2.5-pro) produced high-quality unanimous Ready verdict. System resilience validated.
 - **#413 security review value.** Caught real GITHUB_OUTPUT injection via static EOF delimiter — a security fix PR itself had a security gap. Validates our review even on security-hardening PRs.
+- **#432 permission system review.** R1 caught real privilege escalation (bulk position update), dispatcher fail-open, and cross-guild access — all security-critical. R2 confirmed all 5 fixes. Also had 4 prior spec review rounds that caught 3 blockers + 5 majors per round. Total spec+code review: 6 rounds. Human approved without comments.
 
 ## Actionable Notes
 
@@ -309,9 +311,9 @@ _Last updated: 2026-06-25 14:31 (Asia/Shanghai)_
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 76 PRs (74 merged + 2 closed), ~271 review rounds, 33 days. ~2.3 PRs/day, ~8.2 reviewer-rounds/day.
+7. **Throughput sustained.** 77 PRs (75 merged + 2 closed), ~273 review rounds, 34 days. ~2.3 PRs/day, ~8.0 reviewer-rounds/day.
 
-8. **Ground truth: human rubber-stamps 96% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review.
+8. **Ground truth: human rubber-stamps 96% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern — human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review — first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR.
 
 9. **Nova still leads unique find rate.** 34% unique find rate vs Stella 18% vs Vega 8%. Nova finds ~4× more unique issues than Vega. #423: Nova's attachment-loss finding directly spawned follow-up PR #424. Still best originator by far.
 
