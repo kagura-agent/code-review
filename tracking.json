@@ -2223,13 +2223,31 @@
     "repo": "cove",
     "pr": 429,
     "reviewed_at": "2026-06-24T18:15:00+08:00",
-    "status": "open",
-    "ground_truth": null,
-    "last_checked": "2026-06-25T08:26+08:00",
-    "verdict": "approved",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r3": "needs_changes",
+      "our_verdict_r4": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "CHANNEL_DELETE-race-ordering",
+        "thread-fetch-loop-reactive-subscription",
+        "ThreadPanel-fetch-loop-symmetry",
+        "React-185-infinite-update-loop",
+        "unhandled-fetchThread-rejection"
+      ],
+      "noise": [],
+      "calibration": "4-round review. R1 caught 3 criticals (CHANNEL_DELETE race, thread fetch loops, unhandled rejection). R3 caught ThreadPanel needed same fix as ChannelView. R4 confirmed all fixed, 3/3 unanimous. Human approved without comments — iterative review was the quality gate."
+    },
+    "last_checked": "2026-06-25T14:31+08:00",
+    "verdict": "ready",
     "reviewers": 3,
-    "rounds": 3,
-    "notes": "R1: 3/3 unanimous needs_changes (CHANNEL_DELETE race, thread fetch loop, unhandled fetchThread rejection). R3: 3/3 needs_changes (ThreadPanel fetch loop only remaining). Commit 3cfd965 fixed R3 issue. QA verified: all thread panel tests pass (no fetch loop). Awaiting R4 or direct merge.",
+    "rounds": 4,
+    "notes": "R1: 3/3 needs_changes (CHANNEL_DELETE race, thread fetch loop, unhandled rejection). R3: ThreadPanel fetch loop (3/3). R4: 3/3 unanimous Ready. All blocking issues resolved. Merged 2026-06-25T02:27Z.",
     "round": 4,
     "last_reviewed_at": "2026-06-25T08:28+08:00"
   },
@@ -2260,8 +2278,22 @@
     "repo": "cove",
     "pr": 431,
     "reviewed_at": "2026-06-25T10:43+08:00",
-    "status": "open",
+    "status": "merged",
     "round": 1,
-    "ground_truth": null
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Unanimous 3/3 Ready R1. Pure CI workflow change. Security checks confirmed (env var indirection, jq --arg, secrets handling). Human approved without comments."
+    },
+    "last_checked": "2026-06-25T14:31+08:00",
+    "verdict": "ready",
+    "reviewers": 3,
+    "rounds": 1,
+    "notes": "R1: 3/3 unanimous Ready. CI notification workflow. head -1 fix. jq secure JSON pattern. Merged 2026-06-25T02:44Z."
   }
 ]
