@@ -1,33 +1,39 @@
-# Run Record: cove-435
+# Run Record — PR #435 (Permissions Management UI)
 
-**PR:** kagura-agent/cove#435
-**Title:** feat: Permissions Management UI (#282)
-**Date:** 2026-06-25
-**Round:** 1
-**Verdict:** ⚠️ Needs Changes (3/3 unanimous)
+**Date:** 2026-06-26
+**Round:** 4 (Final)
+**Commit:** 0d4040f
+**Verdict:** ✅ APPROVED (3/3)
 
-## Critical Findings
+## Reviewer Verdicts
 
-1. **GUILD_MEMBER_UPDATE data corruption** (3/3) — username set to snowflake ID, metadata fabricated
-2. **Hardcoded permission bypass** (3/3) — userHighestPosition=999, userPermissions=~0n
+| Reviewer | Model | Verdict | Key Focus |
+|----------|-------|---------|-----------|
+| 🌟 Stella | GPT-5.5 | ✅ Ready | Thorough fix verification, escalation tracking |
+| 🌠 Nova | Claude Opus 4.7 | ✅ Ready | Context-aware severity adjustment, clean analysis |
+| 💫 Vega | Gemini 3.1 Pro | ✅ Ready | Comprehensive fix table, type safety notes |
 
-## Major Findings
+## Consensus Items (non-blocking)
 
-3. **Console.error instead of toasts** (3/3)
-4. **Form sync overwrites user edits** (3/3) — RoleEditor effect on role properties
-5. **No discard changes dialog** (2/3)
-6. **Delete confirmation missing info** (2/3)
+1. Concurrent edit conflict resolution (3/3)
+2. Discard-changes dialog (3/3)
+3. Delete confirmation member count (3/3)
+4. ThreeStateToggle label color dead ternary (2/3)
+5. Error differentiation — generic alert() (2/3)
 
-## Reviewer Performance
+## Round History
 
-| Reviewer | Verdict | Unique Finds |
-|----------|---------|--------------|
-| 🌟 Stella | ⚠️ | Color-to-hex extraction suggestion, abort controller for fetch |
-| 🌠 Nova | ⚠️ | Permission group mismatch (VIEW_CHANNEL placement), SEND_TTS_MESSAGES not in spec |
-| 💫 Vega | ⚠️ | ChannelPermissionsEditor new overwrite flow gap, stale state after save, mouseenter/leave hover bug |
+- **Round 1-2**: Initial review + fixes (gear gate, TDZ, circular deps, etc.)
+- **Round 3**: 13 targeted fixes. Stella/Nova: ⚠️ Needs Changes (M2 gateway overwrite). Vega: ✅ Ready.
+- **Round 4**: All 13 fixes verified ✅. All reviewers agree remaining items are UX polish → follow-up. Unanimous ✅.
 
-## Process Notes
+## Observations
 
-- Frontend PRs review faster (~2-4 min vs 4-8 min for backend security)
-- All 3 found the same data corruption bug independently — high confidence
-- Hardcoded TODO in code was correctly flagged as blocking
+- Re-review protocol worked well — reviewers properly tracked previous issues and verified fixes
+- Severity calibration improved in Round 4 — Stella/Nova correctly downgraded M2 from Critical to Suggestion given small-team context
+- Vega was consistent across rounds (✅ in both R3 and R4)
+- All three reviewers highlighted the same positive patterns (router-helpers, idempotent addRole, test coverage)
+
+## Ground Truth
+
+Pending — will be updated by tracking cron after human review/merge.

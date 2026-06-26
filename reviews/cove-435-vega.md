@@ -1,121 +1,90 @@
-# Code Review: PR #435 — feat: Permissions Management UI (#282)
+# 💫 Vega — PR #435 Review (Round 4, Final)
 
-**Reviewer:** 💫 Vega  
-**Round:** 3  
-**Commit:** 851bd54  
-**Rating:** ✅ Ready
-
----
-
-## Round 2 Fix Verification
-
-### 🟡 N6: Server Settings button missing permission gate — ✅ VERIFIED FIXED
-
-The gear icon in `Sidebar.tsx` is now properly gated:
-
-```typescript
-const canSeeSettings = isOwner || !!(userPermissions & PermissionBits.MANAGE_GUILD) || !!(userPermissions & PermissionBits.MANAGE_ROLES);
-```
-
-Rendering is double-guarded:
-```tsx
-{guildId && canSeeSettings && (
-  <Button type="text" size="small" icon={<SettingOutlined />} ... />
-)}
-```
-
-This matches the spec requirement: "shown if the user has ANY of MANAGE_GUILD or MANAGE_ROLES (or is guild owner)." The `useUserPermissions` hook correctly grants `ALL_PERMISSIONS` to ADMINISTRATOR holders, so admins also pass this gate. No issues.
-
-### 🟡 M3: Last console.error → alert() — ✅ VERIFIED FIXED
-
-All error-handling paths in the **new code** introduced by this PR use `alert()` for user-facing feedback:
-- `ChannelPermissionsEditor.tsx`: `alert("Failed to save permissions")`, `alert("Failed to remove overwrite")`
-- `RoleEditor.tsx`: `alert("Failed to save role")`, `alert("Failed to delete role")`
-- `RoleList.tsx`: `alert("Failed to create role")`, `alert("Failed to reorder roles")`
-- `MembersRoleSection.tsx`: `alert("Failed to assign role")`, `alert("Failed to remove role")`
-- `ServerSettings.tsx`: `alert("Failed to load roles")`
-
-The remaining `console.error("create thread:", err)` in `MessageContextMenu.tsx` is **pre-existing code** (context line in the diff, not introduced by this PR). Not a regression.
+**PR:** kagura-agent/cove#435 — Permissions Management UI (#282)
+**Branch:** `spec/282-permissions-ui` → `main`
+**Commit:** `0d4040f`
+**Stats:** +2481/−94, 35 files changed
 
 ---
 
-## Focus Area Analysis
+## Summary
 
-### 1. Sidebar.tsx — TDZ (Temporal Dead Zone) Resolution ✅
-
-**Before:** `guildId` was declared *after* the new `useUserPermissions(guildId ?? "")` hook call, causing a TDZ error.
-
-**After (commit 851bd54):** Declaration order is correct:
-```typescript
-const guilds = useGuildStore((s) => s.guilds);
-// Use first guild if no active guild in URL — must be declared before useUserPermissions
-const guildId = activeGuildId ?? Object.keys(guilds)[0] ?? null;
-const { userPermissions, isOwner } = useUserPermissions(guildId ?? "");
-```
-
-All dependencies (`activeGuildId`, `guilds`) are declared above via prior hook calls. The comment documents the ordering constraint. Hook call order is unconditional and stable (React Rules of Hooks satisfied). When `guildId` is `null`, passing `""` to `useUserPermissions` hits the early return (`!guild` → `{ userHighestPosition: 0, userPermissions: 0n, isOwner: false }`), resulting in `canSeeSettings === false`. Correct and safe.
-
-### 2. router-helpers.ts — Circular Dependency Break ✅
-
-**Pattern:** Late-binding with `_bindRouter()` called from `router.tsx` after router creation.
-
-**Chains broken:**
-1. `AppShell → ... → useBotStore → router.tsx` (useBotStore now imports from router-helpers)
-2. `router.tsx → ChannelView → ChatArea → ChatMarkdown` (ChatMarkdown now imports from router-helpers)
-3. `router.tsx → ChannelView → ChatArea → MessageContextMenu` (MessageContextMenu now imports from router-helpers)
-
-**Backward compatibility:** `router.tsx` re-exports all helpers, so any existing code importing from `"./router"` continues to work without changes.
-
-**Safety of `getRouter()` returning null:** All call sites (`ChatMarkdown.tsx`, `MessageContextMenu.tsx`) invoke `getRouter().navigate()` inside user-triggered event handlers (onClick, async after user action). The router is always bound before any user interaction occurs. No risk of null dereference.
-
-**gateway-subscriptions.ts** correctly imports helpers from `router-helpers` and the `router` object directly from `router.tsx` for its `navigate()` calls. No circular dependency since gateway-subscriptions is not imported by the router module.
-
-Clean, well-documented, minimal surface area. No new issues introduced.
-
-### 3. canSeeSettings Permission Logic ✅
-
-```typescript
-const canSeeSettings = isOwner || !!(userPermissions & PermissionBits.MANAGE_GUILD) || !!(userPermissions & PermissionBits.MANAGE_ROLES);
-```
-
-Matches spec exactly:
-- ✅ Guild owner (`isOwner` — checked via `guild.owner_id === userId`)
-- ✅ MANAGE_GUILD permission
-- ✅ MANAGE_ROLES permission
-- ✅ ADMINISTRATOR (implicitly — `useUserPermissions` returns `ALL_PERMISSIONS` which includes both flags)
-
-The `useUserPermissions` hook implementation is correct:
-- Finds @everyone role by `role.id === guildId` (Discord convention) ✅
-- OR's permissions across all member roles ✅
-- Escalates to ALL_PERMISSIONS for ADMINISTRATOR ✅
-- Returns `Infinity` position for owner (can manage any role) ✅
-- Memoized with proper dependency array ✅
+Round 4 final review of a comprehensive Permissions Management UI. All 13 fixes from Round 3 are verified in the diff: gear icon permission gate, Sidebar TDZ, circular dependency break via `router-helpers.ts`, members text color, WS event whitelist removal (Discord pattern), idempotent `addRole`, optimistic member role updates, position-1 role creation, scrollbar layout shift fix, READY payload roles inclusion, new test coverage, and docs updates. No new critical or blocking issues found. The previously noted non-blocking items remain appropriate for post-merge follow-up. This PR is ready to merge.
 
 ---
 
-## Additional Observations (Non-Blocking)
+## Round 3 Issue Verification
 
-### Info: Pre-existing console.error in MessageContextMenu
-`console.error("create thread:", err)` at line ~115 of `MessageContextMenu.tsx` is pre-existing. Not a regression from this PR, but could be cleaned up in a follow-up.
+All items from Round 3 were either confirmed fixed or confirmed as non-blocking carry-forward:
 
-### Info: `getRouter()` typing
-`getRouter()` returns `any`. This loses TypeScript type safety for `.navigate()` and `.state.matches`. Acceptable trade-off for cycle-breaking, but a typed wrapper (e.g., `Router` type from react-router-dom) could be added later.
+| # | Issue | Status |
+|---|-------|--------|
+| Fix 1 | Gear icon permission gate | ✅ **Fixed** — `canSeeSettings` check uses `isOwner \|\| MANAGE_GUILD \|\| MANAGE_ROLES`; gear conditionally rendered |
+| Fix 2 | Sidebar TDZ — guildId declaration order | ✅ **Fixed** — `guildId` declared before `useUserPermissions` call, with comment explaining ordering |
+| Fix 3 | Circular dependencies via router-helpers.ts | ✅ **Fixed** — late-bound `_bindRouter()` pattern cleanly breaks ChatMarkdown → router → ChannelView cycle |
+| Fix 4 | Members list text color | ✅ **Fixed** — uses `var(--text-normal)` for username text, correct for dark backgrounds |
+| Fix 5 | WS event whitelist removed | ✅ **Fixed** — `gatewayEvents` Set deleted; all `DISPATCH` ops emit directly via dispatcher |
+| Fix 6 | addRole idempotent | ✅ **Fixed** — store checks `existing.some(r => r.id === role.id)` and updates in-place if found |
+| Fix 7 | Optimistic update for member role add/remove | ✅ **Fixed** — both `handleAddRole` and `handleRemoveRole` update local store after API success |
+| Fix 8 | Create roles at position 1 not MAX+1 | ✅ **Fixed** — server shifts existing roles up, creates at position 1 (Discord behavior) |
+| Fix 9 | Settings scrollbar layout shift | ✅ **Fixed** — `scrollbar-gutter: stable` with transparent-to-visible color on hover |
+| Fix 10 | Include roles in READY payload | ✅ **Fixed** — `session.ts` includes `rolesRepo.listByGuild()` in guild data; client seeds role store |
+| Fix 11 | Role store idempotency + WS dedup tests | ✅ **Fixed** — 3 new test files: `useRoleStore.test.ts`, `ws-deduplication.test.ts`, gateway-subscriptions addendum |
+| Fix 12 | cove-ops skill updated | ✅ **Fixed** — roles & permissions API fully documented with hierarchy rules |
+| Fix 13 | cove-qa skill added | ✅ **Fixed** — QA methodology document with testing levels and anti-patterns |
+
+### Previously noted non-blocking (carry-forward, unchanged):
+- **N7**: Move-up arrow at hierarchy ceiling — server-side enforced, UI doesn't prevent the click but 403 guards it
+- **N1**: RoleEditor effect overwrites unsaved form on concurrent gateway update — no conflict resolution banner yet
+- **N3**: No navigation guard for unsaved changes when switching roles
+- **N4**: Delete confirmation missing member count
+- **N5**: ChannelPermissionsEditor add-overwrite flow starts with neutral state (user must save explicitly)
+
+All remain non-blocking. None have regressed.
 
 ---
 
-## Previously Identified Issues (Confirmed Still Open, Non-Blocking)
+## Critical Issues
 
-These were explicitly listed as NOT fixed and are not required for merge:
-- N7: Move-up arrow at hierarchy ceiling (still allows attempting swap with role at/above user level)
-- N1: RoleEditor effect overwrites unsaved form on concurrent gateway update
-- N3: No navigation guard for unsaved changes
-- N4: Delete confirmation missing member count
-- N5: ChannelPermissionsEditor new overwrite flow gap
+**None.**
+
+---
+
+## Product Impact
+
+1. **New Server Settings panel** — users with `MANAGE_GUILD` or `MANAGE_ROLES` see a gear icon in the sidebar header. Full-screen overlay with Roles and Members sections.
+2. **Role CRUD** — create, edit (name/color/permissions), delete, reorder via up/down arrows. Admin permission toggle has confirmation modal.
+3. **Member role assignment** — add/remove roles on members with hierarchy enforcement. Dropdown shows only assignable roles.
+4. **Channel permissions upgrade** — three-state toggles (allow/neutral/deny) replace simple bot visibility toggles.
+5. **Real-time sync** — gateway events (`GUILD_ROLE_CREATE/UPDATE/DELETE`, `GUILD_MEMBER_UPDATE`) keep UI in sync across sessions.
+6. **Permission gate** — gear icon hidden for unprivileged users; role hierarchy enforced in both UI and server.
+
+---
+
+## Suggestions (Non-blocking, post-merge)
+
+1. **S1 (UX)**: Replace `alert()`/`confirm()` calls with antd `Modal` or toast notifications for consistency with the rest of the UI (ChannelPermissionsEditor uses native dialogs while RoleEditor uses antd Modals).
+2. **S2 (Type safety)**: `memberRoles.map((role: any) => ...)` in MembersRoleSection.tsx — replace `any` with the proper `Role` type after the `filter(Boolean)`.
+3. **S3 (Spec parity)**: Implement delete confirmation member count ("X members have this role") per spec §1.3.
+4. **S4 (UX)**: Add unsaved-changes navigation guard when switching between roles in the editor (spec §1.3 Save Bar Behavior).
+5. **S5 (UX)**: Add concurrent edit conflict banner per spec (§1.3) — currently the effect silently overwrites the form.
+
+---
+
+## Positive Notes
+
+- **Circular dependency fix is clean** — the `router-helpers.ts` late-binding pattern is a well-engineered solution that breaks three circular chains without any hack. The `_bindRouter()` registration with re-exports from `router.tsx` maintains backward compatibility.
+- **Idempotent store operations** — `addRole` checks for existing IDs before inserting, preventing the optimistic-update-plus-WS-event duplication pattern. Backed by dedicated tests.
+- **Comprehensive test coverage** — three new test files covering store idempotency, WS deduplication, and gateway subscription behavior. Tests use real store implementations, not mocks.
+- **Discord-compatible design** — position-1 creation with shift-up, hierarchy enforcement, `@everyone` special handling, managed role restrictions all match Discord patterns.
+- **`scrollbar-gutter: stable`** — elegant CSS-only fix for the layout shift problem instead of JavaScript workarounds.
+- **Documentation quality** — the cove-ops skill update is thorough with hierarchy rules, permission bits table, and all CRUD examples. The cove-qa skill provides genuine methodology guidance.
+- **Server-side safety** — role hierarchy is enforced both client-side (UI gating) and server-side (403 responses), defense in depth.
 
 ---
 
 ## Verdict
 
-**✅ Ready to merge.**
+### ✅ Ready
 
-All Round 2 findings claimed fixed are verified correct. The TDZ fix is clean, the circular dependency break is well-structured with proper late-binding and backward compatibility, and the permission logic correctly implements the spec requirements. No new issues or regressions identified. QA passed. Ship it.
+All 13 Round 3 fixes verified. No new critical or blocking issues. The remaining non-blocking suggestions are UX polish items appropriate for follow-up issues. This is a solid, well-tested implementation of Discord-compatible permissions management.
