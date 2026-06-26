@@ -36,4 +36,11 @@
 
 ## Ground Truth
 
-Pending — will be updated by tracking cron after human review/merge.
+- **Human reviewer:** daniyuu
+- **Human verdict:** approved (no comments)
+- **Our verdict progression:** R1 needs_changes → R2 needs_changes → R3 needs_changes → R4 ready
+- **Accuracy:** correct
+- **Blind spots:** none
+- **Effective dimensions:** guild-member-update-corruption, hardcoded-permission-bypass, gear-permission-gate, sidebar-tdz, circular-dependency, ready-payload-roles, zustand-selector-stability
+- **Noise:** none
+- **Calibration:** 4-round deep review. R1 caught GUILD_MEMBER_UPDATE data corruption + hardcoded permission bypass (3/3 consensus). QA testing revealed React #185 (zustand `?? []` selector instability) and TDZ crash — both fixed iteratively. R4: 3/3 unanimous ready. Human approved without comments — iterative review was the quality gate.

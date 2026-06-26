@@ -2333,11 +2333,32 @@
     "repo": "cove",
     "pr": 435,
     "reviewed_at": "2026-06-25T22:50+08:00",
-    "status": "open",
+    "status": "merged",
     "round": 4,
-    "ground_truth": null,
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict_r1": "needs_changes",
+      "our_verdict_r2": "needs_changes",
+      "our_verdict_r3": "needs_changes",
+      "our_verdict_r4": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "effective_dimensions": [
+        "guild-member-update-corruption",
+        "hardcoded-permission-bypass",
+        "gear-permission-gate",
+        "sidebar-tdz",
+        "circular-dependency",
+        "ready-payload-roles",
+        "zustand-selector-stability"
+      ],
+      "noise": [],
+      "calibration": "4-round deep review. R1 caught GUILD_MEMBER_UPDATE data corruption + hardcoded permission bypass (3/3). QA found React #185 (zustand selector ?? [] instability) and TDZ crash. R4: 3/3 unanimous ready. Human approved without comments — iterative review was the quality gate."
+    },
     "last_reviewed_at": "2026-06-26T15:35+08:00",
-    "last_checked": "2026-06-26T14:29+08:00",
+    "last_checked": "2026-06-26T20:30+08:00",
     "notes": "R4 Final: 3/3 unanimous ✅ Ready. All 13 R3 fixes verified. 5 non-blocking suggestions (concurrent edit, discard dialog, member count, toggle label, error differentiation). Posted to PR. Awaiting Luna final review + merge."
   }
 ]
