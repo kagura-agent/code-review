@@ -1,6 +1,6 @@
 # Code Review Service - Reviewer Stats
 
-_Last updated: 2026-06-26 08:26 (Asia/Shanghai)_
+_Last updated: 2026-06-26 14:29 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -287,7 +287,7 @@ _Last updated: 2026-06-26 08:26 (Asia/Shanghai)_
 | #429 | cove | 2026-06-24 | R1-R4 | ✅ Ready (3/3 R4) | CHANNEL_DELETE-race, thread-fetch-loop, ThreadPanel-fetch-loop, React-185-loop | Merged 2026-06-25 |
 | #431 | cove | 2026-06-25 | R1 | ✅ Ready (3/3 unanimous) | ci-notify-approve, jq-secure-json, head-1-fix | Merged 2026-06-25 |
 | #432 | cove | 2026-06-25 | R1-R2 | ✅ Ready (2/3) | bulk-position-privilege-escalation, dispatcher-fail-open, cross-guild-access | Merged 2026-06-25 |
-| #435 | cove | 2026-06-25 | R1-R2 (open) | ⚠️ Needs Changes (3/3 both rounds) | member-data-corruption, permission-bypass, form-sync-overwrite | Open - spec review passed (R2 LGTM), code review R2 in progress, QA found+fixed React #185 |
+| #435 | cove | 2026-06-25 | R1-R2 (open) | ⚠️ Needs Changes (3/3 both rounds) | member-data-corruption, permission-bypass, form-sync-overwrite | Open - spec approved, code R2 done, QA found+fixed React #185 + TDZ + permission gate. Awaiting R3 or human merge. |
 
 ## Ground Truth Summary (75 merged + 2 closed-unmerged PRs)
 

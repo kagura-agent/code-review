@@ -1,33 +1,53 @@
-# 🌠 Nova — PR #435 Review (Round 2)
+# Code Review: PR #435 — feat: Permissions Management UI (#282)
 
-**PR:** kagura-agent/cove#435 — feat: Permissions Management UI (#282)
-**Commit:** d12bfdc
-**Reviewer:** Nova (code reviewer)
-**Round:** 2 (re-review)
+**Reviewer:** 🌠 Nova
+**Round:** 3
+**Commit:** 851bd54
+**PR:** https://github.com/kagura-agent/cove/pull/435
 **Rating:** ⚠️ Needs Changes
 
 ---
 
-## Round 1 Issue Verification
+## Round 2 Fix Verification
 
-### ✅ C1: GUILD_MEMBER_UPDATE fabricates user data — FIXED
+### ✅ Gear icon permission gate — VERIFIED
+**Commit:** 618fbff
 
-**gateway-subscriptions.ts** now merges with existing member data:
-```typescript
-const existing = useMemberStore.getState().membersByGuildId[data.guild_id]?.[data.user.id];
-const existingUser = existing?.user ?? { id: data.user.id, username: data.user.id, ... };
-const mergedUser = { ...existingUser, ...data.user } as typeof existingUser;
+`Sidebar.tsx` now computes `canSeeSettings` from `useUserPermissions()` and conditionally renders the gear icon:
+```tsx
+const canSeeSettings = isOwner || !!(userPermissions & PermissionBits.MANAGE_GUILD) || !!(userPermissions & PermissionBits.MANAGE_ROLES);
 ```
-Correctly preserves existing username/avatar when the gateway event sends a partial user object, then overlays any new fields from the event. Falls back to a sensible default (`data.user.id` as username) for never-before-seen members. **Resolved.**
+Only shown when the user has `MANAGE_GUILD`, `MANAGE_ROLES`, or is guild owner. Matches the spec. ✅
+
+### ✅ Sidebar TDZ resolved — VERIFIED
+**Commit:** 851bd54
+
+`guildId` declaration was moved above the `useUserPermissions(guildId ?? "")` call with an explicit comment: `"must be declared before useUserPermissions"`. The old location (after the hook call) has been removed. React hook call order is preserved. ✅
+
+### ✅ Circular dependency fix via router-helpers.ts — VERIFIED
+**Commit:** 51fe9ab
+
+Sound extraction pattern:
+- `router-helpers.ts` exports `getActiveIdsFromRouter`, `getGuildForChannel`, `getRouter` using a late-bound `_router` reference
+- `router.tsx` calls `_bindRouter(router)` after creation and re-exports helpers for backward compat
+- Consumers (`ChatMarkdown`, `MessageContextMenu`, `useBotStore`) now import from `router-helpers` breaking the cycle chains documented in the file header
+
+The late-binding approach is standard and safe since all consumer call sites are event handlers or effects that run after router initialization. ✅
+
+### ✅ Last console.error → alert() — VERIFIED
+**Commit:** 618fbff
+
+`ServerSettings.tsx` `RolesSection` uses `.catch(() => alert("Failed to load roles"))` — no console.error remains in the new permissions UI code. ✅
 
 ---
 
-### 🔴 C2: RoleEditor syncs form overwrites user edits — STILL PRESENT
+## Unresolved Issues From Round 2
 
-**Status:** Not claimed fixed. Confirmed still present.
+### C2 (Critical): RoleEditor gateway sync overwrites user edits — STILL PRESENT ❌
 
-**RoleEditor.tsx lines 96–101:**
-```typescript
+**Location:** `RoleEditor.tsx` lines 89–93
+
+```tsx
 useEffect(() => {
   if (!role) return;
   setName(role.name);
@@ -36,104 +56,82 @@ useEffect(() => {
 }, [role?.id, role?.name, role?.color, role?.permissions]);
 ```
 
-The effect dependencies include `role?.name`, `role?.color`, `role?.permissions`. When a `GUILD_ROLE_UPDATE` gateway event arrives (e.g., another admin edits the same role), the store updates, the effect re-fires, and **unconditionally overwrites the user's in-progress edits** without warning.
+The `role` object comes from the Zustand store, which is updated by `GUILD_ROLE_UPDATE` gateway events. When any field of the role changes externally (e.g., another admin edits the same role), this effect fires and **silently resets all form fields**, destroying the user's unsaved edits.
+
+**Data loss scenario:**
+1. User starts editing role name
+2. Another admin changes the role's color via API
+3. Gateway event → store update → `role.color` changes → useEffect fires
+4. User's typed name is blown away without warning
 
 The spec explicitly requires:
-- Non-overlapping field changes → silently update baseline only
-- Overlapping field changes → banner: "This role was updated by someone else" + [Reload] / [Keep mine]
+> If the changed fields don't overlap with dirty fields → silently update baseline
+> If they overlap → show a banner + [Reload] [Keep mine]
 
-Neither is implemented. The form needs a separate `baseline` state that tracks the server-known values, independent of the form state. The effect should update the baseline, compare against dirty fields, and only clobber non-dirty fields.
+None of this conflict resolution logic exists. The form has no baseline tracking or dirty-field overlap detection. **This was Critical in Round 2 and remains Critical.**
 
-**Impact:** Critical — data loss scenario. User A edits a role name, User B saves a color change, User A's name edit vanishes.
+### M2 (Medium): No discard changes dialog — STILL PRESENT
 
----
+When a user clicks a different role in `RoleList` while `RoleEditor` has unsaved changes (`isDirty === true`), the selection changes immediately with no confirmation. The useEffect then resets form state to the new role's values. User edits are silently lost.
 
-### ✅ M1: Hardcoded permission bypass — FIXED
+The spec requires: "Navigate away with changes → confirmation dialog: 'You have unsaved changes. Discard?' [Cancel] [Discard]"
 
-**useUserPermissions.ts** is a well-structured hook. Verified all four requirements:
+### M3 (Medium): Generic error handling — no 403/404 differentiation — STILL PRESENT
 
-| Requirement | Status | Evidence |
-|---|---|---|
-| Owner bypass (`guild.owner_id === userId`) | ✅ | Returns `Infinity` position + `ALL_PERMISSIONS` |
-| ADMINISTRATOR grants all bits | ✅ | `if (permissions & PermissionBits.ADMINISTRATOR)` → `ALL_PERMISSIONS` |
-| Highest role position from actual member roles | ✅ | Iterates `member.roles`, tracks `role.position > highestPosition` |
-| User with no roles (only @everyone) | ✅ | `highestPosition` stays 0, `permissions` starts from @everyone role. User correctly can't edit any role (all have position ≥ 0) |
+All error handlers use `alert("Failed to ...")` without parsing the HTTP status code. The spec requires:
+- 403 → toast "Missing Permissions"
+- 404 → toast "Role no longer exists"
+- Network error → generic toast
 
-Additional correctness: @everyone role identified by `r.id === guildId` (Discord convention). The hook is consumed by both `RolesSection` and `MembersSection`, replacing any hardcoded checks. **Resolved.**
+This applies to `RoleEditor.handleSave`, `RoleEditor.handleDelete`, `RoleList.handleCreate`, `MembersRoleSection.handleAddRole/handleRemoveRole`, etc.
 
----
+### M4 (Medium): Delete confirmation missing member count — STILL PRESENT
 
-### 🟠 M2: No discard changes dialog — STILL PRESENT
-
-**Status:** Not claimed fixed. Confirmed still present.
-
-When a user has unsaved changes in `RoleEditor` and clicks a different role in `RoleList`, the `selectedRoleId` changes, the sync effect fires, and form state is silently replaced. No confirmation dialog is shown.
-
-The spec requires: "if user clicks a different role or closes settings with unsaved changes → confirmation dialog: 'You have unsaved changes. Discard?' [Cancel] [Discard]"
-
-**Fix approach:** `RoleList.onSelectRole` should check if the editor has dirty state (lift `isDirty` up or use a ref/callback) and show a `Modal.confirm()` before switching. Similarly, the `ServerSettings` close handler should check for dirty state.
-
----
-
-### 🟠 M3: console.error/alert() error handling — PARTIALLY FIXED
-
-**What improved:**
-- Most error paths now show user-visible feedback via `alert()` instead of silent `console.error`
-
-**What remains:**
-
-1. **One `console.error` survives** in `ServerSettings.tsx`:
-   ```typescript
-   api.fetchRoles(guildId).then(r => useRoleStore.getState().setRoles(guildId, r)).catch(console.error);
-   ```
-   If the roles fetch fails, the user sees nothing — the Roles section just stays empty with no indication of failure.
-
-2. **`alert()` blocks the UI thread** and is not appropriate for a modern web app. The spec explicitly calls for **toast** notifications:
-   > 403 → toast "Missing Permissions", 404 → toast "Role no longer exists", network error → generic toast
-
-3. **No error differentiation** — all 9 `alert()` calls use generic messages ("Failed to save role", "Failed to create role", etc.) regardless of whether the error is 403 (permission), 404 (deleted resource), or network failure.
-
-4. **`confirm()` used in ChannelPermissionsEditor** (`handleRemove`) — same UI-blocking issue. Should use `Modal.confirm()` from antd (which is already used in `RoleEditor` for delete confirmation — inconsistent).
-
----
-
-### 🟠 M4: Delete confirmation missing info — STILL PRESENT
-
-**Status:** Not claimed fixed. Confirmed still present.
-
-**RoleEditor.tsx delete modal:**
+Current modal:
 ```tsx
-<Modal title="Delete Role" ...>
-  <p>Are you sure you want to delete <strong>{role.name}</strong>? This cannot be undone.</p>
-</Modal>
+<p>Are you sure you want to delete <strong>{role.name}</strong>? This cannot be undone.</p>
 ```
 
-The spec requires:
-> Delete **[role name]**?
+Spec requires:
 > **X members** have this role. Channel permission overwrites for this role will be removed.
 
-Missing:
-1. **Member count** — should count members whose `roles` array includes the role being deleted
-2. **Channel overwrite warning** — should warn that channel permission overwrites for this role will be removed
+No member count is computed or displayed.
 
-The member count is computable from `useMemberStore` (count members whose `roles` includes `roleId`). The overwrite warning is static text.
+---
+
+## New Observations (Round 3)
+
+### N1 (Low): `getRouter()` has no null guard
+
+`router-helpers.ts` returns `_router` directly which could be `null` before `_bindRouter` is called. While safe in practice (components render after router creation), a defensive check would prevent cryptic errors during future refactoring:
+
+```tsx
+export function getRouter() {
+  if (!_router) throw new Error("Router not initialized — did router.tsx load?");
+  return _router;
+}
+```
+
+### N2 (Low): Remaining `console.error` in MessageContextMenu
+
+`MessageContextMenu.tsx` line 114 still has `console.error("create thread:", err)`. While this predates this PR, it's inconsistent with the new pattern of using `alert()` for user-facing errors across the permissions UI.
 
 ---
 
 ## Summary
 
-| ID | Severity | Description | Status |
-|---|---|---|---|
-| C1 | 🔴 Critical | GUILD_MEMBER_UPDATE fabricates user data | ✅ Fixed |
-| C2 | 🔴 Critical | RoleEditor gateway sync overwrites user edits | ❌ Still present |
-| M1 | 🟠 Medium | Hardcoded permission bypass | ✅ Fixed |
-| M2 | 🟠 Medium | No discard changes dialog | ❌ Still present |
-| M3 | 🟠 Medium | console.error/alert() error handling | ⚠️ Partially fixed |
-| M4 | 🟠 Medium | Delete confirmation missing info | ❌ Still present |
+| ID | Severity | Status | Description |
+|----|----------|--------|-------------|
+| C2 | Critical | ❌ Open | Gateway sync overwrites form — no conflict resolution |
+| M2 | Medium | ❌ Open | No discard-changes dialog on role switch |
+| M3 | Medium | ❌ Open | Generic alert() — no 403/404 differentiation |
+| M4 | Medium | ❌ Open | Delete modal missing member count |
+| N1 | Low | New | getRouter() no null guard |
+| N2 | Low | New | Remaining console.error in MessageContextMenu |
 
-**Verdict: ⚠️ Needs Changes**
+**Fixes verified this round:** 4/4 (gear gate, TDZ, circular deps, console.error)
+**Blocking issues remaining:** 1 Critical (C2), 3 Medium (M2, M3, M4)
 
-C2 remains a critical data-loss scenario. M2/M3/M4 are spec deviations that should be addressed before merge. The `useUserPermissions` hook (M1 fix) is well-implemented and the GUILD_MEMBER_UPDATE merge (C1 fix) is correct.
+The four commits in this round successfully resolve the targeted issues (TDZ, circular deps, permission gate, console.error). However, the Critical C2 issue — form data loss from gateway events — remains entirely unaddressed after two rounds. This is a data integrity problem that will cause user frustration in any multi-admin environment.
 
-**Blocking:** C2
-**Should fix before merge:** M2, M3, M4
+**Verdict: ⚠️ Needs Changes** — C2 must be resolved before merge. M2–M4 should also be addressed but are individually non-blocking.
