@@ -2358,7 +2358,7 @@
       "calibration": "4-round deep review. R1 caught GUILD_MEMBER_UPDATE data corruption + hardcoded permission bypass (3/3). QA found React #185 (zustand selector ?? [] instability) and TDZ crash. R4: 3/3 unanimous ready. Human approved without comments — iterative review was the quality gate."
     },
     "last_reviewed_at": "2026-06-26T15:35+08:00",
-    "last_checked": "2026-06-26T20:30+08:00",
-    "notes": "R4 Final: 3/3 unanimous ✅ Ready. All 13 R3 fixes verified. 5 non-blocking suggestions (concurrent edit, discard dialog, member count, toggle label, error differentiation). Posted to PR. Awaiting Luna final review + merge."
+    "last_checked": "2026-06-28T14:26+08:00",
+    "notes": "R4 Final: 3/3 unanimous ✅ Ready. All 13 R3 fixes verified. 5 non-blocking suggestions. Merged 2026-06-26T08:31Z."
   }
 ]
