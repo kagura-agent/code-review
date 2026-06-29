@@ -1,14 +1,14 @@
 # Code Review Service - Reviewer Stats
 
-_Last updated: 2026-06-29 14:29 (Asia/Shanghai)_
+_Last updated: 2026-06-29 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 235 | 229/235 (97%) → | 6 failures total. #411-#437: all clean. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 237 | 234/237 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#437: all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 232 | 212/232 (91%) → | #411-#437: all clean output. 22nd post-switch PR. |
+| 🌟 Stella | gpt-5.5 | 237 | 231/237 (97%) → | 6 failures total. #411-#437 R3: all clean. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 239 | 236/239 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#437 R3: all clean. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 234 | 214/234 (91%) → | #411-#437 R3: all clean output. 22nd post-switch PR. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -116,11 +116,11 @@ _Last updated: 2026-06-29 14:29 (Asia/Shanghai)_
 
 ## Reliability History
 
-| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#435) | Trend |
+| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#437) | Trend |
 |----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 111/115 (97%) | → Stable. #411-#437: all clean. Large-diff sensitivity on >2000 lines. |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 114/117 (97%) | → Stable. #411-#437: all clean. |
-| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 105/112 (94%) | → Stable output. #411-#437: all clean. 22nd post-switch PR. |
+| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 113/117 (97%) | → Stable. #411-#437 R3: all clean. Large-diff sensitivity on >2000 lines. |
+| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 116/119 (97%) | → Stable. #411-#437 R3: all clean. Nova R2 over-escalated suggestions mechanically (calibrated in consolidation). |
+| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 107/114 (94%) | → Stable output. #411-#437 R3: all clean. 22nd post-switch PR. |
 
 ## Vega Calibration Swing Pattern
 
