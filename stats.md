@@ -288,7 +288,7 @@ _Last updated: 2026-06-29 14:29 (Asia/Shanghai)_
 | #431 | cove | 2026-06-25 | R1 | ✅ Ready (3/3 unanimous) | ci-notify-approve, jq-secure-json, head-1-fix | Merged 2026-06-25 |
 | #432 | cove | 2026-06-25 | R1-R2 | ✅ Ready (2/3) | bulk-position-privilege-escalation, dispatcher-fail-open, cross-guild-access | Merged 2026-06-25 |
 | #435 | cove | 2026-06-25 | R1-R4 | ✅ Ready (3/3 R4 unanimous) | member-data-corruption, permission-bypass, gear-gate, zustand-selector-stability, TDZ-crash | Merged 2026-06-26. 4-round code review + 2-round spec review + 4 QA iterations. Most comprehensive single-PR coverage. |
-| #437 | cove | 2026-06-29 | R1 | ⚠️ Needs Changes (3/3 unanimous) | non-atomic-guild-create, guild-create-missing-channels-roles, icon-validation | Open — awaiting fixes + R2 |
+| #437 | cove | 2026-06-29 | R1-R2 | ⚠️ Needs Changes (3/3 R2) | non-atomic-guild-create, guild-create-missing-channels-roles, icon-validation | R1 criticals fixed. R2: icon validation escalated. |
 
 ## Ground Truth Summary (76 merged + 2 closed-unmerged PRs)
 
@@ -298,7 +298,7 @@ _Last updated: 2026-06-29 14:29 (Asia/Shanghai)_
 - **Iterative review as quality gate:** In 75/76 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review)
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 57/76 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
-- **Total review rounds:** ~287 across 79 PRs (76 merged + 2 closed-unmerged + 1 open)
+- **Total review rounds:** ~290 across 79 PRs (76 merged + 2 closed-unmerged + 1 open)
 - **False-ready detection:** 7 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega) - self-correcting system working (Vega is 6 of 7)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
