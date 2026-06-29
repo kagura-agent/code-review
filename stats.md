@@ -6,9 +6,9 @@ _Last updated: 2026-06-29 08:26 (Asia/Shanghai)_
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 231 | 225/231 (97%) → | 6 failures total. #411-#435: all clean. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 233 | 230/233 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#435: all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 228 | 208/228 (91%) → | #411-#435: all clean output. 20th post-switch PR. |
+| 🌟 Stella | gpt-5.5 | 234 | 228/234 (97%) → | 6 failures total. #411-#437: all clean. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 236 | 233/236 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#437: all clean. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 231 | 211/231 (91%) → | #411-#437: all clean output. 21st post-switch PR. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -288,6 +288,7 @@ _Last updated: 2026-06-29 08:26 (Asia/Shanghai)_
 | #431 | cove | 2026-06-25 | R1 | ✅ Ready (3/3 unanimous) | ci-notify-approve, jq-secure-json, head-1-fix | Merged 2026-06-25 |
 | #432 | cove | 2026-06-25 | R1-R2 | ✅ Ready (2/3) | bulk-position-privilege-escalation, dispatcher-fail-open, cross-guild-access | Merged 2026-06-25 |
 | #435 | cove | 2026-06-25 | R1-R4 | ✅ Ready (3/3 R4 unanimous) | member-data-corruption, permission-bypass, gear-gate, zustand-selector-stability, TDZ-crash | Merged 2026-06-26. 4-round code review + 2-round spec review + 4 QA iterations. Most comprehensive single-PR coverage. |
+| #437 | cove | 2026-06-29 | R1 | ⚠️ Needs Changes (3/3 unanimous) | non-atomic-guild-create, guild-create-missing-channels-roles, icon-validation | |
 
 ## Ground Truth Summary (76 merged + 2 closed-unmerged PRs)
 
@@ -297,7 +298,7 @@ _Last updated: 2026-06-29 08:26 (Asia/Shanghai)_
 - **Iterative review as quality gate:** In 75/76 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review)
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 57/76 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
-- **Total review rounds:** ~281 across 78 PRs (76 merged + 2 closed-unmerged)
+- **Total review rounds:** ~284 across 79 PRs (76 merged + 2 closed-unmerged + 1 open)
 - **False-ready detection:** 7 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega) - self-correcting system working (Vega is 6 of 7)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -321,7 +322,7 @@ _Last updated: 2026-06-29 08:26 (Asia/Shanghai)_
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 78 PRs (76 merged + 2 closed), ~281 review rounds, 35 days. ~2.2 PRs/day, ~8.0 reviewer-rounds/day.
+7. **Throughput sustained.** 79 PRs (76 merged + 2 closed + 1 open), ~284 review rounds, 35 days. ~2.3 PRs/day, ~8.1 reviewer-rounds/day.
 
 8. **Ground truth: human rubber-stamps 96% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR.
 
