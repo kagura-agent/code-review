@@ -1,6 +1,6 @@
 # Code Review Service - Reviewer Stats
 
-_Last updated: 2026-06-29 20:26 (Asia/Shanghai)_
+_Last updated: 2026-06-30 02:30 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -290,15 +290,15 @@ _Last updated: 2026-06-29 20:26 (Asia/Shanghai)_
 | #435 | cove | 2026-06-25 | R1-R4 | ✅ Ready (3/3 R4 unanimous) | member-data-corruption, permission-bypass, gear-gate, zustand-selector-stability, TDZ-crash | Merged 2026-06-26. 4-round code review + 2-round spec review + 4 QA iterations. Most comprehensive single-PR coverage. |
 | #437 | cove | 2026-06-29 | R1-R3 | ✅ Ready (3/3 R3 unanimous) | non-atomic-guild-create, guild-create-missing-channels-roles, icon-validation, double-navigation | 3-round review. R1: 2 criticals. R2: icon escalated. R3: all resolved. |
 
-## Ground Truth Summary (76 merged + 2 closed-unmerged PRs)
+## Ground Truth Summary (77 merged + 2 closed-unmerged PRs)
 
 - **Human blind spots found by us:** 0 - human has never caught something we missed
 - **Our blind spots:** 2 - #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
-- **Human rubber-stamp rate:** 96% - human approved without findings in 75/76 merged cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
-- **Iterative review as quality gate:** In 75/76 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review)
+- **Human rubber-stamp rate:** 96% - human approved without findings in 76/77 merged cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
+- **Iterative review as quality gate:** In 76/77 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review)
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
-- **Multi-round PRs:** 57/76 reviewed PRs went through 2+ rounds. Average rounds: 2.6. Max: 7 (#190).
-- **Total review rounds:** ~293 across 79 PRs (76 merged + 2 closed-unmerged + 1 open)
+- **Multi-round PRs:** 57/77 reviewed PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190).
+- **Total review rounds:** ~201 across 79 PRs (77 merged + 2 closed-unmerged)
 - **False-ready detection:** 7 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega) - self-correcting system working (Vega is 6 of 7)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -322,9 +322,9 @@ _Last updated: 2026-06-29 20:26 (Asia/Shanghai)_
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 79 PRs (76 merged + 2 closed + 1 open), ~287 review rounds, 35 days. ~2.3 PRs/day, ~8.2 reviewer-rounds/day.
+7. **Throughput sustained.** 79 PRs (77 merged + 2 closed), ~201 review rounds, 35 days. ~2.3 PRs/day, ~5.7 rounds/day.
 
-8. **Ground truth: human rubber-stamps 96% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR.
+8. **Ground truth: human rubber-stamps 96% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals.
 
 9. **Nova still leads unique find rate.** 22% unique find rate vs Stella 12% vs Vega 12% (window #409-#437). Nova finds ~2× more unique issues per PR. Gap continued narrowing — Vega recovered to 12% (was below 10% for 26+ periods). #437 R1: all 3 reviewers performed well, no calibration issues, 3/3 consensus on both criticals. Nova contributed most unique suggestions (3 unique). Vega mobile responsiveness observation was a valid product-level find.
 
