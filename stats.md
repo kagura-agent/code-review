@@ -1,14 +1,14 @@
 # Code Review Service - Reviewer Stats
 
-_Last updated: 2026-07-03 02:26 (Asia/Shanghai)_
+_Last updated: 2026-07-03 14:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 237 | 231/237 (97%) → | 6 failures total. #411-#437 R3: all clean. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 239 | 236/239 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#437 R3: all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 234 | 214/234 (91%) → | #411-#437 R3: all clean output. 22nd post-switch PR. |
+| 🌟 Stella | gpt-5.5 | 239 | 233/239 (97%) → | 6 failures total. #411-#447: all clean output. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 241 | 238/241 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#447: all clean. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 236 | 216/236 (92%) → | #411-#447: all clean output. 23rd post-switch PR. |
 
 ## Dimension Strengths (per reviewer)
 
@@ -86,9 +86,9 @@ _Last updated: 2026-07-03 02:26 (Asia/Shanghai)_
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 8 | ~65 | ~12% | → Stable. draft-deletion (#410), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2), missing-security-tests-as-Critical (#432 R1), color-to-hex+abort-controller (#435 R1), section-level-gating (#435 R2), features-hardcode (#437 R1). Consistent edge-case finder. |
-| 🌠 Nova | 14 | ~65 | ~22% | ↑ Still dominant. 5 unique in #410. pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch+dead-import (#418), bulk-position-escalation-attack-scenario (#432 R1), permission-group-mismatch+SEND_TTS (#435 R1), M3-analysis (#435 R2), name-validation-dupe+channel-type-magic+error-swallowing (#437 R1). |
-| 💫 Vega | 8 | ~65 | ~12% | ↑ Recovering. Below 10% for 26+ periods then #435-#437 sustained recovery. SDK verification (#400 R2), dotfile-cp (#411), curl-sfS (#413), overwrite-flow-gap+stale-state+hover-bug (#435 R1), move-up-arrow-hierarchy (#435 R2), mobile-responsiveness+cascade-comment (#437 R1). #418: missed blocking issues BOTH rounds. #435+#437: sustained comeback. |
+| 🌟 Stella | 9 | ~68 | ~13% | → Stable. draft-deletion (#410), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2), missing-security-tests-as-Critical (#432 R1), color-to-hex+abort-controller (#435 R1), section-level-gating (#435 R2), features-hardcode (#437 R1), **shell-injection (#447 R1)**. Consistent edge-case finder. |
+| 🌠 Nova | 15 | ~68 | ~22% | ↑ Still dominant. 5 unique in #410. pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch+dead-import (#418), bulk-position-escalation-attack-scenario (#432 R1), permission-group-mismatch+SEND_TTS (#435 R1), M3-analysis (#435 R2), name-validation-dupe+channel-type-magic+error-swallowing (#437 R1), **ghost-guilds-on-login (#447 R1)**. |
+| 💫 Vega | 8 | ~68 | ~12% | → Recovery stalled on security. #435-#437: sustained frontend recovery. **#447 R1: approved Ready when 5 criticals existed** — same backend/security under-detection pattern as #369, #399, #418. 0 unique finds on security PR. Frontend: strong. Backend/security: unreliable. |
 
 ## Consensus Participation
 
@@ -96,7 +96,7 @@ _Last updated: 2026-07-03 02:26 (Asia/Shanghai)_
 |----------|----------------------|----------------------|---------------------|
 | 🌟 Stella | 87% | 23 (incl. stuck spinner #330 R3, guild_id #327 R5, toUser #348 R1, TimeoutError #352 R5, cross-channel-sidebar #356 R1, webhook-bypass #357 R4, migration-concern #357 R5, adapter-scope #418 R2, features-hardcode #437 R1) | 2 (#168 over-scope, #346 R3 over-scoped stale cache) + 1 likely FP (#357 R5 migration) |
 | 🌠 Nova | 93% | 26 (incl. spinner jolt #330, Mark-as-Read #346, dispatch re-swallow #352 R3, THREAD_DELETE-dead-code #357 R2, PATCH-archive-permission #357 R3, THREAD_UPDATE-broadcast #357 R4, result-schema-mismatch #418 R1, dead-import #418 R2, name-validation-dupe+channel-type-magic+error-swallowing #437 R1) | 1 (#330 R5 over-cautious) |
-| 💫 Vega | 74% | 13 (gen ID #190, 204 parsing #255, React 18 #330, OAuth COALESCE #348, owner_id NULL #357 R4, floating promise #367, mobile-responsiveness+cascade-comment #437 R1) | 14 (#261 R3, #290, #327 R5, #330 R2/R3, #331 R2, #348 R2, #352 R3-R4, #356 R1 under-detected, #357 R2 over-escalated, #357 R4 over-held, #369 R1 under-detected, **#418 R1+R2 under-detected**) |
+| 💫 Vega | 73% | 13 (gen ID #190, 204 parsing #255, React 18 #330, OAuth COALESCE #348, owner_id NULL #357 R4, floating promise #367, mobile-responsiveness+cascade-comment #437 R1) | 15 (#261 R3, #290, #327 R5, #330 R2/R3, #331 R2, #348 R2, #352 R3-R4, #356 R1 under-detected, #357 R2 over-escalated, #357 R4 over-held, #369 R1 under-detected, #418 R1+R2 under-detected, **#447 R1 under-detected**) |
 
 ## Severity Calibration
 
@@ -104,7 +104,7 @@ _Last updated: 2026-07-03 02:26 (Asia/Shanghai)_
 |----------|----------------------|------------|-------------|
 | 🌟 Stella | 82% | 14% | 4% |
 | 🌠 Nova | 94% | 4% | 2% |
-| 💫 Vega | 63% | 19% | 18% (#369 R1 ✅ Ready when ⚠️ Needs Changes was correct; #418 R1+R2 ✅ Ready when ⚠️ Needs Changes was correct - under-flagged capability lie + silent no-op) |
+| 💫 Vega | 62% | 19% | 19% (#369 R1 ✅ Ready when ⚠️ Needs Changes was correct; #418 R1+R2 ✅ Ready when ⚠️ Needs Changes was correct; **#447 R1 ✅ Ready when ❌ Needs Changes was correct - missed 5 security criticals**) |
 
 ## False Positive Rate (Critical flagged → later proven non-issue)
 
@@ -206,6 +206,14 @@ _Last updated: 2026-07-03 02:26 (Asia/Shanghai)_
 
 **#435 note:** Vega's best PR since #400. All verdicts correct across 4 rounds (ChannelPermissionsEditor overwrite flow gap, stale state after save, mouseenter/leave hover bug, move-up arrow at hierarchy ceiling). Notable: found an implementation UX issue (move-up arrow at hierarchy ceiling → 403) that neither Stella nor Nova caught. R3: approved Ready while Stella+Nova still had concerns (M2 gateway overwrite) but those were correctly downgraded to non-blocking suggestions by R4. First PR since #400 where Vega contributed genuinely novel finds rather than echoing consensus. Pattern: Vega performs better on frontend/UI code than backend/security reviews.
 
+### #447 (2 rounds) - Vega under-detects security (again)
+| Round | Vega Verdict | Correct Verdict | Assessment |
+|-------|-------------|-----------------|------------|
+| R1 | ✅ Ready | ❌ Needs Changes | Over-lenient (missed 5 criticals: auth bypass, token rotation attack, admin label, shell injection, no tests) |
+| R2 | ✅ Ready | ✅ Ready | ✅ Correct |
+
+**#447 note:** Vega approved Ready on R1 when 5 Critical security issues existed (no authorization on invite-agent, token rotation attack, "Server Admin" label mismatch, shell injection in agent name, zero tests). Same backend/security under-detection pattern as #369 R1, #399 R1, #418 R1+R2. On frontend PRs (#435, #437) Vega calibrates well; on security-sensitive endpoints, consistently misses blocking issues. 23rd PR with gemini-2.5-pro. R2 correctly approved after all fixes — Vega's R2 calibration is fine. The problem is R1 security detection.
+
 ## Review History
 
 | PR | Repo | Date | Rounds | Final Verdict | Key Dimension |
@@ -289,17 +297,18 @@ _Last updated: 2026-07-03 02:26 (Asia/Shanghai)_
 | #432 | cove | 2026-06-25 | R1-R2 | ✅ Ready (2/3) | bulk-position-privilege-escalation, dispatcher-fail-open, cross-guild-access | Merged 2026-06-25 |
 | #435 | cove | 2026-06-25 | R1-R4 | ✅ Ready (3/3 R4 unanimous) | member-data-corruption, permission-bypass, gear-gate, zustand-selector-stability, TDZ-crash | Merged 2026-06-26. 4-round code review + 2-round spec review + 4 QA iterations. Most comprehensive single-PR coverage. |
 | #437 | cove | 2026-06-29 | R1-R3 | ✅ Ready (3/3 R3 unanimous) | non-atomic-guild-create, guild-create-missing-channels-roles, icon-validation, double-navigation | 3-round review. R1: 2 criticals. R2: icon escalated. R3: all resolved. |
+| #447 | cove | 2026-07-02 | R1-R2 | ✅ Ready (2/3) | invite-agent-auth, token-rotation-attack, shell-injection, fre-subscribe-race | R1: 5 criticals (auth, token takeover, admin label, shell injection, no tests). R2: All fixed. Vega under-detected R1 (Ready when 5 criticals). Awaiting merge. |
 
 ## Ground Truth Summary (77 merged + 2 closed-unmerged PRs)
 
 - **Human blind spots found by us:** 0 - human has never caught something we missed
 - **Our blind spots:** 2 - #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
 - **Human rubber-stamp rate:** 96% - human approved without findings in 76/77 merged cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
-- **Iterative review as quality gate:** In 76/77 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review)
+- **Iterative review as quality gate:** In 76/77 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review). #447 (open): R1 caught 5 security criticals, all fixed by R2.
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 57/77 reviewed PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190).
-- **Total review rounds:** ~201 across 79 PRs (77 merged + 2 closed-unmerged)
-- **False-ready detection:** 7 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega) - self-correcting system working (Vega is 6 of 7)
+- **Total review rounds:** ~203 across 80 PRs (77 merged + 2 closed-unmerged + 1 open)
+- **False-ready detection:** 8 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega, #447 R1 Vega) - self-correcting system working (Vega is 7 of 8)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
 - **SDK type hallucination pattern.** #400 R1 had 2 false positives where Nova+Vega inferred SDK types from naming conventions instead of verifying against source. First systematic hallucination failure across all reviewers.
@@ -310,7 +319,7 @@ _Last updated: 2026-07-03 02:26 (Asia/Shanghai)_
 
 ## Actionable Notes
 
-1. **🟡 Vega: gemini-2.5-pro evaluation — 17 PRs complete.** #357-#435. Results: reliability improved (overall 91%), **calibration still PR-dependent**. #399 gave ✅ Ready with 0 findings (5 criticals existed). #400 was Vega's best PR ever. #418: **missed blocking issues BOTH rounds**. **#435: strong comeback** — 4 unique finds, correct verdicts all 4 rounds, first PR since #400 where Vega outperformed expectations. Emerging pattern: Vega calibrates better on **frontend/UI code** (React, zustand, CSS) than **backend/security** reviews. Consider: (a) weight Vega higher on frontend PRs, lower on security PRs, (b) maintain explicit "contract correctness" prompt emphasis for backend reviews, (c) #435 suggests sustained improvement on UI-layer work — monitor next frontend PR.
+1. **🟡 Vega: gemini-2.5-pro evaluation — 18 PRs complete.** #357-#447. Results: reliability improved (overall 92%), **calibration still PR-dependent**. #399 gave ✅ Ready with 0 findings (5 criticals existed). #400 was Vega's best PR ever. #418: **missed blocking issues BOTH rounds**. **#435: strong comeback** — 4 unique finds, correct verdicts all 4 rounds, first PR since #400 where Vega outperformed expectations. **#447: approved Ready R1 when 5 security criticals existed** — same pattern as #369, #399, #418. Emerging pattern confirmed: Vega calibrates well on **frontend/UI code** but **unreliable on backend/security reviews**. Consider: (a) weight Vega lower on security PRs (treat as tie-break only, not full vote), (b) maintain explicit security-focus prompt for backend reviews, (c) #435+#437 confirm Vega's frontend value — strong on React/zustand/CSS.
 
 2. **🟠 NEW: SDK type hallucination failure mode.** #400 R1 had Nova+Vega both hallucinate SDK type names from naming conventions and PR spec examples. Neither checked actual SDK source. **Prompt action needed:** Add instruction to verify SDK/library types against actual source, not spec examples or naming inference. First systematic cross-reviewer hallucination.
 
@@ -322,11 +331,11 @@ _Last updated: 2026-07-03 02:26 (Asia/Shanghai)_
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 79 PRs (77 merged + 2 closed), ~201 review rounds, 35 days. ~2.3 PRs/day, ~5.7 rounds/day.
+7. **Throughput sustained.** 80 PRs (77 merged + 2 closed + 1 open), ~203 review rounds, 38 days. ~2.1 PRs/day, ~5.3 rounds/day.
 
-8. **Ground truth: human rubber-stamps 96% (of merged PRs).** Our iterative review IS the quality gate. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals.
+8. **Ground truth: human rubber-stamps 96% (of merged PRs). #447 pending.** Our iterative review IS the quality gate. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals.
 
-9. **Nova still leads unique find rate.** 22% unique find rate vs Stella 12% vs Vega 12% (window #409-#437). Nova finds ~2× more unique issues per PR. Gap continued narrowing — Vega recovered to 12% (was below 10% for 26+ periods). #437 R1: all 3 reviewers performed well, no calibration issues, 3/3 consensus on both criticals. Nova contributed most unique suggestions (3 unique). Vega mobile responsiveness observation was a valid product-level find.
+9. **Nova still leads unique find rate.** 22% unique find rate vs Stella 13% vs Vega 12% (window #409-#447). Nova finds ~2× more unique issues per PR. #447 R1: Nova found ghost-guilds-on-login (unique), Stella found shell-injection (unique), Vega missed everything (approved Ready). Gap pattern: Nova and Stella contribute unique security finds; Vega contributes 0 on security PRs.
 
 10. **Multi-round PR pattern emerging.** Complex feature PRs consistently need 4+ rounds. Reviewer fatigue may affect Vega most.
 
