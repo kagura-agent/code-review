@@ -1,0 +1,19 @@
+
+> @cove/client@0.1.0 build /mnt/data/repos/forks/cove/packages/client
+> vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 3090 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                              0.83 kB │ gzip:   0.50 kB
+dist/assets/ChannelView-DhzC7XgT.css         0.18 kB │ gzip:   0.14 kB
+dist/assets/index-Dq34RA-r.css              17.30 kB │ gzip:   4.10 kB
+dist/assets/RedirectToDefault-Cs-Px7Ls.js    0.46 kB │ gzip:   0.33 kB
+dist/assets/index-TBnfF_4t.js               15.14 kB │ gzip:   5.22 kB
+dist/assets/ChannelView-B_3hUJWe.js         73.76 kB │ gzip:  20.67 kB
+dist/assets/AppShell-B9071G4d.js           247.00 kB │ gzip:  73.43 kB
+dist/assets/StatusDot-C7onD4qU.js          278.62 kB │ gzip:  89.46 kB
+dist/assets/index-BwwJKhqv.js              373.18 kB │ gzip: 121.34 kB
+✓ built in 4.79s

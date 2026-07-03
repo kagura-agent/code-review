@@ -1,99 +1,35 @@
-# PR #447 Review — feat: redesign FRE — auto-guild, invite-agent endpoint, Settings > Bots integration
-
-**Reviewer:** 💫 Vega  
-**Verdict:** ⚠️ Needs Changes  
-**PR:** kagura-agent/cove#447 (795+, 60−, 10 files)
-
----
+# Code Review: Cove PR #447 (Round 2)
+- **Reviewer**: 💫 Vega
+- **Date**: 2026-07-03
+- **Final Rating**: ✅ Ready
 
 ## Summary
+This is a comprehensive and high-quality follow-up to the first round of review. All critical security vulnerabilities and product issues identified in R1 have been addressed thoughtfully and robustly. The introduction of new tests, improved client-side UX for the agent invitation flow, and server-side hardening make this a significant improvement. The code is clean, well-structured, and ready for merge.
 
-This PR replaces the multi-page First Run Experience with a streamlined flow: auto-create a personal guild on login/register, detect bot-less guilds on the client, and funnel users into a redesigned Settings > Bots tab with a letter-themed invitation UI. The server gets `ensurePersonalGuild` (auth) / `createPersonalGuild` (register) and a new `POST /guilds/:guildId/invite-agent` endpoint. The client drops the full-screen onboarding pages, introduces `useSettingsStore` for cross-component navigation, and adds `InvitationTab` inside `BotManagement`. Overall design is clean and well-structured, but there's one authorization gap that must be fixed before merge.
+## Previous Issues Status
 
----
+| ID  | Issue                                | R1 Severity | Status      | How it was fixed                                                                                                                                                                                                                                                                        |
+| --- | ------------------------------------ | ----------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | No authorization on `invite-agent`   | Critical    | ✅ Addressed | `guilds.ts` now includes a `hasGuildPermission` check for `MANAGE_GUILD` or owner status. This is confirmed by a new test in `guilds.test.ts` that asserts a non-owner gets a 403 Forbidden.                                                                                                  |
+| C2  | Re-invite silently rotates tokens    | Critical    | ✅ Addressed | The `invite-agent` endpoint now checks if a bot with the same name exists. If so, it returns a `409 Conflict` by default. A new `rotate: true` body parameter is required to force token rotation. This is fully covered by two new tests: one for the 409 case and one for the successful rotation. |
+| C3  | "Server Admin" label mismatch        | Critical    | ✅ Addressed | The invite letter generated on the server (`guilds.ts`) correctly states the agent's role is "Member". The old UI was replaced with a new invitation flow, removing the incorrect label.                                                                                                     |
+| C4  | Agent name not sanitized             | Critical    | ✅ Addressed | The agent name is now validated against the regex `^[a-zA-Z0-9_-]{2,80}$` on the server. An invalid name now correctly returns a `400 Bad Request`, which is verified by a new test case.                                                                                                      |
+| C5  | No tests for agent invitation        | Critical    | ✅ Addressed | Six new tests were added to `guilds.test.ts` covering all critical paths: successful invite, auth failure (403), duplicate invite (409), forced rotation, invalid name (400), and invalid characters in name (400). This is excellent test coverage.                                         |
+| -   | FRE only on subscribe                | Product     | ✅ Addressed | `App.tsx` now has a `useEffect` hook that calls `checkFRE` on the current `memberStore` state *immediately* upon load, in addition to subscribing to changes. This ensures the FRE flow triggers reliably.                                                                                 |
+| -   | Multi-guild targets wrong guild      | Product     | ✅ Addressed | `BotManagement.tsx` now uses `getActiveIdsFromRouter()` to determine the active guild for the invitation. It correctly falls back to the first guild if none is active in the URL.                                                                                                        |
+| -   | Deduplicate guild creation           | Product     | ✅ Addressed | The logic for creating a user's initial personal guild has been extracted into a `createPersonalGuild` helper in the new `packages/server/src/helpers/guild.ts` file.                                                                                                                      |
+| -   | `register.ts` not in transaction     | Product     | ✅ Addressed | The call to `createPersonalGuild` is now correctly placed inside the `db.transaction()` block in `register.ts`, ensuring user and guild creation is an atomic operation.                                                                                                                  |
+| -   | `initialSection` not cleared         | Product     | ✅ Addressed | `SettingsPanel.tsx` now clears the `initialSection` from the `useSettingsStore` immediately after consuming it. This prevents the settings panel from incorrectly re-opening to the same section later.                                                                                      |
 
-## Critical Issues
+## Critical Issues (New)
+None. The previous critical issues have been resolved.
 
-### 1. Missing authorization on `invite-agent` endpoint — `guilds.ts`
-
-**File:** `packages/server/src/routes/guilds.ts`, new route at ~line 110
-
-The `POST /guilds/:guildId/invite-agent` endpoint checks guild existence and membership but does **not** verify the user is the guild owner or has `MANAGE_GUILD` permissions. Compare with the existing `PATCH /guilds/:guildId` route which correctly checks:
-
-```
-const isOwner = guild.owner_id !== null && guild.owner_id === userId;
-if (!isOwner) {
-  const roles = repos.roles.listByGuild(guildId);
-  const perms = computeBasePermissions(member, guild, roles);
-  if ((perms & PermissionBits.MANAGE_GUILD) === 0n) {
-    return c.json({ message: "Missing Permissions", code: 50013 }, 403);
-  }
-}
-```
-
-Any guild member—including bots—can currently call this endpoint to create new bot users and receive their auth tokens. This is a privilege escalation: a bot invited to a guild could invite more bots without the owner's consent.
-
-**Fix:** Add the same owner-or-MANAGE_GUILD check from the PATCH route before processing the invite.
-
-### 2. `createPersonalGuild` in `register.ts` is not wrapped in a transaction
-
-**File:** `packages/server/src/routes/register.ts`, lines 13–35
-
-The `createPersonalGuild` function runs 4 independent SQL statements (INSERT guild, INSERT role, INSERT channel, INSERT member) without a transaction. If any intermediate statement fails (e.g., the role INSERT), the database is left in an inconsistent state with a partial guild.
-
-The equivalent function in `auth.ts` (`ensurePersonalGuild`) correctly uses `db.transaction()`. This inconsistency suggests the register.ts version was an oversight.
-
-**Fix:** Wrap the 4 statements in `db.transaction()(() => { ... })`, matching the auth.ts pattern.
-
----
-
-## Product Impact
-
-1. **FRE only inspects the first guild** (`App.tsx`, ~line 225): `guildIds[0]` means the check only looks at the first guild's members. If a user has multiple guilds and bots exist only in a non-first guild, the FRE will incorrectly fire, sending them to Settings > Bots. In practice this is low-impact since auto-guild means most users will have exactly one guild initially, but worth noting for future multi-guild scenarios.
-
-2. **Clipboard "Copied!" may be false** (`BotManagement.tsx`, `handleCopy`): `navigator.clipboard.writeText` can fail (permissions, insecure context), and the error is swallowed with `.catch(() => {})`. The button text changes to "✅ Copied!" regardless. Users on HTTP or with restricted clipboard permissions see a false confirmation. Consider gating the "Copied!" state on the resolved promise and showing a fallback (e.g., select-all the text for manual copy).
-
-3. **Re-invite regenerates the token silently**: The re-invite flow (same-name bot already in guild) regenerates the bot's auth token without warning the user. If the bot was already connected, this immediately disconnects it. Consider surfacing a confirmation or at least a visual indicator that this is a re-invite that will invalidate the old token.
-
----
-
-## Suggestions
-
-### 1. DRY: Deduplicate guild creation logic
-
-`ensurePersonalGuild` (auth.ts) and `createPersonalGuild` (register.ts) are near-identical. Extract a shared helper (e.g., in a `lib/guild-setup.ts` or on `GuildsRepo`) that both routes call. This also ensures the transaction fix from Critical #2 applies in one place.
-
-### 2. Bot creation bypasses `UsersRepo.create` — `guilds.ts`
-
-The invite-agent endpoint constructs and runs raw SQL for user creation instead of using `repos.users.create()`. This means:
-- ID generation differs (snowflake vs. slug-from-username in the repo)
-- Any future business logic added to `UsersRepo.create` won't apply to invite-created bots
-
-Consider extending `UsersRepo.create` with an `id` option (it already accepts one) or extracting bot creation into a dedicated repo method.
-
-### 3. `SectionKey` type is duplicated
-
-`SectionKey` is defined independently in both `useSettingsStore.ts` and `SettingsPanel.tsx`. If sections change, both must be updated manually. Export the type from one location and import it in the other.
-
-### 4. `X-Forwarded-Proto` trust — `guilds.ts`
-
-The `baseUrl` construction reads `X-Forwarded-Proto` from the request header. This is standard behind a reverse proxy, but if the server is ever exposed directly, clients can spoof this header to produce incorrect `baseUrl` values in the invite letter. Low risk (only affects invite letter text, not auth), but consider making this configurable or validating against a trusted proxy list.
-
-### 5. Minor: `inviterName` uses `username` not `global_name` — `guilds.ts`
-
-The invite-agent route sets `inviterName = c.get("botUser").username`, but the client's `InvitationTab` shows `inviterName = globalName || username`. The server letter will always use the raw username (e.g., "john.doe@gmail.com") even if the user has set a display name. Consider using `c.get("botUser").global_name || c.get("botUser").username`.
-
-### 6. CSS uses hardcoded colors — `onboarding.css`
-
-The new `onboarding.css` (310 lines) uses hardcoded hex colors (`#0f1115`, `#e8e8e8`, `#5865f2`, etc.) instead of the project's CSS custom properties (`var(--bg-base)`, `var(--text-normal)`, `var(--accent)`). The ob-letter-paper intentionally uses light colors for the "paper" effect, which is fine. But the login/invite-code pages (`ob-page`, `ob-login-card`) won't respect theme changes. If theming is a goal, consider using CSS variables for the non-letter-paper elements.
-
----
+## Product Impact / Suggestions
+- **FRE Flow is a Huge Improvement**: The new FRE, which opens the Settings panel directly to the "Bots" tab to invite an agent, is a much smoother and more intuitive user experience than the previous modal. The "invite letter" is a fantastic touch that adds a lot of personality.
+- **Improved Login/Invite UI**: The new CSS for the login and invite code pages (`onboarding.css`) is a major visual upgrade, making the app feel much more polished from the very first screen.
+- **Client-Side Validation**: A minor suggestion for the agent name input in `InvitationTab`: adding the same `[a-zA-Z0-9_-]{2,80}` validation client-side would provide faster feedback to the user than waiting for the server's 400 response. This is not a blocker.
 
 ## Positive Notes
-
-- **Clean state management**: `useSettingsStore` is minimal and well-designed — the `openTo(section)` / `openSettings()` / `close()` API covers all cases without over-engineering.
-- **FRE detection is elegant**: Using Zustand's `subscribe` with a `useRef` guard is a good pattern for one-shot side effects triggered by async store population.
-- **Invite letter design**: The letter-paper metaphor is charming and gives the FRE personality. The plain-text version for clipboard copy is thoughtfully formatted.
-- **Input validation**: The new endpoint properly validates the `name` field using the existing `validateString` helper, consistent with the codebase.
-- **Empty code guard**: Adding `if (!code.trim()) return` to the invite code submit handler is a nice defensive addition.
-- **Transaction in auth.ts**: `ensurePersonalGuild` correctly wraps multi-statement creation in `db.transaction()`.
+- **Thorough Fixes**: The fixes are not just patches; they are robust and well-designed. The default-deny approach for token rotation (requiring opt-in) is a great example of secure design.
+- **Excellent Testing**: The new tests are comprehensive and correctly assert the behavior for both success and failure cases, which gives high confidence in the security fixes.
+- **Code Quality**: The new code, including the extracted `createPersonalGuild` helper and the new client-side components, is clean, readable, and follows the existing patterns of the codebase. Great work.
