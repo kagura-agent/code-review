@@ -2395,15 +2395,15 @@
     "repo": "cove",
     "pr": 447,
     "reviewed_at": "2026-07-02T17:38:00+08:00",
-    "status": "open",
+    "status": "merged",
     "verdict": "ready",
     "reviewers": 3,
     "rounds": 2,
     "notes": "R1: 3/3 Needs Changes (Stella ❌, Nova ❌, Vega ✅). 5 criticals: no auth, token rotation attack, admin label mismatch, shell injection, no tests. R2: 2/3 Ready (Nova ✅, Vega ✅, Stella ⚠️). All 5 R1 criticals fixed with tests. Remaining: FRE guildIds[0], error surfacing, bot cap, ghost guilds, same-name race. All non-blocking. Awaiting human review.",
-    "last_checked": "2026-07-03T14:26+08:00",
+    "last_checked": "2026-07-03T20:30+08:00",
     "ground_truth": {
-      "human_reviewer": null,
-      "human_verdict": "pending",
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
       "our_verdict_r1": "needs_changes",
       "our_verdict_r2": "ready",
       "blind_spots": [],
@@ -2415,7 +2415,9 @@
         "guild-creation-dedup"
       ],
       "noise": [],
-      "calibration": "R1 caught 5 critical security issues. All fixed by R2 with test coverage. Vega under-detected R1 (approved Ready when 5 criticals existed — same backend/security pattern as #369, #399, #418)."
+      "calibration": "R1 caught 5 critical security issues (auth bypass, token rotation, admin label, shell injection, no tests). All fixed by R2 with test coverage. Vega under-detected R1 (approved Ready when 5 criticals existed). Human approved without comments — iterative review was the quality gate.",
+      "human_findings": [],
+      "accuracy": "correct"
     }
   }
 ]
