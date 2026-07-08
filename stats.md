@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-07-07 20:26 (Asia/Shanghai)_
+_Last updated: 2026-07-08 08:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -13,6 +13,7 @@ _Last updated: 2026-07-07 20:26 (Asia/Shanghai)_
 
 _Note: #447 merged 2026-07-03T07:27Z. Human approved without comments._
 _#450 (fix: ConnectionBanner) and #453 (feat: webhook guidance) merged 2026-07-07 — small PRs, human-approved without code review service._
+_Open PRs not tracked: #455 (chore: remove cove-webhook skill), #422 (fix: silent reply loss diagnostics — spec-reviewed, awaiting implementation)._
 
 ## Dimension Strengths (per reviewer)
 
