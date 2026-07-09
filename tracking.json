@@ -2419,5 +2419,13 @@
       "human_findings": [],
       "accuracy": "correct"
     }
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 457,
+    "reviewed_at": "2026-07-09T11:25+08:00",
+    "status": "open",
+    "ground_truth": null
   }
 ]
