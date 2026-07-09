@@ -1,20 +1,21 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-07-09 11:25 (Asia/Shanghai)_
+_Last updated: 2026-07-09 14:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 240 | 234/240 (98%) → | 6 failures total. #411-#457: all clean output. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 242 | 239/242 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#457: all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 237 | 217/237 (92%) → | #411-#457: all clean output. 24th post-switch PR. |
+| 🌟 Stella | gpt-5.5 | 241 | 235/241 (98%) → | 6 failures total. #411-#457: all clean output. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 243 | 240/243 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#457: all clean. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 238 | 218/238 (92%) → | #411-#457: all clean output. 25th post-switch PR. |
 
 _Note: #447 merged 2026-07-03T07:27Z. Human approved without comments._
 _#450 (fix: ConnectionBanner) and #453 (feat: webhook guidance) merged 2026-07-07 — small PRs, human-approved without code review service._
 _#455 (chore: remove cove-webhook skill) closed without merge 2026-07-08._
-_Open PRs not tracked: #422 (fix: silent reply loss diagnostics — spec-reviewed, awaiting implementation)._
+_#457 merged 2026-07-09T04:17Z — 3/3 unanimous Ready. Human approved without comments._
+_Open PRs not tracked: #422 (fix: silent reply loss diagnostics — spec-reviewed, awaiting implementation), #456 (feat: cove-ops skill update — open, not yet reviewed)._
 
 ## Dimension Strengths (per reviewer)
 
@@ -306,7 +307,7 @@ _Open PRs not tracked: #422 (fix: silent reply loss diagnostics — spec-reviewe
 | #447 | cove | 2026-07-02 | R1-R2 | ✅ Ready (2/3) | invite-agent-auth, token-rotation-attack, shell-injection, fre-subscribe-race | R1: 5 criticals (auth, token takeover, admin label, shell injection, no tests). R2: All fixed. Vega under-detected R1 (Ready when 5 criticals). Merged 2026-07-03T07:27Z. |
 | #450 | cove | 2026-07-07 | — | ✅ Human-only | hide-ConnectionBanner-when-connected | Small fix (47+57 lines). Human approved, no code review service run. |
 | #453 | cove | 2026-07-07 | — | ✅ Human-only | webhook-guidance-GroupSystemPrompt | Small feature (64+2 lines). Human approved, no code review service run. |
-| #457 | cove | 2026-07-09 | R1 | ✅ Ready (3/3 unanimous) | silent-reply-loss-diagnostics | Pure diagnostic logging. Consensus: dead second isAborted check, missing message.id in freshSend catch. |
+| #457 | cove | 2026-07-09 | R1 | ✅ Ready (3/3 unanimous) | silent-reply-loss-diagnostics | Pure diagnostic logging. Consensus: dead second isAborted check, missing message.id in freshSend catch. Merged 2026-07-09T04:17Z. |
 
 ## Ground Truth Summary (77 merged + 2 closed-unmerged PRs)
 
@@ -316,7 +317,7 @@ _Open PRs not tracked: #422 (fix: silent reply loss diagnostics — spec-reviewe
 - **Iterative review as quality gate:** In 77/78 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review). #447: R1 caught 5 security criticals, all fixed by R2 — merged.
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 58/78 reviewed PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190).
-- **Total review rounds:** ~204 across 81 PRs (78 merged + 2 closed-unmerged + 1 open)
+- **Total review rounds:** ~205 across 82 PRs (79 merged + 2 closed-unmerged + 1 open)
 - **False-ready detection:** 8 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega, #447 R1 Vega) - self-correcting system working (Vega is 7 of 8)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -340,9 +341,9 @@ _Open PRs not tracked: #422 (fix: silent reply loss diagnostics — spec-reviewe
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 83 PRs tracked (78 reviewed+merged + 2 closed + 2 human-only merged + 1 open), ~204 review rounds, 43 days. ~1.9 PRs/day, ~4.7 rounds/day.
+7. **Throughput sustained.** 84 PRs tracked (79 reviewed+merged + 2 closed + 2 human-only merged + 1 open), ~205 review rounds, 44 days. ~1.9 PRs/day, ~4.7 rounds/day.
 
-8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs).** Our iterative review IS the quality gate. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. Human approved without comments. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals.
+8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs).** Our iterative review IS the quality gate. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals.
 
 9. **Nova still leads unique find rate.** 22% unique find rate vs Stella 13% vs Vega 12% (window #409-#447). Nova finds ~2× more unique issues per PR. #447 R1: Nova found ghost-guilds-on-login (unique), Stella found shell-injection (unique), Vega missed everything (approved Ready). Gap pattern: Nova and Stella contribute unique security finds; Vega contributes 0 on security PRs.
 
