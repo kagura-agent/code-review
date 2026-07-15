@@ -1,15 +1,15 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-07-15 14:30 (Asia/Shanghai)_
+_Last updated: 2026-07-15 20:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 241 | 235/241 (98%) → | 6 failures total. #411-#457: all clean output. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 243 | 240/243 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#457: all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 238 | 218/238 (92%) → | #411-#457: all clean output. 25th post-switch PR. |
+| 🌟 Stella | gpt-5.5 | 242 | 236/242 (98%) → | 6 failures total. #411-#460: all clean output. Stable. |
+| 🌠 Nova | claude-opus-4.7 | 244 | 241/244 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#460: all clean. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 239 | 219/239 (92%) → | #411-#460: all clean output. 26th post-switch PR. |
 
 _Note: #447 merged 2026-07-03T07:27Z. Human approved without comments._
 _#450 (fix: ConnectionBanner) and #453 (feat: webhook guidance) merged 2026-07-07 — small PRs, human-approved without code review service._
@@ -17,6 +17,7 @@ _#455 (chore: remove cove-webhook skill) closed without merge 2026-07-08._
 _#457 merged 2026-07-09T04:17Z — 3/3 unanimous Ready. Human approved without comments._
 _#459 (fix: groupAllowFrom schema) merged 2026-07-14T06:15Z — small config fix, human-approved without code review service._
 _#456 (feat: cove-ops skill update) merged 2026-07-15T05:38Z — skill file update, no code review service run._
+_#460 opened 2026-07-15 — R1: 3/3 unanimous Approve. Cross-channel messaging API (548+, 17-). Awaiting human review._
 _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-07-09, superseded by #457)._
 
 ## Dimension Strengths (per reviewer)
@@ -95,9 +96,9 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 9 | ~68 | ~13% | → Stable. draft-deletion (#410), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2), missing-security-tests-as-Critical (#432 R1), color-to-hex+abort-controller (#435 R1), section-level-gating (#435 R2), features-hardcode (#437 R1), **shell-injection (#447 R1)**. Consistent edge-case finder. |
-| 🌠 Nova | 15 | ~68 | ~22% | ↑ Still dominant. 5 unique in #410. pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch+dead-import (#418), bulk-position-escalation-attack-scenario (#432 R1), permission-group-mismatch+SEND_TTS (#435 R1), M3-analysis (#435 R2), name-validation-dupe+channel-type-magic+error-swallowing (#437 R1), **ghost-guilds-on-login (#447 R1)**. |
-| 💫 Vega | 8 | ~68 | ~12% | → Recovery stalled on security. #435-#437: sustained frontend recovery. **#447 R1: approved Ready when 5 criticals existed** — same backend/security under-detection pattern as #369, #399, #418. 0 unique finds on security PR. Frontend: strong. Backend/security: unreliable. |
+| 🌟 Stella | 11 | ~73 | ~15% | → Stable. draft-deletion (#410), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2), missing-security-tests-as-Critical (#432 R1), color-to-hex+abort-controller (#435 R1), section-level-gating (#435 R2), features-hardcode (#437 R1), **shell-injection (#447 R1)**, **transaction-atomicity+WebhookType-export (#460 R1)**. Consistent edge-case finder. |
+| 🌠 Nova | 17 | ~73 | ~23% | ↑ Still dominant. 5 unique in #410. pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch+dead-import (#418), bulk-position-escalation-attack-scenario (#432 R1), permission-group-mismatch+SEND_TTS (#435 R1), M3-analysis (#435 R2), name-validation-dupe+channel-type-magic+error-swallowing (#437 R1), **ghost-guilds-on-login (#447 R1)**, **thread_id-validation+execute-defense-in-depth (#460 R1)**. |
+| 💫 Vega | 9 | ~73 | ~12% | → Stable recovery on frontend. #435-#437: sustained frontend recovery. #460: correct unanimous Approve with 1 unique (avatar_url format). **#447 R1: approved Ready when 5 criticals existed** — backend/security under-detection persists. Frontend/API: good. Backend/security: unreliable. |
 
 ## Consensus Participation
 
@@ -310,8 +311,9 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 | #450 | cove | 2026-07-07 | — | ✅ Human-only | hide-ConnectionBanner-when-connected | Small fix (47+57 lines). Human approved, no code review service run. |
 | #453 | cove | 2026-07-07 | — | ✅ Human-only | webhook-guidance-GroupSystemPrompt | Small feature (64+2 lines). Human approved, no code review service run. |
 | #457 | cove | 2026-07-09 | R1 | ✅ Ready (3/3 unanimous) | silent-reply-loss-diagnostics | Pure diagnostic logging. Consensus: dead second isAborted check, missing message.id in freshSend catch. Merged 2026-07-09T04:17Z. |
+| #460 | cove | 2026-07-15 | R1 | ✅ Approve (3/3 unanimous) | cross-channel-messaging-api | 548+ lines. 5 consensus suggestions (embeds unused, O(n) rate limit, shared logic, internal webhook visibility, spec-reality drift). Stella: transaction atomicity, WebhookType export. Nova: thread_id validation, execute defense-in-depth. Vega: avatar_url format. All non-blocking. Awaiting human review. |
 
-## Ground Truth Summary (77 merged + 2 closed-unmerged PRs reviewed)
+## Ground Truth Summary (77 merged + 2 closed-unmerged + 1 open PRs reviewed)
 
 - **Human blind spots found by us:** 0 - human has never caught something we missed
 - **Our blind spots:** 2 - #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
@@ -319,7 +321,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 - **Iterative review as quality gate:** In 77/78 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review). #447: R1 caught 5 security criticals, all fixed by R2 — merged.
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 58/78 reviewed PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190).
-- **Total review rounds:** ~205 across 82 PRs (79 merged + 2 closed-unmerged + 1 open)
+- **Total review rounds:** ~210 across 83 PRs (80 merged + 2 closed-unmerged + 1 open)
 - **False-ready detection:** 8 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega, #447 R1 Vega) - self-correcting system working (Vega is 7 of 8)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -343,11 +345,11 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 85 PRs tracked (79 reviewed+merged + 2 closed + 4 human-only merged), ~205 review rounds, 50 days. ~1.6 PRs/day, ~4.1 rounds/day. Velocity slowed (fewer PRs last 2 weeks; project entering maintenance phase).
+7. **Throughput sustained.** 87 PRs tracked (80 reviewed+merged + 2 closed + 4 human-only merged + 1 open), ~210 review rounds, 51 days. ~1.6 PRs/day, ~4.1 rounds/day. Velocity slowed (fewer PRs last 2 weeks; project entering maintenance phase). #460 is first new feature PR in 6 days.
 
 8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs).** Our iterative review IS the quality gate. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals.
 
-9. **Nova still leads unique find rate.** 22% unique find rate vs Stella 13% vs Vega 12% (window #409-#447). Nova finds ~2× more unique issues per PR. #447 R1: Nova found ghost-guilds-on-login (unique), Stella found shell-injection (unique), Vega missed everything (approved Ready). Gap pattern: Nova and Stella contribute unique security finds; Vega contributes 0 on security PRs.
+9. **Nova still leads unique find rate.** 23% unique find rate vs Stella 15% vs Vega 12% (window #409-#460). Nova finds ~1.5× more unique issues per PR. #460 R1: Nova found thread_id-validation + execute-defense-in-depth (2 unique), Stella found transaction-atomicity + WebhookType-export (2 unique), Vega found avatar_url-format (1 unique). All 3 contributed this round.
 
 10. **Multi-round PR pattern emerging.** Complex feature PRs consistently need 4+ rounds. Reviewer fatigue may affect Vega most.
 
