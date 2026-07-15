@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-07-15 20:26 (Asia/Shanghai)_
+_Last updated: 2026-07-16 02:30 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -92,13 +92,13 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 5. **False positives on new code** - **#405 R2: raised false Critical C3 (freshSend always deletes draft) when code was guarded by `if(draftMessageId)`**
 6. **Bright spots** - **#400 was Vega's best PR**: correctly caught that C1/C2 were reviewer hallucinations, verified SDK source, gave accurate Ready verdict when Stella+Nova both timed out. Shows Vega can be the most accurate reviewer when verification is the key skill.**
 
-## Unique Find Rate (last 10 PRs: #409 through #437)
+## Unique Find Rate (last 16 reviewed PRs: #409 through #460)
 
 | Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
 |----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 11 | ~73 | ~15% | → Stable. draft-deletion (#410), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2), missing-security-tests-as-Critical (#432 R1), color-to-hex+abort-controller (#435 R1), section-level-gating (#435 R2), features-hardcode (#437 R1), **shell-injection (#447 R1)**, **transaction-atomicity+WebhookType-export (#460 R1)**. Consistent edge-case finder. |
-| 🌠 Nova | 17 | ~73 | ~23% | ↑ Still dominant. 5 unique in #410. pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch+dead-import (#418), bulk-position-escalation-attack-scenario (#432 R1), permission-group-mismatch+SEND_TTS (#435 R1), M3-analysis (#435 R2), name-validation-dupe+channel-type-magic+error-swallowing (#437 R1), **ghost-guilds-on-login (#447 R1)**, **thread_id-validation+execute-defense-in-depth (#460 R1)**. |
-| 💫 Vega | 9 | ~73 | ~12% | → Stable recovery on frontend. #435-#437: sustained frontend recovery. #460: correct unanimous Approve with 1 unique (avatar_url format). **#447 R1: approved Ready when 5 criticals existed** — backend/security under-detection persists. Frontend/API: good. Backend/security: unreliable. |
+| 🌟 Stella | 16 | ~95 | ~17% | → Stable. draft-deletion (#410), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2), missing-security-tests-as-Critical (#432 R1), color-to-hex+abort-controller (#435 R1), section-level-gating (#435 R2), features-hardcode (#437 R1), shell-injection (#447 R1), message.id-gaps (#457), transaction-atomicity+WebhookType-export (#460 R1). Consistent edge-case finder. |
+| 🌠 Nova | 22 | ~95 | ~23% | ↑ Still dominant. 5 unique in #410. pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch+dead-import (#418), bulk-position-escalation-attack-scenario (#432 R1), permission-group-mismatch+SEND_TTS (#435 R1), M3-analysis (#435 R2), name-validation-dupe+channel-type-magic+error-swallowing (#437 R1), ghost-guilds-on-login (#447 R1), log-sequence+lazy-logger (#457), thread_id-validation+execute-defense-in-depth (#460 R1). |
+| 💫 Vega | 10 | ~95 | ~11% | → Stable recovery on frontend. #435-#437: sustained frontend recovery. #460: correct unanimous Approve with 1 unique (avatar_url format). #457: 0 unique (thinnest review). #447 R1: approved Ready when 5 criticals existed — backend/security under-detection persists. Frontend/API: good. Backend/security: unreliable. |
 
 ## Consensus Participation
 
@@ -321,7 +321,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 - **Iterative review as quality gate:** In 77/78 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review). #447: R1 caught 5 security criticals, all fixed by R2 — merged.
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 58/78 reviewed PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190).
-- **Total review rounds:** ~210 across 83 PRs (80 merged + 2 closed-unmerged + 1 open)
+- **Total review rounds:** ~214 across 83 PRs (80 merged + 2 closed-unmerged + 1 open)
 - **False-ready detection:** 8 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega, #447 R1 Vega) - self-correcting system working (Vega is 7 of 8)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -345,7 +345,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 87 PRs tracked (80 reviewed+merged + 2 closed + 4 human-only merged + 1 open), ~210 review rounds, 51 days. ~1.6 PRs/day, ~4.1 rounds/day. Velocity slowed (fewer PRs last 2 weeks; project entering maintenance phase). #460 is first new feature PR in 6 days.
+7. **Throughput sustained.** 87 PRs tracked (80 reviewed+merged + 2 closed + 4 human-only merged + 1 open), ~214 review rounds, 52 days. ~1.6 PRs/day, ~4.1 rounds/day. Velocity slowed (fewer PRs last 2 weeks; project entering maintenance phase). #460 is first new feature PR in 6 days.
 
 8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs).** Our iterative review IS the quality gate. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals.
 
