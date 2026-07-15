@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-07-14 14:36 (Asia/Shanghai)_
+_Last updated: 2026-07-15 14:30 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -16,7 +16,7 @@ _#450 (fix: ConnectionBanner) and #453 (feat: webhook guidance) merged 2026-07-0
 _#455 (chore: remove cove-webhook skill) closed without merge 2026-07-08._
 _#457 merged 2026-07-09T04:17Z — 3/3 unanimous Ready. Human approved without comments._
 _#459 (fix: groupAllowFrom schema) merged 2026-07-14T06:15Z — small config fix, human-approved without code review service._
-_Open PRs not tracked: #456 (feat: cove-ops skill update — open, not yet reviewed)._
+_#456 (feat: cove-ops skill update) merged 2026-07-15T05:38Z — skill file update, no code review service run._
 _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-07-09, superseded by #457)._
 
 ## Dimension Strengths (per reviewer)
@@ -311,7 +311,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 | #453 | cove | 2026-07-07 | — | ✅ Human-only | webhook-guidance-GroupSystemPrompt | Small feature (64+2 lines). Human approved, no code review service run. |
 | #457 | cove | 2026-07-09 | R1 | ✅ Ready (3/3 unanimous) | silent-reply-loss-diagnostics | Pure diagnostic logging. Consensus: dead second isAborted check, missing message.id in freshSend catch. Merged 2026-07-09T04:17Z. |
 
-## Ground Truth Summary (77 merged + 2 closed-unmerged PRs)
+## Ground Truth Summary (77 merged + 2 closed-unmerged PRs reviewed)
 
 - **Human blind spots found by us:** 0 - human has never caught something we missed
 - **Our blind spots:** 2 - #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
@@ -343,7 +343,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 84 PRs tracked (79 reviewed+merged + 2 closed + 2 human-only merged + 1 open), ~205 review rounds, 44 days. ~1.9 PRs/day, ~4.7 rounds/day.
+7. **Throughput sustained.** 85 PRs tracked (79 reviewed+merged + 2 closed + 4 human-only merged), ~205 review rounds, 50 days. ~1.6 PRs/day, ~4.1 rounds/day. Velocity slowed (fewer PRs last 2 weeks; project entering maintenance phase).
 
 8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs).** Our iterative review IS the quality gate. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals.
 
