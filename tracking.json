@@ -2449,7 +2449,7 @@
     "reviewed_at": "2026-07-15T13:35:00+08:00",
     "status": "open",
     "ground_truth": null,
-    "last_checked": "2026-07-16T02:30+08:00",
+    "last_checked": "2026-07-16T08:26+08:00",
     "notes": "R1: 3/3 unanimous Approve. 5 consensus suggestions (all non-blocking). No human review yet. Staging deployed."
   }
 ]
