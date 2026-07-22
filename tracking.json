@@ -2449,7 +2449,7 @@
     "reviewed_at": "2026-07-15T13:35:00+08:00",
     "status": "open",
     "ground_truth": null,
-    "last_checked": "2026-07-22T20:27+08:00",
-    "notes": "R1: 3/3 unanimous Approve. 5 consensus suggestions (all non-blocking). No human review yet. Staging deployed. Still open as of 2026-07-22 14:38. 7 days since review, no activity."
+    "last_checked": "2026-07-23T02:30+08:00",
+    "notes": "R1: 3/3 unanimous Approve. Cross-channel messaging API (548+, 17-). Still awaiting human review (8 days, no activity since 2026-07-16)."
   }
 ]
