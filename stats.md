@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-07-23 02:30 (Asia/Shanghai)_
+_Last updated: 2026-07-23 08:31 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -17,7 +17,8 @@ _#455 (chore: remove cove-webhook skill) closed without merge 2026-07-08._
 _#457 merged 2026-07-09T04:17Z — 3/3 unanimous Ready. Human approved without comments._
 _#459 (fix: groupAllowFrom schema) merged 2026-07-14T06:15Z — small config fix, human-approved without code review service._
 _#456 (feat: cove-ops skill update) merged 2026-07-15T05:38Z — skill file update, no code review service run._
-_#460 opened 2026-07-15 — R1: 3/3 unanimous Approve. Cross-channel messaging API (548+, 17-). Still awaiting human review (8 days, no activity since 2026-07-16)._
+_#460 opened 2026-07-15 — R1: 3/3 unanimous Approve. Cross-channel messaging API (548+, 17-). Still awaiting human review (8+ days, no activity since 2026-07-16)._
+_#461 opened 2026-07-22 — docs: overhaul README (621+, 70-). No code review service run (documentation PR). Awaiting human review._
 _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-07-09, superseded by #457)._
 
 ## Dimension Strengths (per reviewer)
