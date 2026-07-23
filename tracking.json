@@ -2447,9 +2447,18 @@
     "repo": "cove",
     "pr": 460,
     "reviewed_at": "2026-07-15T13:35:00+08:00",
-    "status": "open",
-    "ground_truth": null,
-    "last_checked": "2026-07-23T08:31+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "ready",
+      "accuracy": "correct",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "3/3 unanimous Approve. 8-day wait before human review (opened 2026-07-15, approved 2026-07-23). Human approved without comments — our review was the quality gate. All 5 consensus suggestions and 5 unique findings were non-blocking."
+    },
+    "last_checked": "2026-07-23T14:35+08:00",
     "notes": "R1: 3/3 unanimous Approve. Cross-channel messaging API (548+, 17-). Still awaiting human review (8+ days, no activity since 2026-07-16)."
   }
 ]
