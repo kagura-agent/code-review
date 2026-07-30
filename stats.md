@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-07-30 08:28 (Asia/Shanghai)_
+_Last updated: 2026-07-30 14:30 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -11,8 +11,8 @@ _Last updated: 2026-07-30 08:28 (Asia/Shanghai)_
 | 🌠 Nova | claude-opus-4.7 | 244 | 241/244 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#460: all clean. |
 | 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 239 | 219/239 (92%) → | #411-#460: all clean output. 26th post-switch PR. |
 
-_Note: No new review rounds since last update (2026-07-15 → 2026-07-29, 14 days idle). #460 and #461 both merged 2026-07-23._
-_PR #463 (feat: message actions adapter, +376/-4, opened 2026-07-28) is OPEN but not yet reviewed by code-review service. No human reviews yet either._
+_Note: No new review rounds since last update (2026-07-15 → 2026-07-30, 15 days idle). #460 and #461 both merged 2026-07-23._
+_PR #463 (feat: message actions adapter, +376/-4, opened 2026-07-28) is OPEN but not yet reviewed by code-review service. No human reviews yet either. Staging preview deployed._
 
 _Note: #447 merged 2026-07-03T07:27Z. Human approved without comments._
 _#450 (fix: ConnectionBanner) and #453 (feat: webhook guidance) merged 2026-07-07 — small PRs, human-approved without code review service._
