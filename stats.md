@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-01 20:26 (Asia/Shanghai)_
+_Last updated: 2026-08-02 02:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -13,7 +13,7 @@ _Last updated: 2026-08-01 20:26 (Asia/Shanghai)_
 
 _Note: No new review rounds since last update (2026-07-15 → 2026-08-01, 17 days idle). #460 and #461 both merged 2026-07-23._
 _PR #463 (feat: message actions adapter, +376/-4) merged 2026-08-01T05:52Z — human (daniyuu) approved without comments, no code review service run. 4-day open duration (opened 2026-07-28)._
-_PR #465 (feat: task system — channel-level tasks with thread-based execution, +1114/-22) opened 2026-08-01T07:43Z — large feature PR, staging deployed, no reviews yet. Candidate for full 3-reviewer code review run._
+_PR #465 (feat: task system — channel-level tasks with thread-based execution, +1349/-43) opened 2026-08-01T07:43Z — large feature PR, staging deployed. Manual kagura-agent review posted (3 must-fix, 7 should-fix) + Copilot auto-review (6 comments). No 3-reviewer code review service run yet. Candidate for full run._
 
 _Note: #447 merged 2026-07-03T07:27Z. Human approved without comments._
 _#450 (fix: ConnectionBanner) and #453 (feat: webhook guidance) merged 2026-07-07 — small PRs, human-approved without code review service._
