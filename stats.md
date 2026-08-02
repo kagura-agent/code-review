@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-02 02:26 (Asia/Shanghai)_
+_Last updated: 2026-08-02 08:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -13,7 +13,7 @@ _Last updated: 2026-08-02 02:26 (Asia/Shanghai)_
 
 _Note: No new review rounds since last update (2026-07-15 → 2026-08-01, 17 days idle). #460 and #461 both merged 2026-07-23._
 _PR #463 (feat: message actions adapter, +376/-4) merged 2026-08-01T05:52Z — human (daniyuu) approved without comments, no code review service run. 4-day open duration (opened 2026-07-28)._
-_PR #465 (feat: task system — channel-level tasks with thread-based execution, +1349/-43) opened 2026-08-01T07:43Z — large feature PR, staging deployed. Manual kagura-agent review posted (3 must-fix, 7 should-fix) + Copilot auto-review (6 comments). No 3-reviewer code review service run yet. Candidate for full run._
+_PR #465 (feat: task system — channel-level tasks with thread-based execution, +1349/-43) **merged 2026-08-02T00:18Z** — large feature PR. Manual kagura-agent review posted (3 must-fix, 7 should-fix) + Copilot auto-review (6 comments). Human (daniyuu) approved without comments. No 3-reviewer code review service run. 5th consecutive PR without full service run (after #459, #461, #463, #465)._
 
 _Note: #447 merged 2026-07-03T07:27Z. Human approved without comments._
 _#450 (fix: ConnectionBanner) and #453 (feat: webhook guidance) merged 2026-07-07 — small PRs, human-approved without code review service._
@@ -319,8 +319,9 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 | #460 | cove | 2026-07-15 | R1 | ✅ Approve (3/3 unanimous) | cross-channel-messaging-api | 548+ lines. 5 consensus suggestions (embeds unused, O(n) rate limit, shared logic, internal webhook visibility, spec-reality drift). Stella: transaction atomicity, WebhookType export. Nova: thread_id validation, execute defense-in-depth. Vega: avatar_url format. All non-blocking. Merged 2026-07-23T05:01Z. |
 | #461 | cove | 2026-07-23 | — | ✅ Human-only | readme-overhaul | Documentation PR (621+, 70-). Human approved, no code review service run. Merged 2026-07-23T05:02Z. |
 | #463 | cove | 2026-08-01 | — | ✅ Human-only | message-actions-adapter | Feature PR (+376/-4). Human (daniyuu) approved without comments, no code review service run. Merged 2026-08-01T05:52Z. |
+| #465 | cove | 2026-08-02 | — | ✅ Human-only | task-system-threads | Large feature PR (+1349/-43). Manual kagura-agent review + Copilot auto-review. Human (daniyuu) approved. No 3-reviewer run. Merged 2026-08-02T00:18Z. |
 
-## Ground Truth Summary (78 merged + 2 closed-unmerged PRs reviewed, 5 human-only merged)
+## Ground Truth Summary (78 merged + 2 closed-unmerged PRs reviewed, 6 human-only merged)
 
 - **Human blind spots found by us:** 0 - human has never caught something we missed
 - **Our blind spots:** 2 - #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
@@ -353,7 +354,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 90 PRs tracked (81 reviewed+merged + 2 closed + 7 human-only merged), ~215 review rounds, 67 days. ~1.3 PRs/day, ~3.2 rounds/day. Velocity continuing to slow (project entering maintenance phase). #463 message actions adapter merged 2026-08-01 — 4th consecutive PR without code review service run (after #459, #461, #463). Review service idle 17 days (since #460 on 2026-07-15).
+7. **Throughput sustained.** 91 PRs tracked (81 reviewed+merged + 2 closed + 8 human-only merged), ~215 review rounds, 68 days. ~1.3 PRs/day, ~3.2 rounds/day. Velocity continuing to slow (project entering maintenance phase). #465 task system merged 2026-08-02 — 5th consecutive PR without code review service run (after #459, #461, #463, #465). Review service idle 18 days (since #460 on 2026-07-15). No open PRs as of 2026-08-02.
 
 8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs).** Our iterative review IS the quality gate. #460 merged after 8-day human-review latency — 3/3 Approve was the effective decision. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals. #461: docs-only README overhaul, no code review needed.
 
