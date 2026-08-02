@@ -2460,5 +2460,49 @@
     },
     "last_checked": "2026-07-23T14:35+08:00",
     "notes": "R1: 3/3 unanimous Approve. Cross-channel messaging API (548+, 17-). Still awaiting human review (8+ days, no activity since 2026-07-16)."
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 470,
+    "reviewed_at": "2026-08-02T21:10+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": null,
+      "accuracy": null,
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Small fix (+41/-109). Human approved without comments. No 3-reviewer code review service run."
+    },
+    "verdict": null,
+    "reviewers": 0,
+    "rounds": 0,
+    "notes": "fix: task status dropdown floats above message. CSS z-index fix. Human-only review.",
+    "last_checked": "2026-08-03T02:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 472,
+    "reviewed_at": "2026-08-02T21:32+08:00",
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": null,
+      "accuracy": null,
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Tiny fix (+6/-1). Human approved without comments. No 3-reviewer code review service run."
+    },
+    "verdict": null,
+    "reviewers": 0,
+    "rounds": 0,
+    "notes": "fix: remove delete/clear button from channel header. Human-only review.",
+    "last_checked": "2026-08-03T02:26+08:00"
   }
 ]
