@@ -2504,5 +2504,40 @@
     "rounds": 0,
     "notes": "fix: remove delete/clear button from channel header. Human-only review.",
     "last_checked": "2026-08-03T02:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 476,
+    "reviewed_at": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": null,
+      "accuracy": null,
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "Small UI feature (+22/-2). Thread parent highlight + task row highlight. Human approved without comments. No code review service run."
+    },
+    "verdict": null,
+    "reviewers": 0,
+    "rounds": 0,
+    "notes": "Small UI feature. Thread parent message highlight + task row highlight. By kagura-agent. Human (daniyuu) approved without comments. No 3-reviewer run. Merged 2026-08-02T22:30Z.",
+    "last_checked": "2026-08-03T08:33+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 478,
+    "reviewed_at": null,
+    "status": "open",
+    "ground_truth": null,
+    "verdict": null,
+    "reviewers": 0,
+    "rounds": 0,
+    "notes": "feat(plugin): task threads use direct policy instead of group. +153/-17. By kagura-agent. Created 2026-08-02T22:42Z. No reviews yet.",
+    "last_checked": "2026-08-03T08:33+08:00"
   }
 ]
