@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-03 20:42 (Asia/Shanghai)_
+_Last updated: 2026-08-04 02:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -11,7 +11,7 @@ _Last updated: 2026-08-03 20:42 (Asia/Shanghai)_
 | 🌠 Nova | claude-opus-4.7 | 244 | 241/244 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#460: all clean. |
 | 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 239 | 219/239 (92%) → | #411-#460: all clean output. 26th post-switch PR. |
 
-_Note: No new 3-reviewer service rounds since last update (2026-07-15 → 2026-08-02, 18 days idle). #460 and #461 both merged 2026-07-23._
+_Note: No new 3-reviewer service rounds since last update (2026-07-15 → 2026-08-04, 20 days idle). #460 and #461 both merged 2026-07-23._
 _PR #463 (feat: message actions adapter, +376/-4) merged 2026-08-01T05:52Z — human (daniyuu) approved without comments, no code review service run. 4-day open duration (opened 2026-07-28)._
 _PR #465 (feat: task system — channel-level tasks with thread-based execution, +1349/-43) **merged 2026-08-02T00:18Z** — large feature PR. Manual kagura-agent review posted (3 must-fix, 7 should-fix) + Copilot auto-review (6 comments). Human (daniyuu) approved without comments. No 3-reviewer code review service run._
 _PR #467 (feat: task heartbeat worker + review fixes, +777/-90) **merged 2026-08-02T09:33Z** — by kagura-agent. 3 manual kagura-agent reviews posted (covering security, architecture, dead code). Human (daniyuu) approved without comments. No 3-reviewer code review service run. Findings: task delete permission too broad (P0), direct SQL bypasses MessagesRepo (P0), dead code/duplicated constants (P1), fragile heartbeat string detection (P1)._
@@ -19,10 +19,17 @@ _PR #468 (feat: replace GuildSidebar with server name dropdown switcher, +41/-35
 _PR #469 (feat: default heartbeat to 10min for all new tasks, +5/-6) **merged 2026-08-02T11:02Z** — tiny config change. Human approved only, no review needed._
 _PR #470 (fix: task status dropdown floats above message, +41/-109) **merged 2026-08-02T13:10Z** — CSS z-index fix. Human (daniyuu) approved without comments. No 3-reviewer run._
 _PR #472 (fix: remove delete/clear button from channel header, +6/-1) **merged 2026-08-02T13:32Z** — tiny UI removal. Human (daniyuu) approved without comments. No 3-reviewer run._
-_15th consecutive PR without full 3-reviewer service run (after #459, #461, #463, #465, #467, #468, #469, #470, #472, #476, #478, #488, #496). 19 days idle since last 3-reviewer run (#460, 2026-07-15)._
+_22nd consecutive PR without full 3-reviewer service run (after #459, #461, #463, #465, #467, #468, #469, #470, #472, #476, #478, #481, #482, #484, #486, #488, #490, #495, #496, #498). 20 days idle since last 3-reviewer run (#460, 2026-07-15)._
 _PR #478 (feat: task threads direct policy, +153/-17) **merged 2026-08-03T01:35Z** — human (daniyuu) CHANGES_REQUESTED then APPROVED (2 commits). No 3-reviewer run._
 _PR #488 (feat: show timestamp on heartbeat messages, +1/-1) **merged 2026-08-03T06:34Z** — by kagura-agent. Human approved. Tiny change, no 3-reviewer run._
-_PR #496 (ci: add staging database backup workflow, +50/-0) **opened 2026-08-03T09:29Z** — by kagura-agent. Single workflow file. Human (daniyuu) approved within 2 minutes. No 3-reviewer run needed (CI-only, no application code)._
+_PR #496 (ci: add staging database backup workflow, +50/-0) **merged 2026-08-03T14:13Z** — by kagura-agent. Single workflow file. Human (daniyuu) approved within 2 minutes. No 3-reviewer run needed (CI-only, no application code)._
+_PR #481 (fix: task table UI, +5/-18) **merged 2026-08-03T02:07Z** — small UI cleanup. Human approved._
+_PR #482 (feat: add cancelled task status, +75/-66) **merged 2026-08-03T03:23Z** — status config consolidation. Human approved._
+_PR #484 (feat: bundle cove-ops skill with plugin, +728/-1) **merged 2026-08-03T03:59Z** — large but primarily skill file bundling. Copilot auto-review commented. Human approved._
+_PR #486 (feat: show task status in thread header, +117/-41) **merged 2026-08-03T06:04Z** — human (daniyuu) had 2x CHANGES_REQUESTED then APPROVED (3 review rounds)._
+_PR #490 (feat: reduce default heartbeat to 5min, +2/-2) **merged 2026-08-03T06:45Z** — tiny config change. Human approved._
+_PR #495 (ci: add workflow_dispatch, +1/-0) **merged 2026-08-03T09:27Z** — 1-line CI change. Human approved._
+_PR #498 (fix: query tasks by thread_id, +97/-42) **merged 2026-08-03T10:41Z** — task query fix. Human approved._
 _PR #487 (docs: add Tasks + cross-channel messaging to README, +4/-1) still OPEN — by kagura-agent, docs-only, too small for 3-reviewer service._
 
 _Note: #447 merged 2026-07-03T07:27Z. Human approved without comments._
@@ -339,17 +346,24 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 | #478 | cove | 2026-08-02 | — | ✅ Human-only | task-threads-direct-policy | +153/-17. Plugin: task threads use direct policy, enable block streaming. By kagura-agent. Human CHANGES_REQUESTED then APPROVED. Merged 2026-08-03T01:35Z. |
 | #487 | cove | 2026-08-03 | — | 🔵 Open | tasks-cross-channel-readme | +4/-1. Docs: add Tasks + cross-channel messaging to README. By kagura-agent. No reviews yet. |
 | #488 | cove | 2026-08-03 | — | ✅ Human-only | heartbeat-timestamp | +1/-1. Show timestamp on heartbeat messages. By kagura-agent. Human approved. Merged 2026-08-03T06:34Z. |
-| #496 | cove | 2026-08-03 | — | ✅ Human-only | staging-db-backup-ci | +50/-0. CI: add staging database backup workflow. By kagura-agent. Human (daniyuu) approved in 2 min. Open (awaiting merge). |
+| #496 | cove | 2026-08-03 | — | ✅ Human-only | staging-db-backup-ci | +50/-0. CI: add staging database backup workflow. By kagura-agent. Human (daniyuu) approved in 2 min. Merged 2026-08-03T14:13Z. |
+| #481 | cove | 2026-08-03 | — | ✅ Human-only | task-table-ui-fix | +5/-18. Small UI cleanup. Human approved. Merged 2026-08-03T02:07Z. |
+| #482 | cove | 2026-08-03 | — | ✅ Human-only | cancelled-status-config | +75/-66. Status consolidation. Human approved. Merged 2026-08-03T03:23Z. |
+| #484 | cove | 2026-08-03 | — | ✅ Human-only | bundle-cove-ops-skill | +728/-1. Skill file bundling. Copilot commented. Human approved. Merged 2026-08-03T03:59Z. |
+| #486 | cove | 2026-08-03 | — | ✅ Human-reviewed | task-status-thread-header | +117/-41. Human had 2x CHANGES_REQUESTED then APPROVED. Merged 2026-08-03T06:04Z. |
+| #490 | cove | 2026-08-03 | — | ✅ Human-only | reduce-heartbeat-5min | +2/-2. Config change. Human approved. Merged 2026-08-03T06:45Z. |
+| #495 | cove | 2026-08-03 | — | ✅ Human-only | workflow-dispatch-staging | +1/-0. 1-line CI. Human approved. Merged 2026-08-03T09:27Z. |
+| #498 | cove | 2026-08-03 | — | ✅ Human-only | task-query-thread-id | +97/-42. Task query fix. Human approved. Merged 2026-08-03T10:41Z. |
 
-## Ground Truth Summary (78 merged + 2 closed-unmerged PRs reviewed, 13 human-only/manual-review merged)
+## Ground Truth Summary (85 merged + 2 closed-unmerged PRs reviewed, 20 human-only/manual-review merged)
 
 - **Human blind spots found by us:** 0 - human has never caught something we missed
 - **Our blind spots:** 2 - #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
-- **Human rubber-stamp rate:** 96% - human approved without findings in 78/79 merged-and-reviewed cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup)
+- **Human rubber-stamp rate:** 96% - human approved without findings in 83/85 merged-and-reviewed cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup), #486 (2x CHANGES_REQUESTED on UI).
 - **Iterative review as quality gate:** In 78/79 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review). #460: 8-day wait before human review, human approved without comments — our 3/3 Approve was the decision point.
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 58/79 reviewed PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190).
-- **Total review rounds:** ~215 across 84 PRs (81 merged + 2 closed-unmerged + 1 not-reviewed-by-service). Plus 17 human-only/manual-review PRs (no formal 3-reviewer runs). 2 PRs currently open (#487, #496).
+- **Total review rounds:** ~215 across 84 PRs (81 merged + 2 closed-unmerged + 1 not-reviewed-by-service). Plus 24 human-only/manual-review PRs (no formal 3-reviewer runs). 1 PR currently open (#487).
 - **False-ready detection:** 8 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega, #447 R1 Vega) - self-correcting system working (Vega is 7 of 8)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -374,9 +388,9 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 99 PRs tracked (82 reviewed+merged + 2 closed + 15 human-only/manual-review merged + 2 open), ~215 review rounds, 69 days. ~1.4 PRs/day, ~3.1 rounds/day. Velocity continuing to slow (project entering maintenance phase). 6 PRs merged 2026-08-02 (#467, #468, #469, #470, #472, #476) — all without 3-reviewer code review service run. **15th consecutive PR without full service run** (since #460 on 2026-07-15, 19 days idle). Review service increasingly sidelined as project moves to rapid feature iteration. #467 received 3 manual reviews covering the gap — manual reviews may be replacing the formal 3-reviewer service for owner PRs. **#496 currently open** — CI workflow (+50/-0), already approved by human.
+7. **Throughput sustained.** 99 PRs tracked (82 reviewed+merged + 2 closed + 24 human-only/manual-review merged + 1 open), ~215 review rounds, 69 days. ~1.4 PRs/day, ~3.1 rounds/day. Velocity continuing to slow (project entering maintenance phase). **2026-08-03 was a high-activity day:** 13 PRs merged (#476, #478, #481, #482, #484, #486, #488, #490, #495, #496, #498 + earlier ones) — all without 3-reviewer code review service run. **22nd consecutive PR without full service run** (since #460 on 2026-07-15, 20 days idle). Review service increasingly sidelined as project moves to rapid feature iteration. #486 had human CHANGES_REQUESTED (2x) — human engagement on UI PRs higher than code-level review. **#496 merged** — was last open tracked PR, now only #487 (docs) remains open.
 
-8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs, 78/79).** Our iterative review IS the quality gate. #460 merged after 8-day human-review latency — 3/3 Approve was the effective decision. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals. #461: docs-only README overhaul, no code review needed.
+8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs, 83/85).** Our iterative review IS the quality gate. #460 merged after 8-day human-review latency — 3/3 Approve was the effective decision. #486 is notable: human had 2x CHANGES_REQUESTED on a UI PR — showing human engagement is higher on visual/UX work than backend code. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals. #461: docs-only README overhaul, no code review needed. **2026-08-03:** 13 PRs merged in one day — all human-only/manual-review, reflecting rapid task system feature iteration phase.
 
 9. **Nova still leads unique find rate.** 23% unique find rate vs Stella 17% vs Vega 11% (window #409-#460). Nova finds ~1.4× more unique issues per PR. #460 R1: Nova found thread_id-validation + execute-defense-in-depth (2 unique), Stella found transaction-atomicity + WebhookType-export (2 unique), Vega found avatar_url-format (1 unique). All 3 contributed on #460. No new review rounds since — all 3 reviewers idle since 2026-07-15.
 
