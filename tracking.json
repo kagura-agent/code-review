@@ -2532,12 +2532,23 @@
     "repo": "cove",
     "pr": 478,
     "reviewed_at": null,
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "changes_requested_then_approved",
+      "human_findings": [
+        "small fix requested (empty body review, different commit)"
+      ],
+      "our_verdict": null,
+      "accuracy": "not_reviewed_by_service",
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "No 3-reviewer code review service run. Human requested one change then approved. Plugin feature PR (+153/-17)."
+    },
     "verdict": null,
     "reviewers": 0,
     "rounds": 0,
-    "notes": "feat(plugin): task threads use direct policy instead of group. +153/-17. By kagura-agent. Created 2026-08-02T22:42Z. No reviews yet.",
-    "last_checked": "2026-08-03T08:33+08:00"
+    "notes": "feat(plugin): task threads use direct policy instead of group. +153/-17. By kagura-agent. Created 2026-08-02T22:42Z. No reviews yet. Merged 2026-08-03T01:35Z. Human CHANGES_REQUESTED then APPROVED (2 commits).",
+    "last_checked": "2026-08-03T14:30+08:00"
   }
 ]

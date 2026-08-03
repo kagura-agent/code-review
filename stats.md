@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-03 08:33 (Asia/Shanghai)_
+_Last updated: 2026-08-03 14:30 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -19,7 +19,9 @@ _PR #468 (feat: replace GuildSidebar with server name dropdown switcher, +41/-35
 _PR #469 (feat: default heartbeat to 10min for all new tasks, +5/-6) **merged 2026-08-02T11:02Z** — tiny config change. Human approved only, no review needed._
 _PR #470 (fix: task status dropdown floats above message, +41/-109) **merged 2026-08-02T13:10Z** — CSS z-index fix. Human (daniyuu) approved without comments. No 3-reviewer run._
 _PR #472 (fix: remove delete/clear button from channel header, +6/-1) **merged 2026-08-02T13:32Z** — tiny UI removal. Human (daniyuu) approved without comments. No 3-reviewer run._
-_12th consecutive PR without full 3-reviewer service run (after #459, #461, #463, #465, #467, #468, #469, #470, #472, #476). 19 days idle since last 3-reviewer run (#460, 2026-07-15). PR #478 currently OPEN (first open PR since #465)._
+_13th consecutive PR without full 3-reviewer service run (after #459, #461, #463, #465, #467, #468, #469, #470, #472, #476, #478). 19 days idle since last 3-reviewer run (#460, 2026-07-15)._
+_PR #478 (feat: task threads direct policy, +153/-17) **merged 2026-08-03T01:35Z** — human (daniyuu) CHANGES_REQUESTED then APPROVED (2 commits). No 3-reviewer run._
+_PR #487 (docs: add Tasks + cross-channel messaging to README, +4/-1) and #488 (feat: show timestamp on heartbeat messages, +1/-1) currently OPEN — both by kagura-agent, too small for 3-reviewer service._
 
 _Note: #447 merged 2026-07-03T07:27Z. Human approved without comments._
 _#450 (fix: ConnectionBanner) and #453 (feat: webhook guidance) merged 2026-07-07 — small PRs, human-approved without code review service._
@@ -332,7 +334,9 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 | #470 | cove | 2026-08-02 | — | ✅ Human-only | task-status-dropdown-z-index | +41/-109. CSS z-index fix. Human approved. Merged 2026-08-02T13:10Z. |
 | #472 | cove | 2026-08-02 | — | ✅ Human-only | remove-delete-clear-button | +6/-1. UI removal. Human approved. Merged 2026-08-02T13:32Z. |
 | #476 | cove | 2026-08-02 | — | ✅ Human-only | thread-parent-highlight | +22/-2. Small UI feature. Thread parent message + task row highlight. Human (daniyuu) approved. No 3-reviewer run. Merged 2026-08-02T22:30Z. |
-| #478 | cove | 2026-08-02 | — | 🔵 Open | task-threads-direct-policy | +153/-17. Plugin: task threads use direct policy, enable block streaming. By kagura-agent. No reviews yet. |
+| #478 | cove | 2026-08-02 | — | ✅ Human-only | task-threads-direct-policy | +153/-17. Plugin: task threads use direct policy, enable block streaming. By kagura-agent. Human CHANGES_REQUESTED then APPROVED. Merged 2026-08-03T01:35Z. |
+| #487 | cove | 2026-08-03 | — | 🔵 Open | tasks-cross-channel-readme | +4/-1. Docs: add Tasks + cross-channel messaging to README. By kagura-agent. No reviews yet. |
+| #488 | cove | 2026-08-03 | — | 🔵 Open | heartbeat-timestamp | +1/-1. Show timestamp on heartbeat messages. By kagura-agent. No reviews yet. |
 
 ## Ground Truth Summary (78 merged + 2 closed-unmerged PRs reviewed, 13 human-only/manual-review merged)
 
@@ -342,7 +346,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 - **Iterative review as quality gate:** In 78/79 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review). #460: 8-day wait before human review, human approved without comments — our 3/3 Approve was the decision point.
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
 - **Multi-round PRs:** 58/79 reviewed PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190).
-- **Total review rounds:** ~215 across 84 PRs (81 merged + 2 closed-unmerged + 1 not-reviewed-by-service). Plus 14 human-only/manual-review PRs (no formal 3-reviewer runs). 1 PR currently open (#478).
+- **Total review rounds:** ~215 across 84 PRs (81 merged + 2 closed-unmerged + 1 not-reviewed-by-service). Plus 15 human-only/manual-review PRs (no formal 3-reviewer runs). 2 PRs currently open (#487, #488).
 - **False-ready detection:** 8 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega, #447 R1 Vega) - self-correcting system working (Vega is 7 of 8)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
