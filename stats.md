@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-04 02:26 (Asia/Shanghai)_
+_Last updated: 2026-08-04 20:38 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -20,6 +20,8 @@ _PR #469 (feat: default heartbeat to 10min for all new tasks, +5/-6) **merged 20
 _PR #470 (fix: task status dropdown floats above message, +41/-109) **merged 2026-08-02T13:10Z** — CSS z-index fix. Human (daniyuu) approved without comments. No 3-reviewer run._
 _PR #472 (fix: remove delete/clear button from channel header, +6/-1) **merged 2026-08-02T13:32Z** — tiny UI removal. Human (daniyuu) approved without comments. No 3-reviewer run._
 _22nd consecutive PR without full 3-reviewer service run (after #459, #461, #463, #465, #467, #468, #469, #470, #472, #476, #478, #481, #482, #484, #486, #488, #490, #495, #496, #498). 20 days idle since last 3-reviewer run (#460, 2026-07-15)._
+
+_2026-08-04 20:38 CST tracking run: scanned all 89 run records; `tracking.json` has 0 open PR entries, so no GitHub PR queries or new ground-truth comparisons were applicable. Reviewer aggregates, dimension profiles, calibration, reliability, and trend assessments are unchanged. No reviewer is below the 10% unique-find threshold (Stella ~17%, Nova ~23%, Vega ~11%)._
 _PR #478 (feat: task threads direct policy, +153/-17) **merged 2026-08-03T01:35Z** — human (daniyuu) CHANGES_REQUESTED then APPROVED (2 commits). No 3-reviewer run._
 _PR #488 (feat: show timestamp on heartbeat messages, +1/-1) **merged 2026-08-03T06:34Z** — by kagura-agent. Human approved. Tiny change, no 3-reviewer run._
 _PR #496 (ci: add staging database backup workflow, +50/-0) **merged 2026-08-03T14:13Z** — by kagura-agent. Single workflow file. Human (daniyuu) approved within 2 minutes. No 3-reviewer run needed (CI-only, no application code)._
