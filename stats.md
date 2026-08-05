@@ -1,7 +1,7 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-05 02:30 (Asia/Shanghai)_
+_Last updated: 2026-08-05 08:26 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
@@ -24,6 +24,8 @@ _22nd consecutive PR without full 3-reviewer service run (after #459, #461, #463
 _2026-08-04 20:38 CST tracking run: scanned all 89 run records; `tracking.json` has 0 open PR entries, so no GitHub PR queries or new ground-truth comparisons were applicable. Reviewer aggregates, dimension profiles, calibration, reliability, and trend assessments are unchanged. No reviewer is below the 10% unique-find threshold (Stella ~17%, Nova ~23%, Vega ~11%)._
 
 _2026-08-05 02:30 CST tracking run: scanned all 89 run records and all 99 tracking entries. `tracking.json` still has 0 open PR entries, so no GitHub queries, run-record ground-truth writes, or prompt updates were applicable. Aggregates remain unchanged: Stella ~17% unique-find rate, Nova ~23%, Vega ~11%; all remain above the 10% / 10-review consideration threshold. Reliability, consensus participation, severity calibration, dimension profiles, and last-5-vs-previous-5 trends are unchanged because no new service review round was recorded._
+
+_2026-08-05 08:26 CST tracking run: scanned all 89 run records (Stella 403 mentions, Nova 408, Vega 344) and validated all 99 tracking entries. `tracking.json` has 0 open PR entries; therefore no GitHub queries, state changes, ground-truth writes, or prompt updates applied. The last five versus prior five service-review comparison remains unchanged because no new service round was added. Current unique-find rates remain Stella ~17%, Nova ~23%, Vega ~11%; all exceed the 10% consideration threshold with 10+ reviews. Reliability, consensus participation, severity calibration, and dimension profiles remain unchanged._
 _PR #478 (feat: task threads direct policy, +153/-17) **merged 2026-08-03T01:35Z** — human (daniyuu) CHANGES_REQUESTED then APPROVED (2 commits). No 3-reviewer run._
 _PR #488 (feat: show timestamp on heartbeat messages, +1/-1) **merged 2026-08-03T06:34Z** — by kagura-agent. Human approved. Tiny change, no 3-reviewer run._
 _PR #496 (ci: add staging database backup workflow, +50/-0) **merged 2026-08-03T14:13Z** — by kagura-agent. Single workflow file. Human (daniyuu) approved within 2 minutes. No 3-reviewer run needed (CI-only, no application code)._
