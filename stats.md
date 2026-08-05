@@ -1,15 +1,15 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-05 14:26 (Asia/Shanghai)_
+_Last updated: 2026-08-05 18:24 (Asia/Shanghai)_
 
 ## Per-Reviewer Performance
 
 | Reviewer | Model | Total Review Rounds | Reliability | Trend |
 |----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 242 | 236/242 (98%) → | 6 failures total. #411-#460: all clean output. Stable. |
-| 🌠 Nova | claude-opus-4.7 | 244 | 241/244 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #411-#460: all clean. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 239 | 219/239 (92%) → | #411-#460: all clean output. 26th post-switch PR. |
+| 🌟 Stella | gpt-5.5 | 243 | 237/243 (98%) → | 6 failures total. #510: clean, high-value lifecycle finding. |
+| 🌠 Nova | claude-opus-4.7 | 245 | 242/245 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #510: clean recovery-contract finding. |
+| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 240 | 220/240 (92%) → | #510: clean SDK receipt-contract verification. |
 
 _Note: No new 3-reviewer service rounds since last update (2026-07-15 → 2026-08-04, 20 days idle). #460 and #461 both merged 2026-07-23._
 _PR #463 (feat: message actions adapter, +376/-4) merged 2026-08-01T05:52Z — human (daniyuu) approved without comments, no code review service run. 4-day open duration (opened 2026-07-28)._
