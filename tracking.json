@@ -2594,5 +2594,17 @@
     "rounds": 0,
     "notes": "CI: add staging database backup workflow. +50/-0. Single .yml file. Human (daniyuu) approved within 2 minutes. Merged 2026-08-03T14:13Z. No code review service needed.",
     "last_checked": "2026-08-04T02:26+08:00"
+  },
+  {
+    "owner": "kagura-agent",
+    "repo": "cove",
+    "pr": 510,
+    "reviewed_at": "2026-08-05T18:24+08:00",
+    "status": "open",
+    "ground_truth": null,
+    "verdict": "needs_changes",
+    "reviewers": 3,
+    "run_id": 7505,
+    "last_checked": null
   }
 ]
