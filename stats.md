@@ -1,7 +1,9 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-07 20:28 (Asia/Shanghai)_
+_Last updated: 2026-08-08 02:26 (Asia/Shanghai)_
+
+_2026-08-08 02:26 CST tracking run: scanned all 90 retained run records and all 100 tracking entries (98 merged, 2 closed; 0 open). No GitHub PR query, status update, ground-truth write, or prompt change was applicable. The #510 ground-truth record is already complete. Existing corpus-supported reviewer assessments remain unchanged: Stella ~17%, Nova ~23%, Vega ~11% unique-find rate; all exceed the 10% consideration threshold with 10+ reviews. No new service-review round means consensus participation, critical false-positive evidence, severity-calibration assessment, reliability evidence, dimension radar, and last-five-versus-previous-five trend arrows are unchanged._
 
 ## Reviewer Assessment Method
 
