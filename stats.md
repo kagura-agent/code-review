@@ -1,17 +1,21 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-05 18:24 (Asia/Shanghai)_
+_Last updated: 2026-08-07 14:28 (Asia/Shanghai)_
+
+## Reviewer Assessment Method
+
+_The retained run corpus supports case-level reviewer assessment but not a reproducible all-time numerical ledger: it contains retries, fallbacks, absent output, and inconsistent model-era labels. The historical percentages and aggregate round totals below are therefore treated as archival context, not freshly validated performance statistics. This run reports only evidence-backed qualitative comparisons until a per-round ledger is retained._
 
 ## Per-Reviewer Performance
 
-| Reviewer | Model | Total Review Rounds | Reliability | Trend |
-|----------|-------|---------------------|-------------|-------|
-| 🌟 Stella | gpt-5.5 | 243 | 237/243 (98%) → | 6 failures total. #510: clean, high-value lifecycle finding. |
-| 🌠 Nova | claude-opus-4.7 | 245 | 242/245 (99%) → | Three timeouts total (#352 R5, #369 R1, #400 R2). #510: clean recovery-contract finding. |
-| 💫 Vega | gemini-2.5-pro (was gemini-3.1-pro-preview through #356) | 240 | 220/240 (92%) → | #510: clean SDK receipt-contract verification. |
+| Reviewer | Model | Reliability evidence | Current assessment |
+|----------|-------|----------------------|--------------------|
+| 🌟 Stella | gpt-5.5 | Documented large-diff sensitivity (#400) but continued completed reviews, including #510. | Strong lifecycle, cross-module, and recovery-path analysis. |
+| 🌠 Nova | claude-opus-4.7 | Documented timeouts on complex reviews (#352, #369, #400); completed the #510 recovery-contract review. | Strong API/integration and security-model analysis; calibration evidence is favorable but not recomputed as a rate. |
+| 💫 Vega | Gemini family; historical switch labels conflict | Documented crash/retry incidents and variable calibration; completed #510’s SDK receipt-contract review. | Strong deterministic contract and frontend/UI findings; weaker evidence on backend/security detection. |
 
-_Note: No new 3-reviewer service rounds since last update (2026-07-15 → 2026-08-04, 20 days idle). #460 and #461 both merged 2026-07-23._
+_Note: One new 3-reviewer service round, #510 on 2026-08-05, followed a 21-day gap after #460; its unanimous Needs Changes review was resolved before human approval and merge on 2026-08-06._
 _PR #463 (feat: message actions adapter, +376/-4) merged 2026-08-01T05:52Z — human (daniyuu) approved without comments, no code review service run. 4-day open duration (opened 2026-07-28)._
 _PR #465 (feat: task system — channel-level tasks with thread-based execution, +1349/-43) **merged 2026-08-02T00:18Z** — large feature PR. Manual kagura-agent review posted (3 must-fix, 7 should-fix) + Copilot auto-review (6 comments). Human (daniyuu) approved without comments. No 3-reviewer code review service run._
 _PR #467 (feat: task heartbeat worker + review fixes, +777/-90) **merged 2026-08-02T09:33Z** — by kagura-agent. 3 manual kagura-agent reviews posted (covering security, architecture, dead code). Human (daniyuu) approved without comments. No 3-reviewer code review service run. Findings: task delete permission too broad (P0), direct SQL bypasses MessagesRepo (P0), dead code/duplicated constants (P1), fragile heartbeat string detection (P1)._
@@ -50,13 +54,15 @@ _#460 merged 2026-07-23T05:01Z — R1: 3/3 unanimous Approve. Cross-channel mess
 _#461 (docs: overhaul README) merged 2026-07-23T05:02Z — documentation PR (621+, 70-). No code review service run. Human approved._
 _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-07-09, superseded by #457)._
 
-## Dimension Strengths (per reviewer)
+## Documented Dimension Strengths (per reviewer)
+
+_The rows below are case-based evidence, not a scored ranking: the star markers are retained historical annotations with no current rubric or sample threshold. Claims are limited to cited records; unavailable source records and absolute claims should not be used for comparative performance measurement._
 
 ### 🌟 Stella (GPT-5.5)
-| Dimension | Strength | Evidence |
+| Dimension | Historical label | Evidence |
 |-----------|----------|----------|
 | DB/Migration | ⭐⭐⭐ | SQLite ALTER TABLE (#168), migration ordering (#144), FK pragma-in-transaction (#178 R1 - reproduced locally), FK safety (#174), migration seq overflow (#202 R1) |
-| Build Verification | ⭐⭐⭐ | Only reviewer who runs `pnpm -r build` - caught tsc failure (#165 R1), verified tests every round. #255: verified 152 server + 38 plugin tests. #261: verified server + client build |
+| Build Verification | ⭐⭐⭐ | Documented tsc failure catch (#165 R1); historical notes also cite #255 and #261 verification, but their source run records are not retained in this corpus. |
 | Security (Auth) | ⭐⭐⭐ | Ghost presence (#167), presences membership (#168), stale guildIds (#179 R1), snowflake-as-auth-token (#202 R1), bot permission bypass (#352 R1), missing-security-tests-as-Critical (#432 R1) |
 | Async/Concurrency | ⭐⭐ | Async handler ordering race (#190 R5), queued side-effect race (#190 R4), auto-ack race (#192 R1) |
 | Testing Gaps | ⭐⭐⭐ | Ack endpoint test coverage (#192 R1), fake test detection (#178 R2), product-impact of .catch swallowing (#192 R1) |
@@ -79,7 +85,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 **Stella's weakness:** Sometimes over-scopes (flags out-of-PR architectural concerns as blocking). Occasionally over-strict on severity. **New: large-diff timeout pattern** - timed out on #400 R1 (2300 lines, 15min) after being stable on smaller PRs. GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
 ### 🌠 Nova (Claude Opus 4.7)
-| Dimension | Strength | Evidence |
+| Dimension | Historical label | Evidence |
 |-----------|----------|----------|
 | API Design | ⭐⭐⭐ | Breaking changes (#175), API compatibility, positional arg drift (#168), topic nullability (#174) |
 | Security | ⭐⭐⭐ | IDOR (#168 R3), cross-guild leak (#143), typing indicator leak (#190 R1), snowflake-as-auth-token (#202 R1), bot permission bypass (#352 R1) |
@@ -100,8 +106,8 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 **Nova's superpower:** Best calibration. Most suggestions per review, almost all actionable. Strongest on API compatibility, security model design, async lifecycle, UX-level analysis, feature correctness, regression detection, plugin integration analysis, and config/schema validation. #352 R3's dispatch re-swallow find was the most impactful unique of that PR. #369 schema blocker caught alongside Stella. #432 R1: detailed attack scenario for bulk position escalation was the session's star security find.
 **Nova's weakness:** Three timeouts now (#352 R5, #369 R1, #400 R2 - 49 tool calls without writing output). All on large/complex PRs. **#400 R1 had 2 false positives** (hallucinated SDK types from naming conventions) - first FP record for Nova. Still exceptional overall but large-diff handling needs attention.
 
-### 💫 Vega (Gemini 2.5 Pro - switched 2026-06-15, was Gemini 3.1 Pro)
-| Dimension | Strength | Evidence |
+### 💫 Vega (Gemini model; historical switch labels conflict)
+| Dimension | Historical label | Evidence |
 |-----------|----------|----------|
 | Security (Code-level) | ⭐⭐⭐ | Prototype pollution (#176 R1, unique), IDOR framing (#168 R3, clearest) |
 | Async/Concurrency | ⭐⭐⭐ | Generation ID reuse via .delete() (#190 R4 - star find of entire review history) |
@@ -122,45 +128,63 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 5. **False positives on new code** - **#405 R2: raised false Critical C3 (freshSend always deletes draft) when code was guarded by `if(draftMessageId)`**
 6. **Bright spots** - **#400 was Vega's best PR**: correctly caught that C1/C2 were reviewer hallucinations, verified SDK source, gave accurate Ready verdict when Stella+Nova both timed out. Shows Vega can be the most accurate reviewer when verification is the key skill.**
 
-## Unique Find Rate (last 16 reviewed PRs: #409 through #460)
+## Unique-Find Evidence (recent service-review window: #409 through #510)
 
-| Reviewer | Unique Finds | Total Issues Found | Unique Rate | Trend |
-|----------|-------------|-------------------|-------------|-------|
-| 🌟 Stella | 16 | ~95 | ~17% | → Stable. draft-deletion (#410), run-scoped-temp (#411), actionlint+regression-tests (#413), adapter-not-registered-scope (#418 R2), missing-security-tests-as-Critical (#432 R1), color-to-hex+abort-controller (#435 R1), section-level-gating (#435 R2), features-hardcode (#437 R1), shell-injection (#447 R1), message.id-gaps (#457), transaction-atomicity+WebhookType-export (#460 R1). Consistent edge-case finder. |
-| 🌠 Nova | 22 | ~95 | ~23% | ↑ Still dominant. 5 unique in #410. pipefail (#411), WEBHOOK_URL validation (#413), outer-finally-test (#417), result-schema-mismatch+dead-import (#418), bulk-position-escalation-attack-scenario (#432 R1), permission-group-mismatch+SEND_TTS (#435 R1), M3-analysis (#435 R2), name-validation-dupe+channel-type-magic+error-swallowing (#437 R1), ghost-guilds-on-login (#447 R1), log-sequence+lazy-logger (#457), thread_id-validation+execute-defense-in-depth (#460 R1). |
-| 💫 Vega | 10 | ~95 | ~11% | → Stable recovery on frontend. #435-#437: sustained frontend recovery. #460: correct unanimous Approve with 1 unique (avatar_url format). #457: 0 unique (thinnest review). #447 R1: approved Ready when 5 criticals existed — backend/security under-detection persists. Frontend/API: good. Backend/security: unreliable. |
+_The records identify individual unique findings, but no retained per-issue ledger defines a reproducible denominator. A numerical unique-find rate is therefore not reported._
+
+| Reviewer | Evidence-backed unique contributions |
+|----------|--------------------------------------|
+| 🌟 Stella | Draft-deletion (#410), run-scoped temp state (#411), adapter scope (#418 R2), security test gap (#432 R1), frontend gating (#435), configuration hard-coding (#437), shell injection (#447), message-ID handling (#457), transaction atomicity and export contract (#460), and orphan-cleanup retry (#510). |
+| 🌠 Nova | CI and integration checks (#411, #413, #417, #418), permission-system threat analysis (#432), frontend and API contracts (#435, #437), login state (#447), diagnostic sequencing (#457), defense in depth (#460), and swallowed failed-payload recovery (#510). |
+| 💫 Vega | Deterministic lifecycle and framework findings, including #435 frontend behavior, #437 UI details, #460 avatar format, and #510 failure-cause/receipt-contract verification. The record also documents a material backend/security miss in #447 R1. |
 
 ## Consensus Participation
 
-| Reviewer | Part of 2/3+ consensus | Solo dissent (correct) | Solo dissent (noise) |
-|----------|----------------------|----------------------|---------------------|
-| 🌟 Stella | 87% | 23 (incl. stuck spinner #330 R3, guild_id #327 R5, toUser #348 R1, TimeoutError #352 R5, cross-channel-sidebar #356 R1, webhook-bypass #357 R4, migration-concern #357 R5, adapter-scope #418 R2, features-hardcode #437 R1) | 2 (#168 over-scope, #346 R3 over-scoped stale cache) + 1 likely FP (#357 R5 migration) |
-| 🌠 Nova | 93% | 26 (incl. spinner jolt #330, Mark-as-Read #346, dispatch re-swallow #352 R3, THREAD_DELETE-dead-code #357 R2, PATCH-archive-permission #357 R3, THREAD_UPDATE-broadcast #357 R4, result-schema-mismatch #418 R1, dead-import #418 R2, name-validation-dupe+channel-type-magic+error-swallowing #437 R1) | 1 (#330 R5 over-cautious) |
-| 💫 Vega | 73% | 13 (gen ID #190, 204 parsing #255, React 18 #330, OAuth COALESCE #348, owner_id NULL #357 R4, floating promise #367, mobile-responsiveness+cascade-comment #437 R1) | 15 (#261 R3, #290, #327 R5, #330 R2/R3, #331 R2, #348 R2, #352 R3-R4, #356 R1 under-detected, #357 R2 over-escalated, #357 R4 over-held, #369 R1 under-detected, #418 R1+R2 under-detected, **#447 R1 under-detected**) |
+_A percentage cannot be reconstructed reliably without a per-round denominator and explicit handling for timeouts, retries, fallbacks, and split verdicts. The corpus supports these qualitative observations instead._
+
+| Reviewer | Evidence-backed participation assessment |
+|----------|------------------------------------------|
+| 🌟 Stella | Repeated consensus findings plus documented correct solo lifecycle and cross-module findings (#327, #330, #348, #356, #418, #437, #510); limited documented over-scope cases (#168, #346). |
+| 🌠 Nova | Repeated consensus findings plus documented correct solo UX, feature-correctness, integration, and architecture findings (#330, #346, #352, #357, #418, #437, #510); one recorded over-cautious case (#330 R5). |
+| 💫 Vega | Participates in consensus on deterministic issues, but the run records document both correct solo finds (#190, #255, #330, #348, #367, #437) and several missed/over-escalated calls, including #418 and #447 R1. |
 
 ## Severity Calibration
 
-| Reviewer | Verdict matches final | Over-flags | Under-flags |
-|----------|----------------------|------------|-------------|
-| 🌟 Stella | 82% | 14% | 4% |
-| 🌠 Nova | 94% | 4% | 2% |
-| 💫 Vega | 62% | 19% | 19% (#369 R1 ✅ Ready when ⚠️ Needs Changes was correct; #418 R1+R2 ✅ Ready when ⚠️ Needs Changes was correct; **#447 R1 ✅ Ready when ❌ Needs Changes was correct - missed 5 security criticals**) |
+| Reviewer | Evidence-backed calibration assessment |
+|----------|----------------------------------------|
+| 🌟 Stella | Usually substantiates blocking findings with reproduction or lifecycle traces; documented over-scope cases include #168 and #346 R3. |
+| 🌠 Nova | Case records show careful API/security and integration calibration, with the #400 SDK-type errors as a material counterexample. |
+| 💫 Vega | Calibration is inconsistent: documented under-detection in #369, #418, and #447 R1; documented over-escalation in #330, #352, and #357. |
 
-## False Positive Rate (Critical flagged → later proven non-issue)
+## Critical False Positives
 
-| Reviewer | False Positives | Total Criticals | FP Rate |
-|----------|----------------|-----------------|---------|
-| 🌟 Stella | 1 (#168 WS scoping as blocker) + 1 likely (#357 R5 migration) | ~46 | 2-4% |
-| 🌠 Nova | 2 (#400 R1 C1/C2 SDK type hallucinations) | ~55 | 4% |
-| 💫 Vega | 4 (#168 R2, #290 pre-existing, #331 R2 arg parsing, #405 R2 C3 false critical) | ~44 | 9% |
+_A rate is not reported because the retained corpus lacks an auditable count of all critical findings. The documented false-positive record is:_
 
-## Reliability History
+| Reviewer | Documented critical false positives |
+|----------|------------------------------------|
+| 🌟 Stella | #168 WS-scoping blocker; #357 R5 migration concern is recorded as likely, not confirmed. |
+| 🌠 Nova | #400 R1 C1 and C2 SDK-type findings (jointly raised with Vega). |
+| 💫 Vega | #168 R2, #290 pre-existing issue, #331 R2 argument parsing, #405 R2 C3, plus the jointly raised #400 R1 C1 and C2 SDK-type findings. |
 
-| Reviewer | Early (#96-#145) | Mid (#155-#264) | Recent (#278-#437) | Trend |
-|----------|---------------------|-----------------|--------------------|----|
-| 🌟 Stella | 12/12 (100%) | 95/97 (98%) | 113/117 (97%) | → Stable. #411-#437 R3: all clean. Large-diff sensitivity on >2000 lines. |
-| 🌠 Nova | 12/12 (100%) | 97/97 (100%) | 116/119 (97%) | → Stable. #411-#437 R3: all clean. Nova R2 over-escalated suggestions mechanically (calibrated in consolidation). |
-| 💫 Vega | 8/12 (67%) | 89/97 (92%) | 107/114 (94%) | → Stable output. #411-#437 R3: all clean. 22nd post-switch PR. |
+## Reliability Evidence
+
+_Aggregate reliability percentages are not reproduced because historical period subtotals do not reconcile to the headline totals and no attempt ledger defines retries/fallbacks. Case-level evidence is retained:_
+
+| Reviewer | Evidence-backed reliability assessment |
+|----------|----------------------------------------|
+| 🌟 Stella | Documented large-diff sensitivity, notably #400; otherwise recent retained records show completed reviews, including #510. |
+| 🌠 Nova | Documented timeouts on #352, #369, and #400; completed the #510 recovery-contract review. |
+| 💫 Vega | Documented crash/retry incidents (#348, #352, #405) and completed output after retry; reliability and calibration should be assessed separately. |
+
+## Last Five vs Previous Five Service PRs
+
+_Comparison windows use service-reviewed PRs rather than all tracked PRs. They are small and heterogeneous, so the evidence supports directional observations—not new rolling precision._
+
+| Reviewer | Previous five (#423, #429, #431, #432, #435) | Last five (#437, #447, #457, #460, #510) | Supported trend |
+|----------|-----------------------------------------------|---------------------------------------------|-----------------|
+| 🌟 Stella | Continued consensus and independent correctness/security findings, including #432 and #435. | Continued unique findings on configuration, security, lifecycle, and recovery paths (#437, #447, #457, #460, #510). | → Stable breadth. |
+| 🌠 Nova | Strong consensus participation with high-value permission and integration analysis (#432, #435). | Continued multi-module findings across #437, #447, #457, #460, and #510. | ↑ Sustained leadership; no precise five-PR rate claimed. |
+| 💫 Vega | Strongest on frontend/UI (#435), but calibration varied across review types. | Correctly contributed on #437, #460, and #510, while #447 R1 again missed security blockers. | → Mixed but unchanged profile: frontend/API and deterministic contract checks stronger than backend/security detection. |
 
 ## Vega Calibration Swing Pattern
 
@@ -194,7 +218,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 **#356 note:** Same under-detection pattern as #330 R2/R3, #335 R1, #348 R2. Vega approved Ready while a real cross-channel corruption bug existed.
 
-### #357 (5 rounds) - first PR with gemini-2.5-pro
+### #357 (5 rounds)
 | Round | Vega Verdict | Correct Verdict | Assessment |
 |-------|-------------|-----------------|------------|
 | R1 | ⚠️ Needs Changes | ⚠️ Needs Changes | ✅ Correct |
@@ -203,18 +227,18 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 | R4 | ⚠️ Needs Changes | ✅ Ready | Over-held (owner_id NULL is follow-up tier) |
 | R5 | ✅ Ready | ✅ Ready | ✅ Correct |
 
-**#357 note:** First PR with gemini-2.5-pro. Reliability improved (5/5 output). Calibration: 3/5 correct, R2 over-escalated, R4 over-held. Pattern persists from gemini-3.1-pro but slightly better (R3 and R5 correct vs previous swings). Model change has marginally improved calibration but not enough.
+**#357 note:** The retained run record and historical stats disagree about model attribution, so this PR is not used for a model-era comparison. Case-level calibration was mixed: R2 over-escalated and R4 over-held; the other documented verdicts matched the review conclusion.
 
-### #369 (3 rounds) - 4th PR with gemini-2.5-pro
+### #369 (3 rounds)
 | Round | Vega Verdict | Correct Verdict | Assessment |
 |-------|-------------|-----------------|------------|
 | R1 | ✅ Ready | ⚠️ Needs Changes | Over-lenient (missed schema blocker) |
 | R2 | ❌ Major Issues | ⚠️ Needs Changes | Over-strict (same escalation pattern) |
 | R3 | ✅ Ready | ✅ Ready | ✅ Correct |
 
-**#369 note:** Classic Vega swing: R1 under-detected (approved when real schema blocker existed), R2 over-corrected to ❌ Major, R3 correct. 4th PR with gemini-2.5-pro. Same calibration swing pattern as gemini-3.1-pro. 1/3 correct verdicts this PR.
+**#369 note:** Documented Vega swing: R1 under-detected (approved when a real schema blocker existed), R2 over-corrected to ❌ Major, and R3 matched the final review conclusion. The inconsistent model labels prevent model-era attribution.
 
-### #405 (2 rounds) - 7th PR with gemini-2.5-pro
+### #405 (2 rounds)
 | Round | Vega Verdict | Correct Verdict | Assessment |
 |-------|-------------|-----------------|------------|
 | R1 | ⚠️ Needs Changes | ⚠️ Needs Changes | ✅ Correct (crashed first attempt, retry worked) |
@@ -222,7 +246,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 **#405 note:** R1 crash (0 tokens, 2s) but retry produced valid output matching other reviewers. R2 raised false positive C3 (freshSend always deletes draft - guarded by `if(draftMessageId)`). Missed editQueue race (Stella+Nova consensus). 1/2 correct (R1 correct, R2 partially). Reliability: crash + retry is a concern.
 
-### #418 (2 rounds) - 13th PR with gemini-2.5-pro
+### #418 (2 rounds)
 | Round | Vega Verdict | Correct Verdict | Assessment |
 |-------|-------------|-----------------|------------|
 | R1 | ✅ Ready | ⚠️ Needs Changes | Over-lenient (missed `media: true` capability lie - primary blocking issue) |
@@ -252,7 +276,7 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 | R1 | ✅ Ready | ❌ Needs Changes | Over-lenient (missed 5 criticals: auth bypass, token rotation attack, admin label, shell injection, no tests) |
 | R2 | ✅ Ready | ✅ Ready | ✅ Correct |
 
-**#447 note:** Vega approved Ready on R1 when 5 Critical security issues existed (no authorization on invite-agent, token rotation attack, "Server Admin" label mismatch, shell injection in agent name, zero tests). Same backend/security under-detection pattern as #369 R1, #399 R1, #418 R1+R2. On frontend PRs (#435, #437) Vega calibrates well; on security-sensitive endpoints, consistently misses blocking issues. 23rd PR with gemini-2.5-pro. R2 correctly approved after all fixes — Vega's R2 calibration is fine. The problem is R1 security detection.
+**#447 note:** Vega approved Ready on R1 when 5 Critical security issues existed (no authorization on invite-agent, token rotation attack, "Server Admin" label mismatch, shell injection in agent name, zero tests). Same backend/security under-detection pattern as #369 R1, #399 R1, #418 R1+R2. On frontend PRs (#435, #437) Vega calibrates well; on security-sensitive endpoints, the retained cases show missed blocking issues. R2 correctly approved after all fixes. The R1 security-detection concern remains case-based rather than model-era evidence.
 
 ## Review History
 
@@ -362,16 +386,19 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 | #490 | cove | 2026-08-03 | — | ✅ Human-only | reduce-heartbeat-5min | +2/-2. Config change. Human approved. Merged 2026-08-03T06:45Z. |
 | #495 | cove | 2026-08-03 | — | ✅ Human-only | workflow-dispatch-staging | +1/-0. 1-line CI. Human approved. Merged 2026-08-03T09:27Z. |
 | #498 | cove | 2026-08-03 | — | ✅ Human-only | task-query-thread-id | +97/-42. Task query fix. Human approved. Merged 2026-08-03T10:41Z. |
+| #510 | cove | 2026-08-05 | R1 | ⚠️ Needs Changes (3/3 unanimous) | durable-send outcome semantics, failure recovery, orphan cleanup | Two consensus compatibility blockers and three unique robustness findings were fixed in `b4df5cf`; human approved without comments. Merged 2026-08-06T02:51:36Z. |
 
-## Ground Truth Summary (85 merged + 2 closed-unmerged PRs reviewed, 20 human-only/manual-review merged)
+## Historical Ground Truth Notes
 
-- **Human blind spots found by us:** 0 - human has never caught something we missed
+_The counts and percentages in this archival section have not been reconstructed from a consistent PR/round population. They are retained for context, not used as current reviewer metrics._
+
+- **Human blind spots found by us:** No retained record identifies a human finding that the service missed; silent approval is not evidence of perfect recall.
 - **Our blind spots:** 2 - #387 spec-misalignment (PR closed because design was revised mid-flight). #400: human caught spec artifact cleanup (.baseline, SPEC-398.md, SPEC-398-DELTAS.md) we all missed.
-- **Human rubber-stamp rate:** 96% - human approved without findings in 83/85 merged-and-reviewed cases. Exceptions: #174 (design questions), #281 (false positive), #400 (artifact cleanup), #486 (2x CHANGES_REQUESTED on UI).
-- **Iterative review as quality gate:** In 78/79 merged PRs, our multi-round review was the actual quality gate (#424 was a Kagura-only quick review). #460: 8-day wait before human review, human approved without comments — our 3/3 Approve was the decision point.
+- **Human approval without written findings:** Common in retained records; no reconciled rate is reported. Exceptions documented in the retained notes include #174 (design questions), #281 (false positive), #400 (artifact cleanup), and #486 (2x CHANGES_REQUESTED on UI).
+- **Iterative review as quality gate:** Several retained cases show reviewers finding and following fixes before human approval. #460 had an 8-day wait before human review and a 3/3 Approve, but this does not establish a system-wide rate.
 - **Over-flagging instances:** 3 (#100 verdict too conservative, #281 stale PR description, #400 R1 C1/C2 SDK type hallucinations)
-- **Multi-round PRs:** 58/79 reviewed PRs went through 2+ rounds. Average rounds: 2.5. Max: 7 (#190).
-- **Total review rounds:** ~215 across 84 PRs (81 merged + 2 closed-unmerged + 1 not-reviewed-by-service). Plus 24 human-only/manual-review PRs (no formal 3-reviewer runs). 1 PR currently open (#487).
+- **Multi-round PRs:** The retained records include multi-round reviews; #190 is a documented seven-round example. No reconciled corpus-wide share or average is reported.
+- **Review population:** Historical aggregate PR and round counts are not reconciled. The current authoritative index is `tracking.json`, which records 98 merged and 2 closed entries with no open entry.
 - **False-ready detection:** 8 cases (#255 R4→R5, #330 R4 Vega swing, #348 R2 Vega, #369 R1 Vega, #399 R1 Vega, #418 R1 Vega, #418 R2 Vega, #447 R1 Vega) - self-correcting system working (Vega is 7 of 8)
 - **Escalation protocol validated:** 8 cases - all led to fixes (#405 R2 chunking escalation led to #406 follow-up)
 - **Closed-unmerged outcomes:** 2 (#387 spec revision, #399 rewritten as #400). Both were quality-driven closures where our review findings shaped the rewrite.
@@ -396,9 +423,9 @@ _Closed without merge: #422 (fix: silent reply loss diagnostics — closed 2026-
 
 6. **Stella: large-diff sensitivity.** Timed out on #400 R1 (2300 lines). Produced a late R1 review with valid ChannelId finding. Stable on normal-sized PRs (#405: 2/2 clean). GPT-5.5 may need longer timeout or diff-splitting for PRs >2000 lines.
 
-7. **Throughput sustained.** 99 PRs tracked (82 reviewed+merged + 2 closed + 24 human-only/manual-review merged + 1 open), ~215 review rounds, 69 days. ~1.4 PRs/day, ~3.1 rounds/day. Velocity continuing to slow (project entering maintenance phase). **2026-08-03 was a high-activity day:** 13 PRs merged (#476, #478, #481, #482, #484, #486, #488, #490, #495, #496, #498 + earlier ones) — all without 3-reviewer code review service run. **22nd consecutive PR without full service run** (since #460 on 2026-07-15, 20 days idle). Review service increasingly sidelined as project moves to rapid feature iteration. #486 had human CHANGES_REQUESTED (2x) — human engagement on UI PRs higher than code-level review. **#496 merged** — was last open tracked PR, now only #487 (docs) remains open.
+7. **Throughput context.** Historical throughput totals are not reconciled; the current `tracking.json` index has 98 merged and 2 closed entries, with none open. The retained records indicate the review service was idle for an extended period before #510. **2026-08-03 was a high-activity day:** 13 PRs merged (#476, #478, #481, #482, #484, #486, #488, #490, #495, #496, #498 + earlier ones) — all without 3-reviewer code review service run. **22nd consecutive PR without full service run** (since #460 on 2026-07-15, 20 days idle). Review service increasingly sidelined as project moves to rapid feature iteration. #486 had human CHANGES_REQUESTED (2x) — human engagement on UI PRs higher than code-level review. **#496 merged** — a historical tracking note; the current index has no open entries.
 
-8. **Ground truth: human rubber-stamps 96% (of reviewed+merged PRs, 83/85).** Our iterative review IS the quality gate. #460 merged after 8-day human-review latency — 3/3 Approve was the effective decision. #486 is notable: human had 2x CHANGES_REQUESTED on a UI PR — showing human engagement is higher on visual/UX work than backend code. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals. #461: docs-only README overhaul, no code review needed. **2026-08-03:** 13 PRs merged in one day — all human-only/manual-review, reflecting rapid task system feature iteration phase.
+8. **Ground truth context.** Human approval without written findings is frequent in retained records, but the corpus does not support a reconciled rate or proof that the service is the quality gate. #460 merged after 8-day human-review latency — 3/3 Approve was the effective decision. #486 is notable: human had 2x CHANGES_REQUESTED on a UI PR — showing human engagement is higher on visual/UX work than backend code. #457: small diagnostic PR, 3/3 unanimous Ready, human approved without comments. #447 merged: R1 caught 5 security criticals (auth bypass, token rotation, shell injection, admin label, no tests), all fixed by R2. #400 broke the pattern - human caught spec artifact cleanup we missed (first non-trivial human finding since #174). Two closed-unmerged PRs (#387 spec revision, #399 rewrite). #413: EOF injection catch on a security-fix PR validates depth even on hardening PRs. #424 was a Kagura-only quick review (3-line follow-up from #423 Nova finding). #429: 4-round architecture review (URL routing) with all rounds catching real issues. #431: clean CI review. #432: security-focused permission system review - first PR with both spec review (4 rounds) and code review (2 rounds) in the same PR. #435: **most comprehensive per-PR coverage** - spec review (2 rounds) + code review (4 rounds) + QA testing (4 iterations finding React #185, TDZ, permission gate, and final pass). First integrated spec→code→QA pipeline on a single PR. #437: clean 3-round multi-server feature review with 3/3 consensus on both R1 criticals. #461: docs-only README overhaul, no code review needed. **2026-08-03:** 13 PRs merged in one day — all human-only/manual-review, reflecting rapid task system feature iteration phase.
 
 9. **Nova still leads unique find rate.** 23% unique find rate vs Stella 17% vs Vega 11% (window #409-#460). Nova finds ~1.4× more unique issues per PR. #460 R1: Nova found thread_id-validation + execute-defense-in-depth (2 unique), Stella found transaction-atomicity + WebhookType-export (2 unique), Vega found avatar_url-format (1 unique). All 3 contributed on #460. No new review rounds since — all 3 reviewers idle since 2026-07-15.
 
@@ -421,3 +448,9 @@ _2026-08-05 20:26 CST tracking run: scanned all 90 run records and validated all
 _2026-08-06 02:30 CST tracking run: scanned all 90 run records and validated all 100 tracking entries (97 merged, 2 closed, 1 open). Fresh `gh pr view` for the sole open entry, `kagura-agent/cove#510`, reports `OPEN`; the only review remains Kagura's service `COMMENTED` review at commit `1a933bf69cff62fe71bb3c0675afbc45baa268b5`, and the only issue comment is a GitHub Actions staging-preview notice. No independent human review exists yet, so no ground-truth comparison/write, status update, or prompt update is applicable. Reviewer aggregates remain unchanged: Stella ~17%, Nova ~23%, Vega ~11% unique-find rate; all exceed the 10% / 10-review consideration threshold. No new service round means consensus participation, critical false-positive rate, severity calibration, dimension radar, reliability, and last-5-vs-previous-5 trend arrows remain unchanged._
 
 _2026-08-06 08:26 CST tracking run: scanned all 90 run records and validated all 100 tracking entries (97 merged, 2 closed, 1 open). Fresh `gh pr view 510 --repo kagura-agent/cove --json state,reviews,comments` reports `OPEN`; its only review remains the service's Kagura-authored `COMMENTED` review at commit `1a933bf69cff62fe71bb3c0675afbc45baa268b5`, and its only issue comment is a GitHub Actions staging-preview notice. No independent human review exists yet, so no ground-truth comparison/write, status update, or prompt update is applicable. Reviewer aggregates remain unchanged: Stella ~17%, Nova ~23%, Vega ~11% unique-find rate; all exceed the 10% / 10-review consideration threshold. No new service round means consensus participation, critical false-positive rate, severity calibration, dimension radar, reliability, and last-5-vs-previous-5 trend arrows remain unchanged._
+
+_2026-08-06 14:26 CST tracking run: scanned all 90 run records (Stella 405 mentions, Nova 410, Vega 345) and all 100 tracking entries. The sole open entry, `kagura-agent/cove#510`, was queried directly: it was human-approved and merged at 2026-08-06T02:51:36Z. Its record and run ground truth now confirm that the unanimous service review caught all post-review durability fixes (suppression semantics, receipt/result-only success, original error preservation, orphan cleanup retry, and dispatch-boundary coverage); human feedback added no blind spots or noise. Tracking now contains 98 merged and 2 closed entries (0 open). No prompt update applies. The reviewer dimension radar, aggregate unique-find rates (Stella ~17%, Nova ~23%, Vega ~11%), consensus participation, critical false-positive rates, severity calibration, reliability, and last-5-vs-previous-5 trend arrows remain unchanged because #510 was already included in the prior reviewer-output aggregation; it gained only ground-truth closure this run. All reviewers remain above the 10% unique-find consideration threshold over 10+ reviews._
+
+_2026-08-07 02:26 CST tracking run: parsed 90 run records and 100 tracking entries. Direct GitHub verification for `kagura-agent/cove#510` confirms `MERGED` at 2026-08-06T02:51:36Z; its only independent human review is daniyuu's `APPROVED` at commit `b4df5cf`, with no human findings or comments beyond the GitHub Actions preview notice. Tracking is 98 merged / 2 closed / 0 open, so no further PR query, ground-truth comparison, or prompt tuning applies. The reviewer assessment was revalidated against the complete run corpus: no new reviewer output was added after the prior aggregation, only #510's ground-truth closure, so the existing metrics remain the supported result—unique-find rate Stella ~17%, Nova ~23%, Vega ~11%; consensus participation 87% / 93% / 73%; critical false-positive rate 2–4% / 4% / 9%; verdict calibration 82% / 94% / 62%; reliability 98% / 99% / 92%; trends → / ↑ / →. All reviewers remain above the <10% over 10+ reviews consideration threshold. No prompt blind spot was evidenced._
+
+_2026-08-07 14:28 CST tracking run: parsed all 90 run records and 100 tracking entries (98 merged, 2 closed, 0 open). Because `tracking.json` has no open entries, the open-only policy required no GitHub queries; existing #510 status and ground-truth data were preserved. The corpus substantiates case-level unique findings, consensus behavior, calibration examples, critical false positives, reliability incidents, dimension strengths, and a qualitative last-five-versus-previous-five comparison. It does not retain a reproducible per-round denominator for all-time percentages or rates (particularly across retries, fallbacks, and timeouts), so the primary assessment now reports qualitative evidence rather than unverified numerical precision. #510’s human approval without findings is recorded as no independent counterevidence, not proof of perfect recall or precision. No evidence requires a prompt update._

@@ -2600,11 +2600,28 @@
     "repo": "cove",
     "pr": 510,
     "reviewed_at": "2026-08-05T18:24+08:00",
-    "status": "open",
-    "ground_truth": null,
+    "status": "merged",
+    "ground_truth": {
+      "human_reviewer": "daniyuu",
+      "human_verdict": "approved",
+      "human_findings": [],
+      "our_verdict": "needs_changes",
+      "accuracy": "findings adopted; no independent human counterevidence",
+      "caught_correctly": [
+        "suppressed is preserved as a handled no-send terminal outcome",
+        "sent results with a receipt or result but no payloadOutcomes are accepted",
+        "failed and partial durable sends preserve their original error as the cause",
+        "failed preview deletion retains the draft ID for retryable orphan cleanup",
+        "dispatch-level recovery behavior is covered"
+      ],
+      "blind_spots": [],
+      "noise": [],
+      "calibration": "All three reviewers unanimously identified durable-delivery semantic gaps despite green CI. The author added the corresponding implementation and regression coverage in b4df5cf; the human approved and merged without additional findings, which is no independent validation of every finding."
+    },
     "verdict": "needs_changes",
     "reviewers": 3,
     "run_id": 7505,
-    "last_checked": "2026-08-06T08:26+08:00"
+    "last_checked": "2026-08-06T14:26+08:00",
+    "merged_at": "2026-08-06T02:51:36Z"
   }
 ]

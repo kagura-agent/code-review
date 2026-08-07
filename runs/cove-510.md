@@ -30,9 +30,33 @@
 - CI passing did not cover these SDK semantic boundaries; targeted regression coverage must include suppression and receipt-only success.
 - The review was posted to PR #510. Codex was assigned a focused follow-up covering the consensus fixes plus rebase conflict resolution.
 
+## Ground Truth (PR merged 2026-08-06)
+
+**Human reviewer:** daniyuu (COLLABORATOR)
+
+**Human verdict:** APPROVED (no comments)
+
+**PR outcome:** Merged 2026-08-06T02:51:36Z
+
+### What we caught correctly
+- `suppressed` is now explicitly treated as a handled no-send terminal outcome.
+- A `sent` durable result is accepted when it has a visible `receipt` or `results` entry even if `payloadOutcomes` is absent; malformed supplied outcomes still fail.
+- Failed and partial sends retain their original error as `cause`, preserving recovery diagnostics.
+- A failed preview deletion retains the draft ID and retries orphan cleanup.
+- The final commit added dispatch-boundary regression coverage for failed fallback recovery, suppression, receipt-only/result-only confirmation, and malformed outcomes.
+
+### What we missed
+- The human reviewer submitted no additional findings or comments. This is no independent counterevidence, not proof that no blind spot existed.
+
+### What was noise
+- No human contradiction was recorded. The follow-up commit `b4df5cf` implemented and tested the unanimous blockers plus the three unique robustness findings; approval without comments does not independently validate every finding.
+
+### Calibration note
+- The unanimous **Needs Changes** verdict was consistent with the targeted fixes despite green CI: the defects were durable-delivery semantic compatibility gaps. Human approval followed those fixes rather than contradicting the review.
+
 ## Prompt Evolution Check
 
-- This run exposed no reviewer blind spot: the default prompt's correctness, interface-design, product-impact, and testing dimensions led directly to the shared findings.
+- No reviewer blind spot surfaced: the default prompt's correctness, API/interface design, product-impact, and testing dimensions led directly to the findings.
 - No prompt change needed.
 
 ## Process Notes
