@@ -1,7 +1,9 @@
 # Code Review Service - Reviewer Stats
 
 
-_Last updated: 2026-08-09 14:26 (Asia/Shanghai)_
+_Last updated: 2026-08-09 20:26 (Asia/Shanghai)_
+
+_2026-08-09 20:26 CST tracking run: validated all 100 tracking entries (98 merged, 2 closed; 0 open) and scanned all 90 retained `runs/*.md` records. Under the open-only policy, no GitHub PR query, status update, or ground-truth write applied. The only post-#460 service review, #510, remains merged with complete ground truth; no reviewer output or independently assessed human feedback has been added since the 14:26 assessment. The evidence-backed reviewer assessment is therefore unchanged: the retained corpus supports case-level dimension strengths, consensus behavior, false-positive examples, calibration, reliability, and qualitative five-PR trends, but does not retain a reproducible per-round issue ledger for fresh numerical rates. The historical archival estimates remain Stella ~17%, Nova ~23%, Vega ~11% unique-find rate; all exceed the <10% consideration threshold with 10+ reviews. No human-caught blind spot supports prompt tuning; the default prompt's stale-description safeguard remains appropriate._
 
 _2026-08-09 14:26 CST tracking run: scanned all 90 retained run records (Stella 404 mentions, Nova 410, Vega 345; 21 records contain a Ground Truth section) and all 100 tracking entries (98 merged, 2 closed; 0 open). The open-only policy therefore required no GitHub PR query, status update, ground-truth write, or prompt change. The newest service record, #510, already has complete ground truth. No reviewer output or independently assessed human feedback has been added since the prior assessment, so the corpus-supported reviewer assessment is unchanged: Stella ~17%, Nova ~23%, Vega ~11% unique-find rate; all exceed the 10% consideration threshold with 10+ reviews. Consensus participation, critical false-positive evidence, severity-calibration assessment, reliability evidence, dimension radar, and last-five-versus-previous-five trend arrows are likewise unchanged. The default prompt retains the evidence-backed stale-description safeguard; no new human-caught blind spot justified tuning._
 
