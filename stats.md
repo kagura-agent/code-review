@@ -1,6 +1,10 @@
 # Code Review Service - Reviewer Stats
 
 
+_Last updated: 2026-08-11 20:26 (Asia/Shanghai)_
+
+_2026-08-11 20:26 CST tracking run: parsed all 100 `tracking.json` entries (98 merged, 2 closed; 0 open) and scanned the 90 retained `runs/*.md` records. Under the open-only policy, no GitHub PR lookup, status transition, run-record ground-truth write, or prompt change applied. No reviewer output or independently assessed human feedback has appeared since the 14:26 assessment; #510 remains the newest complete service ground truth (human approval with no independent findings or blind spots). The retained corpus continues to support evidence-backed qualitative radar, consensus, critical false-positive, calibration, reliability, and rolling-trend assessments, but not recomputation of exact all-time rates without a normalized per-round issue ledger. The archival unique-find estimates remain Stella ~17%, Nova ~23%, and Vega ~11%; all exceed the <10% consideration threshold with 10+ reviews. No reviewer replacement or prompt tuning is indicated._
+
 _Last updated: 2026-08-11 14:26 (Asia/Shanghai)_
 
 _2026-08-11 14:26 CST tracking run: validated all 100 tracking entries (98 merged, 2 closed; 0 open) and scanned all 90 retained `runs/*.md` records (Stella 405 mentions, Nova 410, Vega 345; 21 records contain a Ground Truth section). With no open entries, the open-only policy required no GitHub PR query, status update, ground-truth write, or prompt change. The newest service review (#510) already has complete ground truth: human approval added no independent findings and identified no blind spot. No reviewer output or independently assessed human feedback has been added since the prior assessment, so the evidence-backed assessment remains unchanged: Stella ~17%, Nova ~23%, and Vega ~11% unique-find rate; all are above the <10% consideration threshold with 10+ reviews. The corpus still supports case-level dimension strengths, consensus behavior, false-positive evidence, calibration, reliability, and qualitative five-PR trends, but not a reproducible per-round ledger for recalculating exact rates. No human-caught blind spot justified prompt tuning._
